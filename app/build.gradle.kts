@@ -19,11 +19,11 @@ fun getVersionName(): String {
 }
 
 android {
-    namespace = "org.torproject.android"
+    namespace = "com.ustadmobile.orbotmeshrabiyaintegration"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = namespace
+    applicationId = namespace
         versionCode = orbotBaseVersionCode
         versionName = getVersionName()
         minSdk = 24
@@ -36,6 +36,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
+        isCoreLibraryDesugaringEnabled = true
     }
 
     splits {
@@ -124,7 +125,9 @@ android.applicationVariants.all {
 
 dependencies {
     implementation(project(":OrbotLib"))
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     implementation(project(":orbotservice"))
+    implementation(project(":Meshrabiya:lib-meshrabiya"))
     implementation(libs.android.material)
     implementation(libs.android.volley)
     implementation(libs.androidx.activity)
@@ -157,5 +160,16 @@ tasks.named("preBuild") { dependsOn("copyLicenseToAssets") }
 tasks.register<Copy>("copyLicenseToAssets") {
     from(layout.projectDirectory.file("LICENSE"))
     into(layout.projectDirectory.dir("src/main/assets"))
+}
+
+// Workaround for missing R class in Kotlin compilation
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    dependsOn("processFullpermDebugResources")
+    val rJar = file("$buildDir/intermediates/compile_and_runtime_not_namespaced_r_class_jar/fullpermDebug/processFullpermDebugResources/R.jar")
+    compilerOptions {
+        if (rJar.exists()) {
+            freeCompilerArgs.add("-Xplugin=${rJar.absolutePath}")
+        }
+    }
 }
 

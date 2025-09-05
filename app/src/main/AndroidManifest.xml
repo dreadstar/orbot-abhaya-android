@@ -28,6 +28,15 @@
     <!-- For Android 14 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
+    <!-- Mesh Gateway Integration Permissions -->
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.BIND_VPN_SERVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -47,6 +56,15 @@
         android:taskAffinity=""
         android:theme="@style/DefaultTheme"
         tools:replace="android:allowBackup">
+        <activity
+            android:name="com.ustadmobile.orbotmeshrabiyaintegration.MainActivity"
+            android:exported="true"
+            android:theme="@style/OrbotActivityTheme">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name="org.torproject.android.OrbotActivity"
@@ -228,5 +246,61 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <!-- Mesh Gateway VPN Service -->
+        <service
+            android:name="com.ustadmobile.orbotmeshrabiyaintegration.routing.MeshGatewayVpnService"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+        </service>
+
+        <!-- Mesh Traffic Router Service -->
+        <service
+            android:name="com.ustadmobile.orbotmeshrabiyaintegration.routing.MeshTrafficRouterService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <!-- Beta Test Logger Service -->
+        <service
+            android:name="com.ustadmobile.orbotmeshrabiyaintegration.testing.BetaTestLogger"
+            android:enabled="true"
+            android:exported="false" />
+
+        <!-- Network State Receiver -->
+        <receiver
+            android:name="com.ustadmobile.orbotmeshrabiyaintegration.routing.NetworkStateReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter android:priority="1000">
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+                <action android:name="android.net.wifi.STATE_CHANGE" />
+                <action android:name="android.net.wifi.WIFI_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Orbot Integration Receiver -->
+        <receiver
+            android:name="com.ustadmobile.orbotmeshrabiyaintegration.routing.OrbotStateReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="org.torproject.android.intent.action.STATUS" />
+                <action android:name="org.torproject.android.intent.action.START" />
+                <action android:name="org.torproject.android.intent.action.STOP" />
+            </intent-filter>
+        </receiver>
+
+        <!-- File Provider for sharing logs and configurations -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

@@ -1,0 +1,3 @@
+[submodule "Meshrabiya"]
+	path = Meshrabiya
+	url = git@github.com:dreadstar/Meshrabiya.git
