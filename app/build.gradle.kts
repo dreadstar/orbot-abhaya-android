@@ -19,7 +19,7 @@ fun getVersionName(): String {
 }
 
 android {
-    namespace = "com.ustadmobile.orbotmeshrabiyaintegration"
+    namespace = "org.torproject.android"
     compileSdk = 36
 
     defaultConfig {

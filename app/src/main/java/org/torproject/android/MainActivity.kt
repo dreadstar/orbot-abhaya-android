@@ -1,8 +1,8 @@
-package com.ustadmobile.orbotmeshrabiyaintegration
+package org.torproject.android
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.ustadmobile.orbotmeshrabiyaintegration.GatewayCapabilitiesManager
+import org.torproject.android.GatewayCapabilitiesManager
 
 /**
  * Main activity for mesh integration demo. Handles UI and gateway capability toggling.

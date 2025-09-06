@@ -68,4 +68,13 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.retrofit.converter)
     implementation(libs.retrofit.lib)
+    
+    // Critical missing dependencies for D8 desugaring
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.2.10")
+    implementation(libs.kotlinx.coroutines.core)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("androidx.fragment:fragment:1.6.2")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.75")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.75")
+    implementation("org.bouncycastle:bcutil-jdk18on:1.75")
 }

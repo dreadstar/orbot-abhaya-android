@@ -1,6 +1,9 @@
 package org.torproject.android
 
+import org.torproject.android.R
+import org.torproject.android.BuildConfig
 import android.app.Application
+import android.content.Context
 import android.content.res.Configuration
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -13,7 +16,16 @@ import java.util.Locale
 // Meshrabiya imports
 import com.ustadmobile.meshrabiya.vnet.AndroidVirtualNode
 import com.ustadmobile.meshrabiya.log.MNetLogger
+import com.ustadmobile.meshrabiya.log.MNetLoggerStdout
 import kotlinx.serialization.json.Json
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStore
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.Executors
+
+// DataStore extension property
+private val Context.meshDataStore: DataStore<Preferences> by preferencesDataStore(name = "mesh_settings")
 
 class OrbotApp : Application() {
     // Meshrabiya core types
@@ -41,13 +53,21 @@ class OrbotApp : Application() {
         }
 
         // Meshrabiya integration
-        meshLogger = MNetLogger() // configure as needed
+        meshLogger = MNetLoggerStdout() // Use concrete implementation
         meshJson = Json { encodeDefaults = true }
+        
+        // Create DataStore for mesh preferences  
+        val meshDataStore = applicationContext.meshDataStore
+        
+        // Create executor service for mesh operations
+        val meshExecutor = Executors.newScheduledThreadPool(2)
+        
         virtualNode = AndroidVirtualNode(
-            appContext = applicationContext,
+            context = applicationContext,
             logger = meshLogger,
-            json = meshJson
-            // add other required parameters if needed
+            json = meshJson,
+            dataStore = meshDataStore,
+            scheduledExecutorService = meshExecutor
         )
 
         // this code only runs on first install and app updates

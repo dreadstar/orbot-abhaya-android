@@ -1,5 +1,6 @@
 package org.torproject.android
 
+import org.torproject.android.R
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
