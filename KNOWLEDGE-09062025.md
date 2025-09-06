@@ -17,9 +17,9 @@ Successfully integrated Meshrabiya mesh networking library with Orbot Android ap
 - **Gradle Version**: 9.0.0
 - **Kotlin Version**: 2.2.10
 - **Android Gradle Plugin (AGP)**: 8.12.2
-- **Android SDK**: `/Users/dreadstar/Library/Android/sdk`
+- **Android SDK**: `/Users/dreadstar/Library/Android/sdk` *(Note: Update this path if your Android SDK is installed elsewhere)*
   - **Platform**: Android API 36
-  - **NDK**: 27.0.12077973
+  - **NDK**: ndk;27.0.12077973
 
 ### Key Dependencies Resolved
 - **Kotlin Coroutines**: 1.10.2
