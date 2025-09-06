@@ -53,7 +53,26 @@ android {
         viewBinding = true
     }
 
-    testOptions { execution = "ANDROIDX_TEST_ORCHESTRATOR" }
+    testOptions { 
+        execution = "ANDROIDX_TEST_ORCHESTRATOR"
+        unitTests {
+            isIncludeAndroidResources = true
+            all {
+                it.useJUnitPlatform()
+                it.testLogging {
+                    events("passed", "skipped", "failed")
+                    showStandardStreams = true
+                }
+            }
+        }
+    }
+    
+    buildTypes {
+        getByName("debug") {
+            enableUnitTestCoverage = true
+            enableAndroidTestCoverage = true
+        }
+    }
 
     signingConfigs {
         create("release") {
@@ -148,12 +167,57 @@ dependencies {
     implementation(libs.appiconnamechanger)
 
     testImplementation(libs.junit.jupiter)
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso)
     androidTestImplementation(libs.androidx.rules)
     androidTestImplementation(libs.androidx.runner)
     androidTestImplementation(libs.screengrab)
     androidTestUtil(libs.androidx.orchestrator)
+}
+
+// Configure JaCoCo test coverage for app module
+tasks.register<JacocoReport>("jacocoTestReport") {
+    description = "Generates code coverage report for app module unit tests"
+    group = "verification"
+    
+    dependsOn("test")
+    
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
+    
+    val fileFilter = listOf(
+        "**/R.class",
+        "**/R$*.class",
+        "**/BuildConfig.*",
+        "**/Manifest*.*",
+        "**/*Test*.*",
+        "android/**/*.*",
+        "**/*$\$serializer.*"
+    )
+    
+    val debugTree = fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
+        exclude(fileFilter)
+    }
+    
+    val mainSrc = "${project.projectDir}/src/main/java"
+    val kotlinSrc = "${project.projectDir}/src/main/kotlin"
+    
+    sourceDirectories.setFrom(files(listOf(mainSrc, kotlinSrc)))
+    classDirectories.setFrom(files(listOf(debugTree)))
+    executionData.setFrom(fileTree(layout.buildDirectory.get()) {
+        include("outputs/unit_test_code_coverage/*/test*.exec")
+    })
+    
+    doLast {
+        val htmlReport = reports.html.outputLocation.get().asFile
+        if (htmlReport.exists()) {
+            println("📊 App module coverage report: file://${htmlReport.absolutePath}/index.html")
+        }
+    }
 }
 
 tasks.named("preBuild") { dependsOn("copyLicenseToAssets") }

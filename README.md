@@ -281,3 +281,125 @@ Once the build is successful:
 - **Build Issues**: Check [KNOWLEDGE-09062025.md](./KNOWLEDGE-09062025.md) troubleshooting section
 - **Orbot Issues**: Visit [Tor Project Support](https://support.torproject.org/)
 - **Android Development**: See [Android Developer Docs](https://developer.android.com/docs)
+
+---
+
+## Testing
+
+This section provides instructions for running comprehensive tests and generating code coverage reports.
+
+### Running All Tests with Coverage
+
+The project includes an automated `runAllTests` task that executes unit tests across all modules and generates comprehensive coverage reports.
+
+#### Quick Test Execution
+
+```bash
+# Run all tests with coverage calculation and output logging
+truncate -s 0 runAllTests_output.log && \
+export JAVA_HOME=$(/usr/libexec/java_home -v 21) && \
+./gradlew runAllTests --console=plain 2>&1 | tee runAllTests_output.log
+```
+
+This command will:
+1. **Clear the log file** (`truncate -s 0 runAllTests_output.log`)
+2. **Set Java 21 environment** (`export JAVA_HOME=...`)
+3. **Execute all tests** with fresh builds (no caching)
+4. **Generate coverage reports** for each module
+5. **Create aggregated coverage report** combining all modules
+6. **Calculate coverage percentages** automatically
+7. **Log all output** to `runAllTests_output.log`
+
+#### What the runAllTests Task Does
+
+- **Cleans build outputs** to ensure fresh test runs
+- **Runs unit tests** across all modules:
+  - `app` module (main Orbot application)
+  - `orbotservice` module (Orbot service components)
+  - `Meshrabiya:lib-meshrabiya` module (mesh networking library)
+- **Generates individual Jacoco coverage reports** for each module
+- **Creates aggregated coverage report** combining all modules
+- **Automatically calculates and displays coverage percentages**
+
+#### Test Results and Coverage Reports
+
+After successful execution, you'll find:
+
+**Coverage Summary** (automatically calculated):
+```
+=== PROJECT COVERAGE SUMMARY ===
+Instructions: 23.16% (11525 covered / 49773 total)
+Branches: 11.32% (365 covered / 3225 total)
+Lines: 24.68% (2112 covered / 8556 total)
+Complexity: 15.31% (565 covered / 3691 total)
+Methods: 23.67% (488 covered / 2062 total)
+```
+
+**Generated Report Files**:
+- `coverage_summary.log` - Coverage percentages summary
+- `runAllTests_output.log` - Complete test execution log
+- `build/reports/jacoco/aggregated/` - Combined coverage reports (HTML, XML, CSV)
+- Individual module reports in each module's `build/reports/jacoco/` directory
+
+**HTML Coverage Reports** (open in browser):
+- **Aggregated**: `build/reports/jacoco/aggregated/html/index.html`
+- **App Module**: `app/build/reports/jacoco/jacocoTestReport/html/index.html`
+- **OrbotService**: `orbotservice/build/reports/jacoco/jacocoTestReport/html/index.html`
+- **Meshrabiya**: `Meshrabiya/lib-meshrabiya/build/reports/jacoco/jacocoTestReport/html/index.html`
+
+#### Checking Test Results
+
+```bash
+# View coverage summary
+cat coverage_summary.log
+
+# Check test execution log (last 20 lines)
+tail -20 runAllTests_output.log
+
+# Verify all generated coverage reports exist
+ls -la build/reports/jacoco/aggregated/
+```
+
+#### Individual Test Execution
+
+If you need to run tests for specific modules:
+
+```bash
+# App module tests only
+./gradlew :app:testFullpermDebugUnitTest
+
+# OrbotService module tests only
+./gradlew :orbotservice:testDebugUnitTest
+
+# Meshrabiya module tests only
+./gradlew :Meshrabiya:lib-meshrabiya:testDebugUnitTest
+
+# Generate coverage report for specific module
+./gradlew :app:jacocoTestReport
+```
+
+#### Troubleshooting Tests
+
+**Test failures**:
+- Check `runAllTests_output.log` for detailed error messages
+- Ensure all dependencies are properly installed
+- Verify Java 21 is being used: `./gradlew --version`
+
+**Coverage report generation issues**:
+- Ensure tests completed successfully before coverage calculation
+- Check that `build/reports/jacoco/aggregated/jacoco.csv` exists
+- Verify `calculate_coverage.sh` script has execute permissions: `chmod +x calculate_coverage.sh`
+
+**Environment issues**:
+```bash
+# Verify Java version
+java -version
+
+# Check Gradle wrapper
+./gradlew --version
+
+# Clean and retry
+./gradlew clean
+```
+
+---
