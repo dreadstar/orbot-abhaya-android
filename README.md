@@ -43,11 +43,6 @@ learn to configure it properly. Learn more: <https://torproject.org/>
   </table>
 </div>
 
-***********************************************
-**Copyright &#169; 2009-2025, Nathan Freitas, The Guardian Project**
-
----
-
 ## Development Setup
 
 This section provides step-by-step instructions for setting up a development environment to build Orbot with Meshrabiya mesh networking integration.
@@ -403,3 +398,9 @@ java -version
 ```
 
 ---
+
+***********************************************
+**Copyright &#169; 2009-2025, Nathan Freitas, The Guardian Project**
+
+---
+
