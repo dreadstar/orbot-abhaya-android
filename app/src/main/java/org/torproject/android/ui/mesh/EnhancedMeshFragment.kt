@@ -17,6 +17,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.torproject.android.GatewayCapabilitiesManager
 import org.torproject.android.R
+import org.torproject.android.service.MeshServiceCoordinator
+import org.torproject.android.service.routing.MeshTrafficRouter
+import org.torproject.android.service.routing.MeshTrafficRouterImpl
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -32,6 +35,8 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     
     // Core managers
     private lateinit var gatewayManager: GatewayCapabilitiesManager
+    private lateinit var meshCoordinator: MeshServiceCoordinator
+    private lateinit var trafficRouter: MeshTrafficRouter
     private var virtualNode: AndroidVirtualNode? = null
     
     // Status display elements
@@ -111,6 +116,13 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
         gatewayManager = GatewayCapabilitiesManager.getInstance(requireContext())
         gatewayManager.addListener(this)
         
+        // Initialize mesh services
+        meshCoordinator = MeshServiceCoordinator.getInstance(requireContext())
+        meshCoordinator.initializeMeshService()
+        
+        // Initialize traffic router
+        trafficRouter = MeshTrafficRouterImpl(requireContext())
+        
         // TODO: Get virtual node from application
         // virtualNode = (requireActivity().application as OrbotApp).virtualNode
     }
@@ -118,11 +130,29 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     private fun setupListeners() {
         gatewayToggle.setOnCheckedChangeListener { _, isChecked ->
             gatewayManager.shareTor = isChecked
+            
+            // Update mesh service preferences when Tor gateway changes
+            val currentPrefs = meshCoordinator.getUserSharingPreferences()
+            meshCoordinator.setUserSharingPreferences(
+                allowTorGateway = isChecked,
+                allowInternetGateway = currentPrefs["allowInternetGateway"] ?: false,
+                allowStorageSharing = currentPrefs["allowStorageSharing"] ?: true
+            )
+            
             updateGatewayStatus()
         }
         
         internetGatewayToggle.setOnCheckedChangeListener { _, isChecked ->
             gatewayManager.shareInternet = isChecked
+            
+            // Update mesh service preferences when Internet gateway changes
+            val currentPrefs = meshCoordinator.getUserSharingPreferences()
+            meshCoordinator.setUserSharingPreferences(
+                allowTorGateway = currentPrefs["allowTorGateway"] ?: false,
+                allowInternetGateway = isChecked,
+                allowStorageSharing = currentPrefs["allowStorageSharing"] ?: true
+            )
+            
             updateGatewayStatus()
         }
         
@@ -179,37 +209,71 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     }
     
     private fun updateNetworkStats() {
-        // Mock data for now - will be replaced with real mesh statistics
-        val mockActiveNodes = if (isNetworkActive) (2..8).random() else 0
-        val mockNetworkLoad = if (isNetworkActive) (20..80).random() else 0
-        val mockStability = if (isNetworkActive) (85..99).random() else 0
+        // Get real mesh service status instead of mock data
+        val meshStatus = meshCoordinator.getMeshServiceStatus()
+        val healthCheck = meshCoordinator.performHealthCheck()
         
-        activeNodesText.text = "$mockActiveNodes nodes"
-        networkLoadText.text = "$mockNetworkLoad% load"
-        stabilityText.text = "$mockStability% stable"
+        // Update with real data from MeshServiceCoordinator
+        activeNodesText.text = "${meshStatus.nodeCount} nodes"
+        networkLoadText.text = "${if (meshStatus.trafficBytes > 0) "Active" else "Idle"} traffic"
+        stabilityText.text = "${if (healthCheck.success) "Stable" else "Unstable"}"
         
-        meshStatusText.text = if (isNetworkActive) {
-            "Mesh network active with $mockActiveNodes connected nodes"
-        } else {
-            "Mesh network stopped"
+        // Update mesh status with real information
+        meshStatusText.text = when {
+            meshStatus.isRunning && meshStatus.nodeCount > 0 -> 
+                "Mesh network active with ${meshStatus.nodeCount} connected nodes"
+            meshStatus.isRunning && meshStatus.nodeCount == 0 -> 
+                "Mesh network running, discovering peers..."
+            !meshStatus.isRunning -> 
+                "Mesh network stopped"
+            else -> 
+                "Mesh network status unknown"
         }
+        
+        // Update network active state based on real status
+        isNetworkActive = meshStatus.isRunning
     }
     
     private fun updateNodeInformation() {
+        // Get real mesh service information
+        val meshStatus = meshCoordinator.getMeshServiceStatus()
+        val currentRoles = meshCoordinator.getCurrentlyAssignedRoles()
+        val userPrefs = meshCoordinator.getUserSharingPreferences()
+        val virtualNode = meshCoordinator.getVirtualNode()
+        
         val nodeInfo = buildString {
             appendLine("Local Node Status:")
             if (virtualNode != null) {
-                appendLine("• Node ID: ${virtualNode.hashCode()}")
-                appendLine("• Status: ${if (isNetworkActive) "Connected" else "Disconnected"}")
-                appendLine("• Role: ${if (gatewayManager.shareInternet || gatewayManager.shareTor) "Gateway" else "Participant"}")
+                appendLine("• Node ID: ${virtualNode.addressAsInt}")
+                appendLine("• Status: ${if (meshStatus.isRunning) "Connected" else "Disconnected"}")
+                appendLine("• Gateway: ${if (meshStatus.isGateway) "Yes" else "No"}")
+                
+                if (currentRoles.isNotEmpty()) {
+                    appendLine("• Current Roles: ${currentRoles.joinToString(", ")}")
+                }
+                
+                appendLine("\nUser Preferences:")
+                appendLine("• Tor Gateway: ${if (userPrefs["allowTorGateway"] == true) "Enabled" else "Disabled"}")
+                appendLine("• Internet Gateway: ${if (userPrefs["allowInternetGateway"] == true) "Enabled" else "Disabled"}")  
+                appendLine("• Storage Sharing: ${if (userPrefs["allowStorageSharing"] == true) "Enabled" else "Disabled"}")
             } else {
                 appendLine("• Node: Not initialized")
             }
             
-            if (isNetworkActive) {
-                appendLine("\nConnected Peers:")
-                repeat((1..5).random()) { index ->
-                    appendLine("• Peer-${index + 1}: Signal ${(70..99).random()}%")
+            if (meshStatus.isRunning && meshStatus.nodeCount > 0) {
+                appendLine("\nNetwork Information:")
+                appendLine("• Connected Nodes: ${meshStatus.nodeCount}")
+                appendLine("• Traffic: ${meshStatus.trafficBytes} bytes")
+                
+                // Get neighbors from virtual node if available
+                virtualNode?.let { node ->
+                    val neighbors = node.neighbors()
+                    if (neighbors.isNotEmpty()) {
+                        appendLine("\nConnected Peers:")
+                        neighbors.take(5).forEach { (neighborId, _) ->
+                            appendLine("• Node-${neighborId}: Active")
+                        }
+                    }
                 }
             }
         }
@@ -236,37 +300,79 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     }
     
     private fun startMeshNetwork() {
-        isNetworkActive = true
-        updateUI()
-        
-        // TODO: Integrate with actual mesh network starting
         lifecycleScope.launch {
-            // Simulate network startup
             meshStatusText.text = "Starting mesh network..."
-            delay(2000)
-            updateUI()
+            
+            // Actually start the mesh networking through MeshServiceCoordinator
+            val success = meshCoordinator.startMeshNetworking()
+            
+            if (success) {
+                isNetworkActive = true
+                meshStatusText.text = "Mesh network started successfully"
+                
+                // Update user sharing preferences based on UI toggles
+                meshCoordinator.setUserSharingPreferences(
+                    allowTorGateway = gatewayToggle.isChecked,
+                    allowInternetGateway = internetGatewayToggle.isChecked,
+                    allowStorageSharing = true // Default to allowing storage sharing
+                )
+                
+                updateUI()
+            } else {
+                meshStatusText.text = "Failed to start mesh network"
+            }
         }
     }
     
     private fun stopMeshNetwork() {
-        isNetworkActive = false
-        updateUI()
-        
-        // TODO: Integrate with actual mesh network stopping
-        meshStatusText.text = "Mesh network stopped"
+        lifecycleScope.launch {
+            meshStatusText.text = "Stopping mesh network..."
+            
+            // Actually stop the mesh networking through MeshServiceCoordinator
+            val success = meshCoordinator.stopMeshNetworking()
+            
+            if (success) {
+                isNetworkActive = false
+                meshStatusText.text = "Mesh network stopped successfully"
+            } else {
+                meshStatusText.text = "Failed to stop mesh network"
+            }
+            
+            updateUI()
+        }
     }
     
     private fun updateNetworkInformation() {
+        val meshStatus = meshCoordinator.getMeshServiceStatus()
+        val healthCheck = meshCoordinator.performHealthCheck()
+        val virtualNode = meshCoordinator.getVirtualNode()
+        
         val networkInfo = buildString {
             appendLine("Network Interface Information:")
-            appendLine("• Mesh Interface: ${if (isNetworkActive) "mesh0 (10.10.0.1)" else "Not active"}")
-            appendLine("• Gateway Mode: ${if (gatewayManager.shareTor) "Tor" else if (gatewayManager.shareInternet) "Internet" else "None"}")
+            if (virtualNode != null) {
+                appendLine("• Mesh Interface: mesh0 (${virtualNode.addressAsInt})")
+            } else {
+                appendLine("• Mesh Interface: Not active")
+            }
             
-            if (isNetworkActive) {
-                appendLine("\nTraffic Statistics:")
-                appendLine("• Bytes sent: ${(1000..50000).random()}")
-                appendLine("• Bytes received: ${(500..25000).random()}")
-                appendLine("• Packets forwarded: ${(10..500).random()}")
+            appendLine("• Gateway Mode: ${when {
+                gatewayManager.shareTor && gatewayManager.shareInternet -> "Tor + Internet"
+                gatewayManager.shareTor -> "Tor"
+                gatewayManager.shareInternet -> "Internet"
+                else -> "None"
+            }}")
+            
+            if (meshStatus.isRunning) {
+                appendLine("\nMesh Statistics:")
+                appendLine("• Connected Nodes: ${meshStatus.nodeCount}")
+                appendLine("• Traffic Bytes: ${meshStatus.trafficBytes}")
+                appendLine("• Network Latency: ${healthCheck.networkLatency}ms")
+                appendLine("• Service Health: ${if (healthCheck.success) "Healthy" else "Issues Detected"}")
+                
+                val currentRoles = meshCoordinator.getCurrentlyAssignedRoles()
+                if (currentRoles.isNotEmpty()) {
+                    appendLine("• Active Roles: ${currentRoles.joinToString(", ")}")
+                }
             }
         }
         
