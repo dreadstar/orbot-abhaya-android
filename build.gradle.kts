@@ -37,26 +37,33 @@ tasks.register("clean", Delete::class) {
     delete(layout.buildDirectory)
 }
 
-// Simple and reliable runAllTests task using proper Gradle task dependencies
+// Auto-discovering runAllTests task that finds and runs all tests dynamically
 tasks.register("runAllTests") {
-    description = "Runs all tests across all submodules and generates code coverage reports"
+    description = "Automatically discovers and runs all tests across all submodules and generates code coverage reports"
     group = "verification"
     
     // Clean build outputs first to ensure fresh runs
     dependsOn("clean")
     
-    // Define task dependencies - include all modules, use --continue to handle modules without tests
-    dependsOn(
-        ":app:testFullpermDebugUnitTest",
-        ":orbotservice:testDebugUnitTest", 
-        ":Meshrabiya:lib-meshrabiya:testDebugUnitTest"
-    )
+    // Automatically discover and depend on all test tasks
+    dependsOn(provider {
+        project.allprojects.flatMap { proj ->
+            proj.tasks.withType<Test>().map { task ->
+                "${proj.path}:${task.name}"
+            }.filter { taskPath ->
+                // Include unit tests, exclude Android instrumentation tests
+                taskPath.contains("UnitTest", ignoreCase = true) || 
+                taskPath.matches(Regex(".*:test$"))
+            }
+        }
+    })
     
-    // Generate coverage reports after tests complete
+    // Generate coverage reports after tests complete  
     finalizedBy(
         ":app:jacocoTestReport",
         ":orbotservice:jacocoTestReport",
-        ":Meshrabiya:lib-meshrabiya:jacocoTestReport"
+        ":Meshrabiya:lib-meshrabiya:jacocoTestReport",
+        "aggregatedCoverageReport"
     )
 
     doLast {

@@ -56,20 +56,10 @@
         android:taskAffinity=""
         android:theme="@style/DefaultTheme"
         tools:replace="android:allowBackup">
-        <activity
-            android:name="com.ustadmobile.orbotmeshrabiyaintegration.MainActivity"
-            android:exported="true"
-            android:theme="@style/OrbotActivityTheme">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-
+        
         <activity
             android:name="org.torproject.android.OrbotActivity"
             android:excludeFromRecents="false"
-
             android:exported="true"
             android:launchMode="singleInstance"
             android:theme="@style/OrbotActivityTheme">

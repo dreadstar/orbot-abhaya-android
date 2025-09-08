@@ -43,6 +43,8 @@ learn to configure it properly. Learn more: <https://torproject.org/>
   </table>
 </div>
 
+</div>
+
 ## Development Setup
 
 This section provides step-by-step instructions for setting up a development environment to build Orbot with Meshrabiya mesh networking integration.
@@ -276,6 +278,290 @@ Once the build is successful:
 - **Build Issues**: Check [KNOWLEDGE-09062025.md](./KNOWLEDGE-09062025.md) troubleshooting section
 - **Orbot Issues**: Visit [Tor Project Support](https://support.torproject.org/)
 - **Android Development**: See [Android Developer Docs](https://developer.android.com/docs)
+
+---
+
+## Emulating
+
+This section provides comprehensive instructions for setting up and using Android emulators to test Orbot with mesh networking functionality.
+
+### Prerequisites
+
+Before setting up an emulator, ensure you have completed the [Development Setup](#development-setup) section and have:
+- Android Studio properly installed and configured
+- Android SDK with required platforms (API 34, 35, 36)
+- Java 21 configured correctly
+- Project successfully built
+
+### Step 1: Create an Android Virtual Device (AVD)
+
+#### Using Android Studio AVD Manager:
+
+1. **Open AVD Manager**:
+   - In Android Studio, go to `Tools` → `AVD Manager`
+   - Or click the AVD Manager icon in the toolbar
+   - Or use the device selector dropdown and click "Device Manager"
+
+2. **Create New Virtual Device**:
+   - Click "Create Virtual Device" button
+   - **Phone Category**: Select a phone device (recommended: Pixel 6, Pixel 7, or Pixel 8)
+   - **System Image**: 
+     - Click "Download" next to **API 35 (Android 15.0)** (recommended)
+     - If API 35 has issues, use **API 34 (Android 14.0)** as fallback
+     - **Architecture**: Choose `x86_64` for best performance on most computers
+   - **Verify Configuration**: Review settings and click "Finish"
+
+#### Using Command Line (Alternative):
+
+```bash
+# List available system images
+avdmanager list
+
+# Create AVD with API 35 (x86_64)
+avdmanager create avd -n "Orbot_Test_API35" -k "system-images;android-35;google_apis;x86_64"
+
+# Create AVD with API 34 (fallback)
+avdmanager create avd -n "Orbot_Test_API34" -k "system-images;android-34;google_apis;x86_64"
+```
+
+### Step 2: Start the Emulator
+
+#### From Android Studio:
+1. Open AVD Manager (`Tools` → `AVD Manager`)
+2. Find your created AVD and click the **Play** (▶️) button
+3. Wait for the emulator to fully boot (this may take 2-5 minutes on first launch)
+
+#### From Command Line:
+```bash
+# Start emulator by name
+emulator -avd Orbot_Test_API35
+
+# Start with additional options for better performance
+emulator -avd Orbot_Test_API35 -memory 4096 -cores 4
+```
+
+### Step 3: Verify Emulator Setup
+
+Once the emulator starts, verify it's working correctly:
+
+```bash
+# Check connected devices
+export ANDROID_HOME="/Users/yourusername/Library/Android/sdk"
+export PATH="$PATH:$ANDROID_HOME/platform-tools"
+adb devices
+
+# Expected output:
+# List of devices attached
+# emulator-5554   device
+```
+
+**Verify boot completion**:
+```bash
+# Wait for emulator to fully boot
+adb wait-for-device
+adb shell getprop sys.boot_completed
+
+# Should output: 1 (when fully booted)
+```
+
+### Step 4: Install and Test Orbot
+
+#### Install the APK:
+
+```bash
+# Install the debug APK (choose appropriate architecture)
+adb install -r app/build/outputs/apk/fullperm/debug/app-fullperm-x86_64-debug.apk
+
+# Verify installation
+adb shell pm list packages | grep torproject
+# Expected output: package:org.torproject.android.debug
+```
+
+#### Launch Orbot:
+
+```bash
+# Launch Orbot main activity
+adb shell am start -n org.torproject.android.debug/org.torproject.android.OrbotActivity
+
+# Check app launch in logcat
+adb logcat -s "org.torproject.android.debug:*" | head -10
+```
+
+### Step 5: Testing Mesh Functionality
+
+#### Navigate to Mesh Tab:
+1. **Open Orbot** on the emulator
+2. **Navigate to Mesh tab** in the bottom navigation
+3. **Verify Enhanced Mesh UI** loads with:
+   - Network Overview card with statistics
+   - Tor Gateway service card with toggle
+   - Internet Gateway service card
+   - Network control buttons (Start/Stop Mesh)
+   - Network status information
+
+#### Test Mesh Controls:
+1. **Toggle Gateway Services**: Try enabling/disabling Tor and Internet gateway toggles
+2. **Start/Stop Mesh**: Use the network control buttons
+3. **Refresh Status**: Test the refresh button functionality
+4. **Check Real-time Updates**: Observe if the UI updates automatically every 5 seconds
+
+### Troubleshooting Emulator Issues
+
+#### Emulator Won't Start or Boot:
+
+**Check Hardware Acceleration**:
+```bash
+# On macOS, verify Intel HAXM or Apple Silicon support
+system_profiler SPHardwareDataType
+
+# Ensure virtualization is enabled in BIOS/UEFI (Windows/Linux)
+```
+
+**Try Different System Images**:
+- If API 36 fails, try API 35 or API 34
+- Switch between `x86_64` and `x86` architectures if needed
+- Try images without Google APIs if standard images fail
+
+**Increase Emulator Resources**:
+```bash
+# Start with more memory and CPU cores
+emulator -avd Orbot_Test_API35 -memory 6144 -cores 6
+```
+
+#### Installation Issues:
+
+**APK Installation Fails**:
+```bash
+# Clear app data and try fresh install
+adb shell pm clear org.torproject.android.debug
+adb uninstall org.torproject.android.debug
+adb install app/build/outputs/apk/fullperm/debug/app-fullperm-x86_64-debug.apk
+```
+
+**"Broken pipe" or Connection Issues**:
+```bash
+# Restart ADB server
+adb kill-server
+adb start-server
+adb devices
+```
+
+#### App Crashes or Issues:
+
+**Monitor App Runtime**:
+```bash
+# Monitor for crashes and errors
+adb logcat -s "AndroidRuntime:E" -s "org.torproject.android.debug:*"
+
+# Clear logcat and monitor fresh launch
+adb logcat -c
+adb shell am start -n org.torproject.android.debug/org.torproject.android.OrbotActivity
+adb logcat -s "org.torproject.android.debug:*"
+```
+
+**Check App Permissions**:
+```bash
+# Grant necessary permissions
+adb shell pm grant org.torproject.android.debug android.permission.INTERNET
+adb shell pm grant org.torproject.android.debug android.permission.ACCESS_NETWORK_STATE
+```
+
+#### UI Issues:
+
+**Mesh Fragment Not Loading Enhanced UI**:
+1. **Verify Navigation**: Ensure `nav_graph.xml` points to `EnhancedMeshFragment`
+2. **Check Layout**: Confirm `fragment_mesh_enhanced.xml` exists and is referenced correctly
+3. **Rebuild Project**: Clean and rebuild if layout changes aren't reflected
+4. **Reinstall APK**: Force reinstall with `-r` flag
+
+**Material3 Theme Issues**:
+```bash
+# Check for theme-related crashes in logcat
+adb logcat | grep -i "material\|theme\|inflate"
+```
+
+### Performance Optimization
+
+#### For Better Emulator Performance:
+
+1. **Enable Hardware Acceleration**:
+   - Ensure Intel HAXM (Intel) or Hypervisor Framework (Apple Silicon) is installed
+   - Use x86_64 system images when possible
+
+2. **Allocate Sufficient Resources**:
+   ```bash
+   # Recommended emulator settings
+   emulator -avd Orbot_Test_API35 \
+     -memory 4096 \
+     -cores 4 \
+     -gpu host \
+     -skin 1080x1920
+   ```
+
+3. **Disable Unnecessary Features**:
+   - Turn off animations in emulator settings
+   - Disable location services if not needed
+   - Close other resource-intensive applications
+
+#### Emulator vs Physical Device:
+
+**Emulator Advantages**:
+- ✅ Consistent test environment
+- ✅ Easy to reset and reproduce issues
+- ✅ Debug-friendly with full access
+- ✅ Multiple API levels without multiple devices
+
+**Physical Device Advantages**:
+- ✅ Real-world performance testing
+- ✅ Actual hardware sensors and capabilities
+- ✅ True network connectivity testing
+- ✅ Better for mesh networking validation
+
+### Testing Screenshots and Evidence
+
+#### Capture Screenshots for Documentation:
+```bash
+# Take screenshot of current emulator screen
+adb exec-out screencap -p > orbot_mesh_screenshot_$(date +%Y%m%d_%H%M%S).png
+
+# Record screen video (Android 4.4+)
+adb shell screenrecord /sdcard/orbot_demo.mp4
+# Stop recording with Ctrl+C, then pull the file:
+adb pull /sdcard/orbot_demo.mp4
+```
+
+#### Document Test Results:
+- **Take screenshots** of each major UI screen (Connect, Mesh, More, Kindness)
+- **Record interactions** showing mesh functionality
+- **Log any issues** with specific error messages from logcat
+- **Note performance** observations and device specifications
+
+### Emulator Environment Summary
+
+For consistent testing, use these environment variables:
+
+```bash
+# Android SDK and tools
+export ANDROID_HOME="/Users/yourusername/Library/Android/sdk"
+export PATH="$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator"
+
+# Java 21 for building
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+
+# Quick emulator launch function (add to ~/.zshrc or ~/.bashrc)
+alias start-orbot-emulator="emulator -avd Orbot_Test_API35 -memory 4096 -cores 4 &"
+
+# Quick install and launch function
+alias install-orbot="adb install -r app/build/outputs/apk/fullperm/debug/app-fullperm-x86_64-debug.apk && adb shell am start -n org.torproject.android.debug/org.torproject.android.OrbotActivity"
+```
+
+### Next Steps After Emulator Setup
+
+1. **Test Core Functionality**: Verify basic Orbot connection and proxy functionality
+2. **Explore Mesh Features**: Test all mesh networking controls and status displays
+3. **Performance Testing**: Monitor resource usage and responsiveness
+4. **Integration Testing**: Test interaction between Orbot and mesh networking components
+5. **Documentation**: Record test results and any issues discovered
 
 ---
 

@@ -20,4 +20,9 @@
         android:name="org.torproject.android.ui.kindness.KindnessFragment"
         android:label="fragment_kindness"
         tools:layout="@layout/fragment_kindness" />
+    <fragment
+        android:id="@+id/meshFragment"
+        android:name="org.torproject.android.ui.mesh.EnhancedMeshFragment"
+        android:label="fragment_mesh"
+        tools:layout="@layout/fragment_mesh_enhanced" />
 </navigation>
