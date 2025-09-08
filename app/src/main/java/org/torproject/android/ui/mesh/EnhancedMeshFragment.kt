@@ -49,13 +49,19 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     private lateinit var gatewayToggle: SwitchMaterial
     private lateinit var internetGatewayToggle: SwitchMaterial
     private lateinit var refreshButton: MaterialButton
-    private lateinit var startMeshButton: MaterialButton
-    private lateinit var stopMeshButton: MaterialButton
+    private lateinit var meshToggleButton: MaterialButton
     
     // Service cards
     private lateinit var torGatewayCard: MaterialCardView
     private lateinit var internetGatewayCard: MaterialCardView
     private lateinit var networkOverviewCard: MaterialCardView
+    
+    // Storage participation elements  
+    private lateinit var storageParticipationCard: MaterialCardView
+    private lateinit var storageParticipationToggle: SwitchMaterial
+    private lateinit var storageAllocationSlider: com.google.android.material.slider.Slider
+    private lateinit var storageStatusText: TextView
+    private lateinit var storageAllocationText: TextView
     
     // Service status texts
     private lateinit var torGatewayStatus: TextView
@@ -96,13 +102,19 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
         gatewayToggle = view.findViewById(R.id.gatewayToggle)
         internetGatewayToggle = view.findViewById(R.id.internetGatewayToggle)
         refreshButton = view.findViewById(R.id.refreshButton)
-        startMeshButton = view.findViewById(R.id.startMeshButton)
-        stopMeshButton = view.findViewById(R.id.stopMeshButton)
+        meshToggleButton = view.findViewById(R.id.meshToggleButton)
         
         // Service cards
         torGatewayCard = view.findViewById(R.id.torGatewayCard)
         internetGatewayCard = view.findViewById(R.id.internetGatewayCard)
         networkOverviewCard = view.findViewById(R.id.networkOverviewCard)
+        
+        // Storage participation views
+        storageParticipationCard = view.findViewById(R.id.storageParticipationCard)
+        storageParticipationToggle = view.findViewById(R.id.storageParticipationToggle)
+        storageAllocationSlider = view.findViewById(R.id.storageAllocationSlider)
+        storageStatusText = view.findViewById(R.id.storageStatusText)
+        storageAllocationText = view.findViewById(R.id.storageAllocationText)
         
         // Service status
         torGatewayStatus = view.findViewById(R.id.torGatewayStatus)
@@ -136,7 +148,8 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
             meshCoordinator.setUserSharingPreferences(
                 allowTorGateway = isChecked,
                 allowInternetGateway = currentPrefs["allowInternetGateway"] ?: false,
-                allowStorageSharing = currentPrefs["allowStorageSharing"] ?: true
+                allowStorageSharing = currentPrefs["allowStorageSharing"] ?: true,
+                storageAllocationGB = 5  // Default allocation
             )
             
             updateGatewayStatus()
@@ -150,7 +163,8 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
             meshCoordinator.setUserSharingPreferences(
                 allowTorGateway = currentPrefs["allowTorGateway"] ?: false,
                 allowInternetGateway = isChecked,
-                allowStorageSharing = currentPrefs["allowStorageSharing"] ?: true
+                allowStorageSharing = currentPrefs["allowStorageSharing"] ?: true,
+                storageAllocationGB = 5  // Default allocation
             )
             
             updateGatewayStatus()
@@ -160,12 +174,41 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
             updateUI()
         }
         
-        startMeshButton.setOnClickListener {
-            startMeshNetwork()
+        meshToggleButton.setOnClickListener {
+            if (isNetworkActive) {
+                stopMeshNetwork()
+            } else {
+                startMeshNetwork()
+            }
         }
         
-        stopMeshButton.setOnClickListener {
-            stopMeshNetwork()
+        // Storage participation listeners
+        storageParticipationToggle.setOnCheckedChangeListener { _, isChecked ->
+            val currentPrefs = meshCoordinator.getUserSharingPreferences()
+            val currentAllocation = storageAllocationSlider.value.toInt()
+            
+            meshCoordinator.setUserSharingPreferences(
+                allowTorGateway = currentPrefs["allowTorGateway"] ?: false,
+                allowInternetGateway = currentPrefs["allowInternetGateway"] ?: false,
+                allowStorageSharing = isChecked,
+                storageAllocationGB = currentAllocation
+            )
+            
+            updateStorageStatus()
+        }
+
+        storageAllocationSlider.addOnChangeListener { _, value, _ ->
+            storageAllocationText.text = "${value.toInt()} GB"
+            
+            if (storageParticipationToggle.isChecked) {
+                val currentPrefs = meshCoordinator.getUserSharingPreferences()
+                meshCoordinator.setUserSharingPreferences(
+                    allowTorGateway = currentPrefs["allowTorGateway"] ?: false,
+                    allowInternetGateway = currentPrefs["allowInternetGateway"] ?: false,
+                    allowStorageSharing = true,
+                    storageAllocationGB = value.toInt()
+                )
+            }
         }
     }
     
@@ -183,6 +226,7 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
         updateNetworkStats()
         updateNodeInformation()
         updateServiceCards()
+        updateStorageStatus()
         
         lastUpdateText.text = "Last updated: ${timeFormatter.format(Date())}"
     }
@@ -297,11 +341,63 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
         networkOverviewCard.setCardBackgroundColor(
             if (isNetworkActive) activeColor else inactiveColor
         )
+        
+        // Update button states and colors
+        updateButtonStates()
+    }
+    
+    private fun updateButtonStates() {
+        // Update button text, color and style based on network status
+        val enabledColor = requireContext().getColor(R.color.orbot_btn_enabled_purple)
+        val disabledColor = requireContext().getColor(R.color.orbot_btn_disable_grey)
+        val whiteText = requireContext().getColor(android.R.color.white)
+        
+        if (isNetworkActive) {
+            // Network is active - show as "Stop Mesh" 
+            meshToggleButton.text = "Stop Mesh"
+            meshToggleButton.setBackgroundColor(enabledColor)
+            meshToggleButton.setTextColor(whiteText)
+            meshToggleButton.isEnabled = true
+        } else {
+            // Network is inactive - show as "Start Mesh"
+            meshToggleButton.text = "Start Mesh"
+            meshToggleButton.setBackgroundColor(enabledColor)
+            meshToggleButton.setTextColor(whiteText)
+            meshToggleButton.isEnabled = true
+        }
+    }
+    
+    private fun updateStorageStatus() {
+        // Get REAL storage status from MeshServiceCoordinator
+        val storageStatus = meshCoordinator.getStorageParticipationStatus()
+        val userPrefs = meshCoordinator.getUserSharingPreferences()
+        
+        storageParticipationToggle.isChecked = userPrefs["allowStorageSharing"] ?: false
+        storageAllocationSlider.value = storageStatus.allocatedGB.toFloat()
+        storageAllocationText.text = "${storageStatus.allocatedGB} GB"
+        
+        storageStatusText.text = when {
+            storageStatus.isEnabled && storageStatus.participationHealth == "Active" ->
+                "Participating in distributed storage (${storageStatus.usedGB}/${storageStatus.allocatedGB} GB used)"
+            storageStatus.isEnabled && storageStatus.participationHealth != "Active" ->
+                "Storage enabled but not yet active"
+            else -> "Storage participation disabled"
+        }
+        
+        // Update card background following existing pattern
+        val activeColor = requireContext().getColor(R.color.bright_green)
+        val inactiveColor = requireContext().getColor(R.color.panel_background_main)
+        
+        storageParticipationCard.setCardBackgroundColor(
+            if (storageStatus.isEnabled) activeColor else inactiveColor
+        )
     }
     
     private fun startMeshNetwork() {
         lifecycleScope.launch {
             meshStatusText.text = "Starting mesh network..."
+            meshToggleButton.isEnabled = false
+            meshToggleButton.text = "Starting..."
             
             // Actually start the mesh networking through MeshServiceCoordinator
             val success = meshCoordinator.startMeshNetworking()
@@ -314,12 +410,15 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
                 meshCoordinator.setUserSharingPreferences(
                     allowTorGateway = gatewayToggle.isChecked,
                     allowInternetGateway = internetGatewayToggle.isChecked,
-                    allowStorageSharing = true // Default to allowing storage sharing
+                    allowStorageSharing = true, // Default to allowing storage sharing
+                    storageAllocationGB = 5  // Default allocation
                 )
                 
                 updateUI()
             } else {
                 meshStatusText.text = "Failed to start mesh network"
+                meshToggleButton.isEnabled = true
+                meshToggleButton.text = "Start Mesh"
             }
         }
     }
@@ -327,6 +426,8 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     private fun stopMeshNetwork() {
         lifecycleScope.launch {
             meshStatusText.text = "Stopping mesh network..."
+            meshToggleButton.isEnabled = false
+            meshToggleButton.text = "Stopping..."
             
             // Actually stop the mesh networking through MeshServiceCoordinator
             val success = meshCoordinator.stopMeshNetworking()

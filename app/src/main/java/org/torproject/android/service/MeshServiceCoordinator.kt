@@ -91,6 +91,10 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
     private var meshRoleManager: MeshRoleManager? = null
     private var emergentRoleManager: EmergentRoleManager? = null
     
+    // Storage participation components
+    private var distributedStorageManager: com.ustadmobile.meshrabiya.storage.DistributedStorageManager? = null
+    private val storageScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    
     // Threading and logging
     private val executorService = Executors.newScheduledThreadPool(4)
     private val betaLogger = BetaTestLogger.getInstance(context)
@@ -119,7 +123,16 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
         val lastActivity: Long
     )
     
-    
+    /**
+     * Storage participation status for UI updates - following MeshServiceStatus pattern
+     */
+    data class StorageParticipationStatus(
+        val isEnabled: Boolean,
+        val allocatedGB: Int = 5,
+        val usedGB: Int = 0,
+        val participationHealth: String = "Unknown"
+    )
+
     // ===============================================================================
     // SERVICE INITIALIZATION METHODS
     // ===============================================================================
@@ -411,11 +424,13 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
      * @param allowTorGateway - Whether user allows Tor gateway sharing (future feature)
      * @param allowInternetGateway - Whether user allows Internet gateway sharing
      * @param allowStorageSharing - Whether user allows storage sharing
+     * @param storageAllocationGB - Storage allocation in GB for distributed storage
      */
     fun setUserSharingPreferences(
         allowTorGateway: Boolean = false,
         allowInternetGateway: Boolean = false, 
-        allowStorageSharing: Boolean = false
+        allowStorageSharing: Boolean = false,
+        storageAllocationGB: Int = 5
     ) {
         scope.launch {
             try {
@@ -438,8 +453,16 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
                 
                 if (allowStorageSharing) {
                     preferredRoles.add(MeshRole.STORAGE_NODE)
-                    betaLogger.log(LogLevel.INFO, "MESH_PREFS", "User enabled storage sharing")
-                    Log.i(TAG, "User enabled storage sharing")
+                    // Configure actual storage participation
+                    configureStorageParticipation(true, storageAllocationGB)
+                    betaLogger.log(LogLevel.INFO, "MESH_PREFS", "User enabled storage sharing", 
+                        mapOf("allocationGB" to storageAllocationGB.toString()))
+                    Log.i(TAG, "User enabled storage sharing with ${storageAllocationGB}GB allocation")
+                } else {
+                    // Disable storage participation
+                    configureStorageParticipation(false, 0)
+                    betaLogger.log(LogLevel.INFO, "MESH_PREFS", "User disabled storage sharing")
+                    Log.i(TAG, "User disabled storage sharing")
                 }
                 
                 // Set preferred roles - EmergentRoleManager will decide actual assignment
@@ -528,5 +551,120 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
                     mapOf("error" to e.message.orEmpty()))
             }
         }
+    }
+    
+    // ===============================================================================
+    // DISTRIBUTED STORAGE SECTION - ADDED TO EXISTING CLASS
+    // ===============================================================================
+    
+    /**
+     * Initialize storage participation components - follows initializeMeshService() pattern
+     */
+    fun initializeStorageParticipation() {
+        storageScope.launch {
+            try {
+                betaLogger.log(LogLevel.INFO, "STORAGE_INIT", "Initializing distributed storage")
+                Log.i(TAG, "Initializing storage participation")
+                
+                if (distributedStorageManager == null && virtualNode != null) {
+                    // Use REAL DistributedStorageManager from Meshrabiya
+                    // Create a simple adapter for AndroidVirtualNode to MeshNetworkInterface
+                    val meshAdapter = object : com.ustadmobile.meshrabiya.storage.MeshNetworkInterface {
+                        override suspend fun sendStorageRequest(targetNodeId: String, fileInfo: com.ustadmobile.meshrabiya.storage.DistributedFileInfo, operation: com.ustadmobile.meshrabiya.storage.StorageOperation) {
+                            // TODO: Implement when needed
+                        }
+                        override suspend fun queryFileAvailability(path: String): List<String> = emptyList()
+                        override suspend fun requestFileFromNode(nodeId: String, path: String): ByteArray? = null
+                        override suspend fun getAvailableStorageNodes(): List<String> = emptyList()
+                        override suspend fun broadcastStorageAdvertisement(capabilities: com.ustadmobile.meshrabiya.mmcp.StorageCapabilities) {
+                            // TODO: Implement when needed
+                        }
+                    }
+                    
+                    distributedStorageManager = com.ustadmobile.meshrabiya.storage.DistributedStorageManager(
+                        context = context,
+                        meshNetworkInterface = meshAdapter,  // Use adapter instead of virtualNode
+                        storageConfig = createDefaultStorageConfig()
+                    )
+                    betaLogger.log(LogLevel.INFO, "STORAGE_INIT", "Storage participation initialized")
+                    Log.i(TAG, "Storage participation initialized successfully")
+                }
+            } catch (e: Exception) {
+                betaLogger.log(LogLevel.ERROR, "STORAGE_INIT", "Failed to initialize storage", 
+                    mapOf("error" to e.message.orEmpty()))
+                Log.e(TAG, "Failed to initialize storage participation", e)
+            }
+        }
+    }
+    
+    /**
+     * Get storage participation status - follows getMeshServiceStatus() pattern
+     */
+    fun getStorageParticipationStatus(): StorageParticipationStatus {
+        return try {
+            val storageStats = distributedStorageManager?.storageStats?.value
+            StorageParticipationStatus(
+                isEnabled = distributedStorageManager?.participationEnabled?.value ?: false,
+                allocatedGB = getStorageAllocationGB(),
+                usedGB = (storageStats?.currentlyUsed ?: 0L).toInt(),
+                participationHealth = if (distributedStorageManager != null) "Active" else "Inactive"
+            )
+        } catch (e: Exception) {
+            betaLogger.log(LogLevel.WARN, "STORAGE_STATUS", "Error getting storage status", 
+                mapOf("error" to e.message.orEmpty()))
+            Log.w(TAG, "Error getting storage participation status", e)
+            StorageParticipationStatus(isEnabled = false)
+        }
+    }
+    
+    /**
+     * Configure storage participation with real DistributedStorageManager
+     */
+    private suspend fun configureStorageParticipation(enabled: Boolean, allocationGB: Int) {
+        try {
+            if (enabled && distributedStorageManager == null) {
+                initializeStorageParticipation()
+            }
+            
+            distributedStorageManager?.let { storage ->
+                // Use REAL API methods from DistributedStorageManager
+                val config = com.ustadmobile.meshrabiya.storage.StorageParticipationConfig(
+                    participationEnabled = enabled,
+                    totalQuota = allocationGB.toLong() * 1024 * 1024 * 1024, // Convert GB to bytes
+                    allowedDirectories = listOf("/storage/mesh"),
+                    encryptionRequired = true
+                )
+                storage.configureStorageParticipation(config)
+                
+                betaLogger.log(LogLevel.INFO, "STORAGE_CONFIG", "Storage participation configured", 
+                    mapOf("enabled" to enabled.toString(), "allocationGB" to allocationGB.toString()))
+                Log.i(TAG, "Storage participation configured: enabled=$enabled, allocation=${allocationGB}GB")
+            }
+        } catch (e: Exception) {
+            betaLogger.log(LogLevel.ERROR, "STORAGE_CONFIG", "Failed to configure storage", 
+                mapOf("error" to e.message.orEmpty()))
+            Log.e(TAG, "Failed to configure storage participation", e)
+        }
+    }
+    
+    /**
+     * Create default storage configuration
+     */
+    private fun createDefaultStorageConfig(): com.ustadmobile.meshrabiya.storage.StorageConfiguration {
+        return com.ustadmobile.meshrabiya.storage.StorageConfiguration(
+            defaultReplicationFactor = 3,
+            encryptionEnabled = true,
+            compressionEnabled = true,
+            maxFileSize = 100L * 1024 * 1024, // 100MB
+            defaultQuota = 5L * 1024 * 1024 * 1024 // 5GB
+        )
+    }
+    
+    /**
+     * Get current storage allocation in GB
+     */
+    private fun getStorageAllocationGB(): Int {
+        // TODO: Store this in preferences, for now return default
+        return 5
     }
 }
