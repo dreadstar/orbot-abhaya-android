@@ -23,7 +23,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-    applicationId = namespace
+        applicationId = namespace
         versionCode = orbotBaseVersionCode
         versionName = getVersionName()
         minSdk = 24
@@ -113,9 +113,17 @@ android {
         }
     }
 
+    // Exclude .bak files from Android resource processing
+    androidResources {
+        ignoreAssetsPattern = "!*.bak:!**/*.bak"
+    }
+
     packaging {
         resources {
-            excludes += listOf("META-INF/androidx.localbroadcastmanager_localbroadcastmanager.version")
+            excludes += listOf(
+                "META-INF/androidx.localbroadcastmanager_localbroadcastmanager.version",
+                "**/*.bak"  // Exclude .bak files from APK packaging
+            )
         }
     }
 
@@ -132,7 +140,7 @@ android {
 
 // Increments versionCode by ABI type
 android.applicationVariants.all {
-    outputs.configureEach { ->
+    outputs.configureEach {
         if (versionCode == orbotBaseVersionCode) {
             val incrementMap =
                 mapOf("armeabi-v7a" to 1, "arm64-v8a" to 2, "x86" to 4, "x86_64" to 5)
@@ -196,7 +204,8 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         "**/Manifest*.*",
         "**/*Test*.*",
         "android/**/*.*",
-        "**/*$\$serializer.*"
+        "**/*$\$serializer.*",
+        "**/*.bak"  // Exclude .bak files from coverage reports
     )
     
     val debugTree = fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
@@ -220,20 +229,84 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     }
 }
 
-tasks.named("preBuild") { dependsOn("copyLicenseToAssets") }
+// .bak file management tasks to prevent Android Resource Manager conflicts
+tasks.register<Exec>("moveBakFiles") {
+    group = "build setup"
+    description = "Move .bak files to temporary storage before resource processing"
+    
+    commandLine("./pre_build_bak_manager.sh")
+    workingDir = project.rootDir
+    
+    doFirst {
+        println("🔧 Moving .bak files to prevent resource conflicts...")
+    }
+}
+
+tasks.register<Exec>("restoreBakFiles") {
+    group = "build cleanup"
+    description = "Restore .bak files after resource processing is complete"
+    
+    commandLine("./post_build_bak_manager.sh")
+    workingDir = project.rootDir
+    
+    doFirst {
+        println("🔧 Restoring .bak files to original locations...")
+    }
+    
+    // Always run, even if build fails
+    mustRunAfter("moveBakFiles")
+}
+
+// Hook into the build lifecycle
+tasks.named("preBuild") { 
+    dependsOn("copyLicenseToAssets", "moveBakFiles") 
+}
+
+// Ensure .bak files are restored after resource processing tasks complete
+tasks.matching { it.name.contains("mergeDebugResources") || it.name.contains("mergeReleaseResources") }.configureEach {
+    finalizedBy("restoreBakFiles")
+}
+
+// Also ensure restoration after APK building tasks
+tasks.matching { it.name.contains("assembleDebug") || it.name.contains("assembleRelease") }.configureEach {
+    finalizedBy("restoreBakFiles")
+}
+
+// Ensure restoration after compilation tasks complete
+tasks.matching { it.name.contains("compileDebugKotlin") || it.name.contains("compileReleaseKotlin") }.configureEach {
+    finalizedBy("restoreBakFiles")
+}
+
+// Comprehensive approach: restore .bak files after any major Android build task
+tasks.matching { 
+    it.name.startsWith("compile") || 
+    it.name.startsWith("merge") || 
+    it.name.startsWith("assemble") ||
+    it.name.startsWith("bundle") ||
+    it.name.contains("Resources") ||
+    it.name.contains("Assets")
+}.configureEach {
+    finalizedBy("restoreBakFiles")
+}
+
 tasks.register<Copy>("copyLicenseToAssets") {
     from(layout.projectDirectory.file("LICENSE"))
     into(layout.projectDirectory.dir("src/main/assets"))
+    // Copy tasks automatically handle file filtering - no manual exclude needed here
 }
 
-// Workaround for missing R class in Kotlin compilation
+// Global exclusion for all copy tasks - this prevents .bak files from being processed
+tasks.withType<Copy>().configureEach {
+    exclude("**/*.bak")
+}
+
+// Workaround for missing R class in Kotlin compilation (fixed deprecated buildDir)
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     dependsOn("processFullpermDebugResources")
-    val rJar = file("$buildDir/intermediates/compile_and_runtime_not_namespaced_r_class_jar/fullpermDebug/processFullpermDebugResources/R.jar")
+    val rJar = file("${layout.buildDirectory.get()}/intermediates/compile_and_runtime_not_namespaced_r_class_jar/fullpermDebug/processFullpermDebugResources/R.jar")
     compilerOptions {
         if (rJar.exists()) {
             freeCompilerArgs.add("-Xplugin=${rJar.absolutePath}")
         }
     }
 }
-
