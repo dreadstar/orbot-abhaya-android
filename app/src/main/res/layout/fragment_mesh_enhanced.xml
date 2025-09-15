@@ -410,6 +410,88 @@
 
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Storage Drop Folder Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/storageDropFolderCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/storage_drop_folder_title"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- Folder Selection Buttons -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/selectFolderButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:text="@string/storage_select_folder"
+                        style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/createFolderButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/storage_create_folder"
+                        style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                </LinearLayout>
+
+                <!-- Selected Folder Display -->
+                <TextView
+                    android:id="@+id/selectedFolderText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/storage_no_folder_selected"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:layout_marginBottom="16dp"
+                    android:background="@drawable/material_card_background"
+                    android:padding="12dp" />
+
+                <!-- Folder Contents Header -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/storage_folder_contents"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Folder Contents RecyclerView -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/folderContentsRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="100dp"
+                    android:maxHeight="300dp"
+                    android:nestedScrollingEnabled="false" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Detailed Information Card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"

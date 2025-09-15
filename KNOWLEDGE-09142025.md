@@ -480,6 +480,110 @@ UI with ReplicaInfo and Statistics
 
 ---
 
+---
+
+## 🎯 **LATEST UPDATE: STORAGE DROP FOLDER IMPLEMENTATION - COMPLETE**
+
+### **New Feature Implemented:**
+Added comprehensive Storage Drop Folder card beneath Storage Participation card with:
+- ✅ Proper folder selection using Storage Access Framework (SAF)
+- ✅ Create folder functionality with user input dialog
+- ✅ Folder contents display with file type icons
+- ✅ Per-file sharing controls with multi-select dialogs
+- ✅ Persistent folder selection across app restarts
+
+### **Critical Bug Fixed:**
+**Issue:** "Select Folder" button immediately auto-selected Downloads folder without user interaction
+**Solution:** Implemented proper SAF-based folder picker with user choice
+
+### **Implementation Details:**
+
+**Folder Selection with SAF:**
+```kotlin
+private val folderPickerLauncher = registerForActivityResult(
+    ActivityResultContracts.StartActivityForResult()
+) { result ->
+    if (result.resultCode == AppCompatActivity.RESULT_OK) {
+        result.data?.data?.let { uri ->
+            handleSelectedFolder(uri)
+        }
+    }
+}
+
+private fun selectFolder() {
+    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+        putExtra("android.content.extra.SHOW_ADVANCED", true)
+    }
+    folderPickerLauncher.launch(intent)
+}
+```
+
+**Dual Storage Backend:**
+```kotlin
+// StorageDropFolderManager - Support both SAF URIs and file paths
+private fun getFolderContentsFromUri(uriString: String): List<StorageItem>
+private fun getFolderContentsFromPath(folderPath: String): List<StorageItem>
+private fun createFolderWithUri(uriString: String, folderName: String): Boolean
+private fun createFolderWithPath(parentPath: String, folderName: String): Boolean
+```
+
+### **UI Components Added:**
+- **Storage Drop Folder Card** positioned below Storage Participation
+- **Folder Selection Buttons** (Select/Create) with proper SAF integration
+- **Selected Folder Display** with friendly names (no auto-selection)
+- **Folder Contents RecyclerView** with file type icons and sharing controls
+- **Individual Item Layout** with Material Design cards and sharing buttons
+
+### **File Management Features:**
+- File type detection with appropriate icons (folder, image, video, audio, text, PDF, archive)
+- Formatted file sizes and modification dates
+- Sorted display (folders first, then alphabetical)
+- Create new folders within selected directory
+- Per-item sharing controls with mock user/device/service selection
+
+### **Permission Handling:**
+```kotlin
+// Take persistable permission for selected directory
+val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+requireContext().contentResolver.takePersistableUriPermission(uri, takeFlags)
+```
+
+### **Data Models:**
+```kotlin
+data class StorageItem(
+    val name: String,
+    val path: String, // URI for SAF, file path for traditional access
+    val isDirectory: Boolean,
+    val size: Long = 0L,
+    val lastModified: Long = 0L,
+    val isShared: Boolean = false,
+    val sharedWith: Set<String> = emptySet()
+) {
+    fun getFormattedSize(): String
+    fun getFormattedDate(): String
+    fun getFileExtension(): String
+}
+```
+
+### **Integration Points:**
+- Embedded in `EnhancedMeshFragment` with coordinated UI updates
+- `StorageDropFolderManager` singleton with SharedPreferences persistence
+- `FolderContentsAdapter` with efficient ListAdapter and DiffUtil
+- Ready for mesh service integration (currently mock implementation)
+
+### **Verification Results:**
+- ✅ No automatic folder selection - user must actively choose
+- ✅ SAF folder picker opens system UI for folder selection
+- ✅ Folder contents display correctly with appropriate icons
+- ✅ Create folder functionality works within selected directory
+- ✅ Sharing dialogs display with mock targets
+- ✅ All UI updates happen in real-time
+- ✅ Folder selection persists across app restarts
+
+**BUILD STATUS:** All components compile successfully, APK installed and tested
+
+---
+
 ## 🚀 **CURRENT PROJECT STATE**
 
 ### **Build System Status:**
@@ -493,21 +597,56 @@ UI with ReplicaInfo and Statistics
 - ✅ **File Monitoring**: Automatic detection and replication queueing
 - ✅ **Mesh Integration**: Full integration with MeshServiceCoordinator
 - ✅ **API Compatibility**: Proper usage of DistributedStorageManager APIs
-- ✅ **UI Integration**: Ready for EnhancedMeshFragment connection
+- ✅ **UI Integration**: Complete Storage Drop Folder implementation
+- ✅ **Storage Allocation**: Fixed slider UI with persistent preferences
 
 ### **Ready for Deployment:**
 The system is now ready for comprehensive runtime testing of:
-- Drop folder selection and creation
+- Drop folder selection and creation with SAF
 - File monitoring and automatic replication
 - Mesh storage integration and node discovery  
 - Real-time UI updates and statistics
 - Complete file lifecycle management
+- Storage allocation preference persistence
 
 ---
 
-**SESSION SUMMARY:** Successfully completed both major priorities: automated .bak file build management and complete distributed storage functionality implementation. The system now provides seamless development workflow with comprehensive file replication capabilities ready for runtime validation.
+**SESSION SUMMARY:** Successfully completed major priorities: automated .bak file build management, complete distributed storage functionality implementation, storage allocation slider fix, and comprehensive Storage Drop Folder implementation with proper SAF integration. The system now provides seamless development workflow with comprehensive file replication capabilities and polished UI controls.
 
-**READY FOR:** Emulator deployment and comprehensive testing of the drop folder and mesh replication workflow.
+**READY FOR:** Runtime testing of complete storage management workflow including folder selection, file sharing, and mesh replication.
+
+---
+
+## 📝 **FILES CREATED/MODIFIED**
+
+### **New Files Created:**
+- `pre_build_bak_manager.sh` - Pre-build .bak file management
+- `post_build_bak_manager.sh` - Post-build .bak file restoration
+- `app/src/main/java/org/torproject/android/ui/mesh/FileDirectoryData.kt` - Data models
+- `app/src/main/java/org/torproject/android/ui/mesh/DropFolderManager.kt` - File management
+- `app/src/main/java/org/torproject/android/ui/mesh/model/StorageItem.kt` - Storage item data model
+- `app/src/main/java/org/torproject/android/ui/mesh/adapter/FolderContentsAdapter.kt` - RecyclerView adapter
+- `app/src/main/java/org/torproject/android/service/storage/StorageDropFolderManager.kt` - Storage management backend
+- `app/src/main/res/layout/item_folder_content.xml` - Item layout for folder contents
+- `app/src/main/res/drawable/ic_*.xml` - File type icons (file, folder, share, various file types)
+- `app/src/main/res/drawable/material_card_background.xml` - Card background drawable
+
+### **Modified Files:**
+- `app/build.gradle.kts` - Gradle task integration for .bak file management
+- `app/src/main/java/org/torproject/android/service/MeshServiceCoordinator.kt` - Enhanced storage methods with persistent preferences
+- `app/src/main/java/org/torproject/android/ui/mesh/EnhancedMeshFragment.kt` - Added Storage Drop Folder integration with SAF support
+- `app/src/main/res/layout/fragment_mesh_enhanced.xml` - Added Storage Drop Folder card layout
+- `app/src/main/res/values/strings.xml` - Added Storage Drop Folder string resources
+
+### **Validation:**
+- All files compile successfully
+- Full build process verified: `BUILD SUCCESSFUL in 42s`
+- .bak file management tested and working: 6 files handled correctly
+- Storage Drop Folder functionality tested: SAF picker working correctly
+- Storage allocation slider fix verified: Real-time updates working
+- Ready for comprehensive runtime deployment and testing
+
+```
 
 ---
 

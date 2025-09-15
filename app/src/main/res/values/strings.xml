@@ -236,6 +236,16 @@
     <string name="refresh_mesh_status">Refresh Status</string>
     <string name="pref_detect_root_title">Root Detection</string>
 
+    <!-- Storage Drop Folder Strings -->
+    <string name="storage_drop_folder_title">Storage Drop Folder</string>
+    <string name="storage_select_folder">Select Folder</string>
+    <string name="storage_create_folder">Create Folder</string>
+    <string name="storage_no_folder_selected">No folder selected</string>
+    <string name="storage_folder_selected">Selected: %s</string>
+    <string name="storage_folder_contents">Folder Contents</string>
+    <string name="storage_share_with">Share with</string>
+    <string name="storage_empty_folder">No files or folders found</string>
+
     <string name="app_icon_chooser_label_night_watch">Night Watch</string>
     <string name="app_icon_chooser_label_assistant">Assistant</string>
     <string name="app_icon_chooser_label_paint">Paint</string>

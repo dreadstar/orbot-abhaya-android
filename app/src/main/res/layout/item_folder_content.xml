@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="2dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="?attr/colorOutlineVariant">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center_vertical">
+
+        <!-- File/Folder Icon -->
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/itemIcon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="12dp"
+            android:src="@drawable/ic_file_24"
+            app:tint="?attr/colorOnSurfaceVariant" />
+
+        <!-- File/Folder Name and Details -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/itemName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="File name"
+                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                android:textStyle="bold"
+                android:maxLines="2"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/itemDetails"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="File size • Modified date"
+                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+        </LinearLayout>
+
+        <!-- Share Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/shareButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@string/storage_share_with"
+            android:textSize="12sp"
+            android:minWidth="0dp"
+            android:minHeight="32dp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="4dp"
+            style="@style/Widget.Material3.Button.OutlinedButton.Icon" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

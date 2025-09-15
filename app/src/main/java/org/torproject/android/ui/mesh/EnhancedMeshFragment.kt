@@ -5,6 +5,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -20,6 +23,9 @@ import org.torproject.android.R
 import org.torproject.android.service.MeshServiceCoordinator
 import org.torproject.android.service.routing.MeshTrafficRouter
 import org.torproject.android.service.routing.MeshTrafficRouterImpl
+import org.torproject.android.service.storage.StorageDropFolderManager
+import org.torproject.android.ui.mesh.adapter.FolderContentsAdapter
+import org.torproject.android.ui.mesh.model.StorageItem
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -37,6 +43,7 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     private lateinit var gatewayManager: GatewayCapabilitiesManager
     private lateinit var meshCoordinator: MeshServiceCoordinator
     private lateinit var trafficRouter: MeshTrafficRouter
+    private lateinit var storageDropFolderManager: StorageDropFolderManager
     private var virtualNode: AndroidVirtualNode? = null
     
     // Status display elements
@@ -63,6 +70,14 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     private lateinit var storageStatusText: TextView
     private lateinit var storageAllocationText: TextView
     
+    // Storage drop folder elements
+    private lateinit var storageDropFolderCard: MaterialCardView
+    private lateinit var selectFolderButton: MaterialButton
+    private lateinit var createFolderButton: MaterialButton
+    private lateinit var selectedFolderText: TextView
+    private lateinit var folderContentsRecyclerView: RecyclerView
+    private lateinit var folderContentsAdapter: FolderContentsAdapter
+    
     // Service status texts
     private lateinit var torGatewayStatus: TextView
     private lateinit var internetGatewayStatus: TextView
@@ -73,6 +88,17 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     private var isNetworkActive = false
     private var isUpdatingSliderProgrammatically = false
     private val timeFormatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+
+    // Activity result launcher for folder selection
+    private val folderPickerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == androidx.appcompat.app.AppCompatActivity.RESULT_OK) {
+            result.data?.data?.let { uri ->
+                handleSelectedFolder(uri)
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -88,6 +114,7 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
         initializeViews(view)
         setupManagers()
         initializeStorageUI()  // Initialize storage UI with saved preferences
+        initializeStorageDropFolderUI()  // Initialize storage drop folder UI
         setupListeners()
         startPeriodicUpdates()
         updateUI()
@@ -118,6 +145,13 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
         storageStatusText = view.findViewById(R.id.storageStatusText)
         storageAllocationText = view.findViewById(R.id.storageAllocationText)
         
+        // Storage drop folder views
+        storageDropFolderCard = view.findViewById(R.id.storageDropFolderCard)
+        selectFolderButton = view.findViewById(R.id.selectFolderButton)
+        createFolderButton = view.findViewById(R.id.createFolderButton)
+        selectedFolderText = view.findViewById(R.id.selectedFolderText)
+        folderContentsRecyclerView = view.findViewById(R.id.folderContentsRecyclerView)
+        
         // Service status
         torGatewayStatus = view.findViewById(R.id.torGatewayStatus)
         internetGatewayStatus = view.findViewById(R.id.internetGatewayStatus)
@@ -136,6 +170,18 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
         
         // Initialize traffic router
         trafficRouter = MeshTrafficRouterImpl(requireContext())
+        
+        // Initialize storage drop folder manager
+        storageDropFolderManager = StorageDropFolderManager.getInstance(requireContext())
+        
+        // Setup folder contents adapter
+        folderContentsAdapter = FolderContentsAdapter { item ->
+            onShareItemClicked(item)
+        }
+        folderContentsRecyclerView.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = folderContentsAdapter
+        }
         
         // TODO: Get virtual node from application
         // virtualNode = (requireActivity().application as OrbotApp).virtualNode
@@ -249,6 +295,15 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
             // Update storage status to reflect new allocation
             updateStorageStatus()
         }
+        
+        // Storage drop folder listeners
+        selectFolderButton.setOnClickListener {
+            selectFolder()
+        }
+        
+        createFolderButton.setOnClickListener {
+            showCreateFolderDialog()
+        }
     }
     
     private fun startPeriodicUpdates() {
@@ -266,6 +321,7 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
         updateNodeInformation()
         updateServiceCards()
         updateStorageStatus()
+        updateStorageDropFolderUI()
         
         lastUpdateText.text = "Last updated: ${timeFormatter.format(Date())}"
     }
@@ -542,6 +598,208 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     
     override fun onCapabilityChanged(status: GatewayCapabilitiesManager.GatewayStatus) {
         updateGatewayStatus()
+    }
+    
+    // Storage Drop Folder Methods
+    
+    private fun initializeStorageDropFolderUI() {
+        updateStorageDropFolderUI()
+    }
+    
+    private fun updateStorageDropFolderUI() {
+        val folderName = storageDropFolderManager.getSelectedFolderName()
+        if (folderName != null) {
+            selectedFolderText.text = getString(R.string.storage_folder_selected, folderName)
+        } else {
+            selectedFolderText.text = getString(R.string.storage_no_folder_selected)
+        }
+        
+        // Update folder contents
+        val contents = storageDropFolderManager.getFolderContents()
+        folderContentsAdapter.submitList(contents)
+    }
+    
+    private fun selectFolder() {
+        // Launch the Storage Access Framework folder picker
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            // Optional: Set initial directory if available
+            putExtra("android.content.extra.SHOW_ADVANCED", true)
+        }
+        
+        try {
+            folderPickerLauncher.launch(intent)
+        } catch (e: Exception) {
+            // Fallback if SAF is not available
+            view?.let { v ->
+                com.google.android.material.snackbar.Snackbar.make(
+                    v,
+                    "Unable to open folder picker. Please check your device settings.",
+                    com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+    
+    private fun handleSelectedFolder(uri: Uri) {
+        try {
+            // Take persistable permission for the selected directory
+            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            requireContext().contentResolver.takePersistableUriPermission(uri, takeFlags)
+            
+            // Get display name from the URI
+            val displayName = getFolderDisplayName(uri)
+            
+            // Store the selected folder information
+            storageDropFolderManager.setSelectedFolder(
+                uri = uri.toString(),
+                path = null, // We'll use URI-based access instead of file paths
+                displayName = displayName
+            )
+            
+            // Update the UI
+            updateStorageDropFolderUI()
+            
+            view?.let { v ->
+                com.google.android.material.snackbar.Snackbar.make(
+                    v,
+                    "Selected folder: $displayName",
+                    com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+                ).show()
+            }
+            
+        } catch (e: Exception) {
+            view?.let { v ->
+                com.google.android.material.snackbar.Snackbar.make(
+                    v,
+                    "Failed to access selected folder: ${e.message}",
+                    com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+    
+    private fun getFolderDisplayName(uri: Uri): String {
+        return try {
+            val documentId = android.provider.DocumentsContract.getTreeDocumentId(uri)
+            when {
+                documentId.contains("primary:") -> {
+                    val path = documentId.substringAfter("primary:")
+                    if (path.isEmpty()) "Internal Storage" else path.split("/").last()
+                }
+                documentId.contains("home:") -> {
+                    val path = documentId.substringAfter("home:")
+                    if (path.isEmpty()) "Home" else path.split("/").last()
+                }
+                else -> {
+                    // Try to get a meaningful name from the URI
+                    uri.lastPathSegment?.split("/")?.last() ?: "Selected Folder"
+                }
+            }
+        } catch (e: Exception) {
+            "Selected Folder"
+        }
+    }
+    
+    private fun showCreateFolderDialog() {
+        val selectedPath = storageDropFolderManager.getSelectedFolderPath()
+        if (selectedPath == null) {
+            // Show message to select a folder first
+            view?.let { v ->
+                com.google.android.material.snackbar.Snackbar.make(
+                    v,
+                    "Please select a folder first",
+                    com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+                ).show()
+            }
+            return
+        }
+        
+        // Create a simple dialog for folder name input
+        val builder = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        val input = android.widget.EditText(requireContext())
+        input.hint = "Folder name"
+        
+        builder.setTitle("Create New Folder")
+            .setView(input)
+            .setPositiveButton("Create") { _, _ ->
+                val folderName = input.text.toString().trim()
+                if (folderName.isNotEmpty()) {
+                    if (storageDropFolderManager.createFolder(folderName)) {
+                        updateStorageDropFolderUI()
+                        view?.let { v ->
+                            com.google.android.material.snackbar.Snackbar.make(
+                                v,
+                                "Folder '$folderName' created successfully",
+                                com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+                            ).show()
+                        }
+                    } else {
+                        view?.let { v ->
+                            com.google.android.material.snackbar.Snackbar.make(
+                                v,
+                                "Failed to create folder '$folderName'",
+                                com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    private fun onShareItemClicked(item: StorageItem) {
+        // Show dialog to select users/devices to share with
+        showShareItemDialog(item)
+    }
+    
+    private fun showShareItemDialog(item: StorageItem) {
+        val builder = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        
+        // TODO: Get actual list of available users/devices from mesh service
+        val availableTargets = listOf(
+            "Device: Phone-1234",
+            "Device: Tablet-5678",
+            "Service: File Transfer",
+            "Service: Media Streaming",
+            "User: Alice",
+            "User: Bob"
+        )
+        
+        val selectedItems = BooleanArray(availableTargets.size) { index ->
+            item.sharedWith.contains(availableTargets[index])
+        }
+        
+        builder.setTitle("Share '${item.name}' with:")
+            .setMultiChoiceItems(availableTargets.toTypedArray(), selectedItems) { _, which, isChecked ->
+                selectedItems[which] = isChecked
+            }
+            .setPositiveButton("Update Sharing") { _, _ ->
+                val newSharedWith = availableTargets.filterIndexed { index, _ -> 
+                    selectedItems[index] 
+                }.toSet()
+                
+                if (storageDropFolderManager.shareItem(item, newSharedWith)) {
+                    updateStorageDropFolderUI()
+                    view?.let { v ->
+                        com.google.android.material.snackbar.Snackbar.make(
+                            v,
+                            "Sharing updated for '${item.name}'",
+                            com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+                        ).show()
+                    }
+                } else {
+                    view?.let { v ->
+                        com.google.android.material.snackbar.Snackbar.make(
+                            v,
+                            "Failed to update sharing for '${item.name}'",
+                            com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
     
     override fun onDestroyView() {
