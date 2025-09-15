@@ -71,6 +71,7 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     private lateinit var stabilityText: TextView
     
     private var isNetworkActive = false
+    private var isUpdatingSliderProgrammatically = false
     private val timeFormatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
     override fun onCreateView(
@@ -86,6 +87,7 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
         
         initializeViews(view)
         setupManagers()
+        initializeStorageUI()  // Initialize storage UI with saved preferences
         setupListeners()
         startPeriodicUpdates()
         updateUI()
@@ -147,8 +149,8 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
             val currentPrefs = meshCoordinator.getUserSharingPreferences()
             meshCoordinator.setUserSharingPreferences(
                 allowTorGateway = isChecked,
-                allowInternetGateway = currentPrefs["allowInternetGateway"] ?: false,
-                allowStorageSharing = currentPrefs["allowStorageSharing"] ?: true,
+                allowInternetGateway = currentPrefs["allowInternetGateway"] as? Boolean ?: false,
+                allowStorageSharing = currentPrefs["allowStorageSharing"] as? Boolean ?: true,
                 storageAllocationGB = 5  // Default allocation
             )
             
@@ -161,9 +163,9 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
             // Update mesh service preferences when Internet gateway changes
             val currentPrefs = meshCoordinator.getUserSharingPreferences()
             meshCoordinator.setUserSharingPreferences(
-                allowTorGateway = currentPrefs["allowTorGateway"] ?: false,
+                allowTorGateway = currentPrefs["allowTorGateway"] as? Boolean ?: false,
                 allowInternetGateway = isChecked,
-                allowStorageSharing = currentPrefs["allowStorageSharing"] ?: true,
+                allowStorageSharing = currentPrefs["allowStorageSharing"] as? Boolean ?: true,
                 storageAllocationGB = 5  // Default allocation
             )
             
@@ -188,8 +190,8 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
             val currentAllocation = storageAllocationSlider.value.toInt()
             
             meshCoordinator.setUserSharingPreferences(
-                allowTorGateway = currentPrefs["allowTorGateway"] ?: false,
-                allowInternetGateway = currentPrefs["allowInternetGateway"] ?: false,
+                allowTorGateway = currentPrefs["allowTorGateway"] as? Boolean ?: false,
+                allowInternetGateway = currentPrefs["allowInternetGateway"] as? Boolean ?: false,
                 allowStorageSharing = isChecked,
                 storageAllocationGB = currentAllocation
             )
@@ -197,18 +199,55 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
             updateStorageStatus()
         }
 
-        storageAllocationSlider.addOnChangeListener { _, value, _ ->
-            storageAllocationText.text = "${value.toInt()} GB"
-            
-            if (storageParticipationToggle.isChecked) {
-                val currentPrefs = meshCoordinator.getUserSharingPreferences()
-                meshCoordinator.setUserSharingPreferences(
-                    allowTorGateway = currentPrefs["allowTorGateway"] ?: false,
-                    allowInternetGateway = currentPrefs["allowInternetGateway"] ?: false,
-                    allowStorageSharing = true,
-                    storageAllocationGB = value.toInt()
-                )
+        storageAllocationSlider.addOnChangeListener { _, value, fromUser ->
+            // Skip processing if we're updating programmatically
+            if (isUpdatingSliderProgrammatically) {
+                return@addOnChangeListener
             }
+            
+            val newAllocationGB = value.toInt()
+            
+            // If user is actively participating in storage, validate against current usage
+            if (storageParticipationToggle.isChecked && fromUser) {
+                val storageStatus = meshCoordinator.getStorageParticipationStatus()
+                val currentUsedGB = storageStatus.usedGB
+                
+                // Prevent allocation below current usage
+                if (newAllocationGB < currentUsedGB && currentUsedGB > 0) {
+                    // Show user feedback and reset to minimum safe value
+                    val minSafeAllocation = maxOf(currentUsedGB, 1)
+                    isUpdatingSliderProgrammatically = true
+                    storageAllocationSlider.value = minSafeAllocation.toFloat()
+                    storageAllocationText.text = "${minSafeAllocation} GB"
+                    isUpdatingSliderProgrammatically = false
+                    
+                    // Show brief feedback to user
+                    view?.let { v ->
+                        val snackbar = com.google.android.material.snackbar.Snackbar.make(
+                            v,
+                            "Cannot allocate less than current usage (${currentUsedGB} GB)",
+                            com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+                        )
+                        snackbar.show()
+                    }
+                    return@addOnChangeListener
+                }
+            }
+            
+            // Update the text display
+            storageAllocationText.text = "${newAllocationGB} GB"
+            
+            // Always update preferences - allocation setting is independent of participation toggle
+            val currentPrefs = meshCoordinator.getUserSharingPreferences()
+            meshCoordinator.setUserSharingPreferences(
+                allowTorGateway = currentPrefs["allowTorGateway"] as? Boolean ?: false,
+                allowInternetGateway = currentPrefs["allowInternetGateway"] as? Boolean ?: false,
+                allowStorageSharing = storageParticipationToggle.isChecked,
+                storageAllocationGB = newAllocationGB
+            )
+            
+            // Update storage status to reflect new allocation
+            updateStorageStatus()
         }
     }
     
@@ -368,29 +407,50 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     }
     
     private fun updateStorageStatus() {
+        // Get user preferences first (this is immediate)
+        val userPrefs = meshCoordinator.getUserSharingPreferences()
+        val userEnabledStorage = userPrefs["allowStorageSharing"] as? Boolean ?: false
+        val userAllocation = userPrefs["storageAllocationGB"] as? Int ?: 5
+        
         // Get REAL storage status from MeshServiceCoordinator
         val storageStatus = meshCoordinator.getStorageParticipationStatus()
-        val userPrefs = meshCoordinator.getUserSharingPreferences()
         
-        storageParticipationToggle.isChecked = userPrefs["allowStorageSharing"] ?: false
-        storageAllocationSlider.value = storageStatus.allocatedGB.toFloat()
-        storageAllocationText.text = "${storageStatus.allocatedGB} GB"
+        // Only update toggle state - slider value should not be changed here
+        storageParticipationToggle.isChecked = userEnabledStorage
         
+        // Update status text based on user preference FIRST, then actual status
         storageStatusText.text = when {
-            storageStatus.isEnabled && storageStatus.participationHealth == "Active" ->
-                "Participating in distributed storage (${storageStatus.usedGB}/${storageStatus.allocatedGB} GB used)"
-            storageStatus.isEnabled && storageStatus.participationHealth != "Active" ->
-                "Storage enabled but not yet active"
+            !userEnabledStorage -> "Storage participation disabled"
+            userEnabledStorage && storageStatus.isEnabled && storageStatus.participationHealth == "Active" ->
+                "Participating in distributed storage (${storageStatus.usedGB}/${userAllocation} GB used)"
+            userEnabledStorage && storageStatus.isEnabled ->
+                "Storage configured - ${userAllocation} GB allocated"
+            userEnabledStorage -> "Initializing storage participation - ${userAllocation} GB allocated"
             else -> "Storage participation disabled"
         }
         
-        // Update card background following existing pattern
+        // Update card background following existing pattern - use user preference
         val activeColor = requireContext().getColor(R.color.bright_green)
         val inactiveColor = requireContext().getColor(R.color.panel_background_main)
         
         storageParticipationCard.setCardBackgroundColor(
-            if (storageStatus.isEnabled) activeColor else inactiveColor
+            if (userEnabledStorage) activeColor else inactiveColor
         )
+    }
+    
+    private fun initializeStorageUI() {
+        // Get user preferences for initial UI setup
+        val userPrefs = meshCoordinator.getUserSharingPreferences()
+        val userAllocation = userPrefs["storageAllocationGB"] as? Int ?: 5
+        
+        // Set initial slider value and text without triggering listener
+        isUpdatingSliderProgrammatically = true
+        storageAllocationSlider.value = userAllocation.toFloat()
+        storageAllocationText.text = "${userAllocation} GB"
+        isUpdatingSliderProgrammatically = false
+        
+        // Update status after UI is initialized
+        updateStorageStatus()
     }
     
     private fun startMeshNetwork() {

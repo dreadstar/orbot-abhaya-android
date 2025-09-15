@@ -434,6 +434,9 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
     ) {
         scope.launch {
             try {
+                // Always save storage allocation preference regardless of sharing enabled state
+                setStorageAllocationGB(storageAllocationGB)
+                
                 val preferredRoles = mutableSetOf<MeshRole>()
                 
                 // Always participate as a basic mesh participant
@@ -483,20 +486,23 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
      * Get current user sharing preferences
      * Returns user's configured preferences for resource sharing
      */
-    fun getUserSharingPreferences(): Map<String, Boolean> {
+    fun getUserSharingPreferences(): Map<String, Any> {
         return try {
             val preferredRoles = emergentRoleManager?.getPreferredRoles() ?: emptySet()
+            val currentAllocation = getStorageAllocationGB()
             mapOf(
                 "allowTorGateway" to preferredRoles.contains(MeshRole.TOR_GATEWAY),
                 "allowInternetGateway" to preferredRoles.contains(MeshRole.CLEARNET_GATEWAY),
-                "allowStorageSharing" to preferredRoles.contains(MeshRole.STORAGE_NODE)
+                "allowStorageSharing" to preferredRoles.contains(MeshRole.STORAGE_NODE),
+                "storageAllocationGB" to currentAllocation
             )
         } catch (e: Exception) {
             Log.w(TAG, "Error getting user preferences", e)
             mapOf(
                 "allowTorGateway" to false,
                 "allowInternetGateway" to false,
-                "allowStorageSharing" to false
+                "allowStorageSharing" to false,
+                "storageAllocationGB" to 5
             )
         }
     }
@@ -664,7 +670,26 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
      * Get current storage allocation in GB
      */
     private fun getStorageAllocationGB(): Int {
-        // TODO: Store this in preferences, for now return default
-        return 5
+        return try {
+            val sharedPrefs = context.getSharedPreferences("mesh_storage_prefs", Context.MODE_PRIVATE)
+            sharedPrefs.getInt("storage_allocation_gb", 5) // Default to 5 GB
+        } catch (e: Exception) {
+            Log.w(TAG, "Error getting storage allocation preference", e)
+            5
+        }
+    }
+    
+    /**
+     * Store storage allocation preference
+     */
+    private fun setStorageAllocationGB(allocationGB: Int) {
+        try {
+            val sharedPrefs = context.getSharedPreferences("mesh_storage_prefs", Context.MODE_PRIVATE)
+            sharedPrefs.edit().putInt("storage_allocation_gb", allocationGB).apply()
+            betaLogger.log(LogLevel.DEBUG, "STORAGE_PREFS", "Saved allocation preference", 
+                mapOf("allocationGB" to allocationGB.toString()))
+        } catch (e: Exception) {
+            Log.w(TAG, "Error saving storage allocation preference", e)
+        }
     }
 }
