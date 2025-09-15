@@ -18,12 +18,15 @@ import com.google.android.material.switchmaterial.SwitchMaterial
 import com.ustadmobile.meshrabiya.vnet.AndroidVirtualNode
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import org.torproject.android.GatewayCapabilitiesManager
 import org.torproject.android.R
 import org.torproject.android.service.MeshServiceCoordinator
 import org.torproject.android.service.routing.MeshTrafficRouter
 import org.torproject.android.service.routing.MeshTrafficRouterImpl
 import org.torproject.android.service.storage.StorageDropFolderManager
+import org.torproject.android.service.compute.ServiceLayerCoordinator
+import org.torproject.android.service.compute.IntelligentDistributedComputeService
 import org.torproject.android.ui.mesh.adapter.FolderContentsAdapter
 import org.torproject.android.ui.mesh.model.StorageItem
 import java.text.SimpleDateFormat
@@ -45,6 +48,7 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     private lateinit var trafficRouter: MeshTrafficRouter
     private lateinit var storageDropFolderManager: StorageDropFolderManager
     private var virtualNode: AndroidVirtualNode? = null
+    private var serviceLayerCoordinator: ServiceLayerCoordinator? = null
     
     // Status display elements
     private lateinit var meshStatusText: TextView
@@ -77,6 +81,15 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     private lateinit var selectedFolderText: TextView
     private lateinit var folderContentsRecyclerView: RecyclerView
     private lateinit var folderContentsAdapter: FolderContentsAdapter
+    
+    // Distributed service layer elements
+    private lateinit var distributedServiceLayerCard: MaterialCardView
+    private lateinit var serviceLayerParticipationSwitch: SwitchMaterial
+    private lateinit var serviceLayerStatusText: TextView
+    private lateinit var pythonServiceStatus: TextView
+    private lateinit var mlInferenceServiceStatus: TextView
+    private lateinit var distributedStorageServiceStatus: TextView
+    private lateinit var taskSchedulerServiceStatus: TextView
     
     // Service status texts
     private lateinit var torGatewayStatus: TextView
@@ -115,6 +128,7 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
         setupManagers()
         initializeStorageUI()  // Initialize storage UI with saved preferences
         initializeStorageDropFolderUI()  // Initialize storage drop folder UI
+        initializeDistributedServiceLayerUI()  // Initialize distributed service layer UI
         setupListeners()
         startPeriodicUpdates()
         updateUI()
@@ -151,6 +165,15 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
         createFolderButton = view.findViewById(R.id.createFolderButton)
         selectedFolderText = view.findViewById(R.id.selectedFolderText)
         folderContentsRecyclerView = view.findViewById(R.id.folderContentsRecyclerView)
+        
+        // Distributed service layer views
+        distributedServiceLayerCard = view.findViewById(R.id.distributedServiceLayerCard)
+        serviceLayerParticipationSwitch = view.findViewById(R.id.serviceLayerParticipationSwitch)
+        serviceLayerStatusText = view.findViewById(R.id.serviceLayerStatusText)
+        pythonServiceStatus = view.findViewById(R.id.pythonServiceStatus)
+        mlInferenceServiceStatus = view.findViewById(R.id.mlInferenceServiceStatus)
+        distributedStorageServiceStatus = view.findViewById(R.id.distributedStorageServiceStatus)
+        taskSchedulerServiceStatus = view.findViewById(R.id.taskSchedulerServiceStatus)
         
         // Service status
         torGatewayStatus = view.findViewById(R.id.torGatewayStatus)
@@ -304,6 +327,11 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
         createFolderButton.setOnClickListener {
             showCreateFolderDialog()
         }
+        
+        // Distributed service layer listeners
+        serviceLayerParticipationSwitch.setOnCheckedChangeListener { _, isChecked ->
+            updateServiceLayerParticipation(isChecked)
+        }
     }
     
     private fun startPeriodicUpdates() {
@@ -322,8 +350,16 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
         updateServiceCards()
         updateStorageStatus()
         updateStorageDropFolderUI()
+        updateDistributedServiceLayerUI()
         
         lastUpdateText.text = "Last updated: ${timeFormatter.format(Date())}"
+    }
+    
+    private fun updateDistributedServiceLayerUI() {
+        // Only update service statuses if service layer is active
+        if (serviceLayerParticipationSwitch.isChecked) {
+            updateServiceStatuses()
+        }
     }
     
     private fun updateGatewayStatus() {
@@ -802,8 +838,280 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
             .show()
     }
     
+    // Distributed Service Layer Methods
+    
+    private fun initializeDistributedServiceLayerUI() {
+        // Initialize service layer participation state from preferences
+        val prefs = requireContext().getSharedPreferences("mesh_service_layer", android.content.Context.MODE_PRIVATE)
+        val isParticipating = prefs.getBoolean("service_layer_participation", false)
+        
+        serviceLayerParticipationSwitch.isChecked = isParticipating
+        updateServiceLayerStatus(isParticipating)
+        updateServiceStatuses()
+    }
+    
+    private fun updateServiceLayerParticipation(isParticipating: Boolean) {
+        // Save preference
+        val prefs = requireContext().getSharedPreferences("mesh_service_layer", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("service_layer_participation", isParticipating).apply()
+        
+        // Update UI
+        updateServiceLayerStatus(isParticipating)
+        
+        // Start or stop the actual service coordinator
+        lifecycleScope.launch {
+            if (isParticipating) {
+                // Start distributed service layer
+                updateServiceStatuses(starting = true)
+                
+                val success = startDistributedServices()
+                
+                if (success) {
+                    updateServiceStatuses()
+                    view?.let { v ->
+                        com.google.android.material.snackbar.Snackbar.make(
+                            v,
+                            "✅ Distributed Service Layer activated - Contributing compute resources",
+                            com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                        ).show()
+                    }
+                } else {
+                    serviceLayerParticipationSwitch.isChecked = false
+                    updateServiceStatuses(stopped = true)
+                    view?.let { v ->
+                        com.google.android.material.snackbar.Snackbar.make(
+                            v,
+                            "❌ Failed to start Distributed Service Layer",
+                            com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                
+            } else {
+                // Stop distributed service layer
+                updateServiceStatuses(stopping = true)
+                
+                val success = stopDistributedServices()
+                
+                updateServiceStatuses(stopped = true)
+                view?.let { v ->
+                    com.google.android.material.snackbar.Snackbar.make(
+                        v,
+                        "⏸️ Distributed Service Layer deactivated",
+                        com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
+    
+    private suspend fun startDistributedServices(): Boolean {
+        return try {
+            // Create mock mesh network interface
+            // Create mock mesh network interface
+            val mockMeshNetwork = object : IntelligentDistributedComputeService.MeshNetworkInterface {
+                override suspend fun executeRemoteTask(nodeId: String, request: IntelligentDistributedComputeService.TaskExecutionRequest): IntelligentDistributedComputeService.TaskExecutionResponse {
+                    return IntelligentDistributedComputeService.TaskExecutionResponse.Success(
+                        result = mapOf("output" to "Mock result"),
+                        executionTimeMs = 1000L
+                    )
+                }
+            }
+            
+            // Initialize service coordinator
+            serviceLayerCoordinator = ServiceLayerCoordinator(mockMeshNetwork)
+            
+            // Start services
+            val success = serviceLayerCoordinator?.startServices() ?: false
+            
+            if (success) {
+                // Start periodic statistics updates
+                startServiceStatisticsUpdates()
+                android.util.Log.i("EnhancedMeshFragment", "Distributed service layer started successfully")
+            }
+            
+            success
+            
+        } catch (e: Exception) {
+            android.util.Log.e("EnhancedMeshFragment", "Failed to start distributed services", e)
+            false
+        }
+    }
+    
+    private suspend fun stopDistributedServices(): Boolean {
+        return try {
+            // Stop statistics updates
+            stopServiceStatisticsUpdates()
+            
+            val success = serviceLayerCoordinator?.stopServices() ?: true
+            
+            if (success) {
+                serviceLayerCoordinator = null
+                android.util.Log.i("EnhancedMeshFragment", "Distributed service layer stopped successfully")
+            }
+            
+            success
+            
+        } catch (e: Exception) {
+            android.util.Log.e("EnhancedMeshFragment", "Failed to stop distributed services", e)
+            false
+        }
+    }
+    
+    private var serviceStatsUpdateJob: Job? = null
+    
+    private fun startServiceStatisticsUpdates() {
+        stopServiceStatisticsUpdates()
+        
+        serviceStatsUpdateJob = lifecycleScope.launch {
+            while (serviceLayerCoordinator?.isServiceActive() == true) {
+                updateServiceStatisticsDisplay()
+                delay(15000) // Update every 15 seconds
+            }
+        }
+    }
+    
+    private fun stopServiceStatisticsUpdates() {
+        serviceStatsUpdateJob?.cancel()
+        serviceStatsUpdateJob = null
+    }
+    
+    private fun updateServiceStatisticsDisplay() {
+        serviceLayerCoordinator?.let { coordinator ->
+            val stats = coordinator.getServiceStatistics()
+            val capabilities = coordinator.getServiceCapabilities()
+            
+            // Update service status indicators based on actual capabilities
+            pythonServiceStatus.text = if (capabilities.supportedComputeTypes.contains("PYTHON_SCRIPT")) {
+                "Ready (${stats.computeTasksCompleted} tasks)"
+            } else {
+                requireContext().getString(R.string.service_unavailable)
+            }
+            
+            mlInferenceServiceStatus.text = if (capabilities.supportedComputeTypes.contains("ML_INFERENCE")) {
+                "Ready (${String.format("%.1fMB", stats.totalBytesProcessed / (1024f * 1024f))})"
+            } else {
+                requireContext().getString(R.string.service_unavailable)
+            }
+            
+            distributedStorageServiceStatus.text = if (capabilities.storageEnabled) {
+                "Ready (${String.format("%.1fGB", capabilities.maxStorageGB)} max)"
+            } else {
+                requireContext().getString(R.string.service_unavailable)
+            }
+            
+            val uptimeMinutes = (stats.serviceUptimeMs / (1000 * 60)).toInt()
+            taskSchedulerServiceStatus.text = if (capabilities.computeEnabled) {
+                "Ready (${uptimeMinutes}m uptime)"
+            } else {
+                requireContext().getString(R.string.service_unavailable)
+            }
+        }
+    }
+    
+    private fun updateServiceLayerStatus(isParticipating: Boolean) {
+        serviceLayerStatusText.text = if (isParticipating) {
+            getString(R.string.service_layer_active)
+        } else {
+            getString(R.string.service_layer_inactive)
+        }
+    }
+    
+    private fun updateServiceStatuses(
+        starting: Boolean = false,
+        stopping: Boolean = false,
+        stopped: Boolean = false
+    ) {
+        val context = requireContext()
+        val isParticipating = serviceLayerParticipationSwitch.isChecked
+        
+        when {
+            starting -> {
+                pythonServiceStatus.text = "Starting..."
+                mlInferenceServiceStatus.text = "Starting..."
+                distributedStorageServiceStatus.text = "Starting..."
+                taskSchedulerServiceStatus.text = "Starting..."
+            }
+            stopping -> {
+                pythonServiceStatus.text = "Stopping..."
+                mlInferenceServiceStatus.text = "Stopping..."
+                distributedStorageServiceStatus.text = "Stopping..."
+                taskSchedulerServiceStatus.text = "Stopping..."
+            }
+            stopped || !isParticipating -> {
+                pythonServiceStatus.text = context.getString(R.string.service_unavailable)
+                mlInferenceServiceStatus.text = context.getString(R.string.service_unavailable)
+                distributedStorageServiceStatus.text = context.getString(R.string.service_unavailable)
+                taskSchedulerServiceStatus.text = context.getString(R.string.service_unavailable)
+            }
+            else -> {
+                // Check actual service availability
+                pythonServiceStatus.text = if (isPythonServiceAvailable()) {
+                    context.getString(R.string.service_ready)
+                } else {
+                    context.getString(R.string.service_error)
+                }
+                
+                mlInferenceServiceStatus.text = if (isMLInferenceServiceAvailable()) {
+                    context.getString(R.string.service_ready)
+                } else {
+                    context.getString(R.string.service_error)
+                }
+                
+                distributedStorageServiceStatus.text = if (isDistributedStorageServiceAvailable()) {
+                    context.getString(R.string.service_ready)
+                } else {
+                    context.getString(R.string.service_error)
+                }
+                
+                taskSchedulerServiceStatus.text = if (isTaskSchedulerServiceAvailable()) {
+                    context.getString(R.string.service_ready)
+                } else {
+                    context.getString(R.string.service_error)
+                }
+            }
+        }
+    }
+    
+    private fun isPythonServiceAvailable(): Boolean {
+        // TODO: Check if Python runtime is available and functional
+        // For now, simulate based on device capabilities
+        return try {
+            // Check if we can execute a simple Python command
+            Runtime.getRuntime().exec("python3 --version")
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+    
+    private fun isMLInferenceServiceAvailable(): Boolean {
+        // TODO: Check if TensorFlow Lite is available and models are loaded
+        // For now, always return true as TensorFlow Lite is included in the build
+        return true
+    }
+    
+    private fun isDistributedStorageServiceAvailable(): Boolean {
+        // TODO: Check if distributed storage service is running
+        // For now, return true if storage participation is enabled
+        return storageParticipationToggle.isChecked
+    }
+    
+    private fun isTaskSchedulerServiceAvailable(): Boolean {
+        // TODO: Check if task scheduler service is running
+        // For now, simulate based on mesh network status
+        return isNetworkActive
+    }
+    
     override fun onDestroyView() {
         super.onDestroyView()
         gatewayManager.removeListener(this)
+        
+        // Cleanup service layer resources
+        stopServiceStatisticsUpdates()
+        lifecycleScope.launch {
+            serviceLayerCoordinator?.stopServices()
+            serviceLayerCoordinator = null
+        }
     }
 }

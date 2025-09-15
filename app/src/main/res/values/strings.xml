@@ -246,6 +246,21 @@
     <string name="storage_share_with">Share with</string>
     <string name="storage_empty_folder">No files or folders found</string>
 
+    <!-- Distributed Service Layer Strings -->
+    <string name="distributed_service_layer_title">Distributed Service Layer</string>
+    <string name="service_layer_participation">Participate in Service Layer</string>
+    <string name="service_layer_active">Service layer active - Contributing compute resources</string>
+    <string name="service_layer_inactive">Service layer inactive - Not participating in distributed compute</string>
+    <string name="service_layer_capabilities">Available Services</string>
+    <string name="python_execution_service">Python Script Execution</string>
+    <string name="ml_inference_service">Machine Learning Inference</string>
+    <string name="distributed_storage_service">Distributed File Storage</string>
+    <string name="task_scheduler_service">Intelligent Task Scheduler</string>
+    <string name="service_ready">Ready</string>
+    <string name="service_unavailable">Unavailable</string>
+    <string name="service_busy">Busy</string>
+    <string name="service_error">Error</string>
+
     <string name="app_icon_chooser_label_night_watch">Night Watch</string>
     <string name="app_icon_chooser_label_assistant">Assistant</string>
     <string name="app_icon_chooser_label_paint">Paint</string>
