@@ -1,0 +1,451 @@
+package org.torproject.android.ui.mesh
+
+import android.content.Context
+import android.content.SharedPreferences
+import android.os.FileObserver
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
+import org.torproject.android.service.MeshServiceCoordinator
+import java.io.File
+import java.util.concurrent.ConcurrentHashMap
+
+/**
+ * Manages the drop folder functionality and integration with distributed storage
+ */
+class DropFolderManager(
+    private val context: Context,
+    private val meshCoordinator: MeshServiceCoordinator
+) {
+    private val prefs: SharedPreferences = context.getSharedPreferences("drop_folder", Context.MODE_PRIVATE)
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    
+    // File system observer for monitoring changes
+    private var fileObserver: FileObserver? = null
+    
+    // Cache for replica information
+    private val replicaInfoCache = ConcurrentHashMap<String, ReplicaInfo>()
+    
+    // Flow for directory contents
+    private val _directoryContents = MutableStateFlow<List<FileDirectoryItem>>(emptyList())
+    val directoryContents: StateFlow<List<FileDirectoryItem>> = _directoryContents.asStateFlow()
+    
+    // Flow for drop folder configuration
+    private val _dropFolderConfig = MutableStateFlow<DropFolderConfig?>(null)
+    val dropFolderConfig: StateFlow<DropFolderConfig?> = _dropFolderConfig.asStateFlow()
+    
+    // Flow for statistics
+    private val _folderStats = MutableStateFlow<DropFolderStats>(DropFolderStats(0, 0, 0, 0, 0, 0))
+    val folderStats: StateFlow<DropFolderStats> = _folderStats.asStateFlow()
+    
+    // Current directory being viewed
+    private val _currentDirectory = MutableStateFlow<File?>(null)
+    val currentDirectory: StateFlow<File?> = _currentDirectory.asStateFlow()
+    
+    init {
+        loadSavedConfiguration()
+        startPeriodicReplicationCheck()
+    }
+    
+    /**
+     * Set the drop folder path and initialize monitoring
+     */
+    suspend fun setDropFolder(folderPath: String, displayName: String? = null): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val folder = File(folderPath)
+                if (!folder.exists()) {
+                    folder.mkdirs()
+                }
+                
+                if (!folder.isDirectory || !folder.canRead()) {
+                    return@withContext false
+                }
+                
+                // Save configuration
+                val config = DropFolderConfig(
+                    path = folderPath,
+                    displayName = displayName,
+                    isActive = true
+                )
+                saveConfiguration(config)
+                _dropFolderConfig.value = config
+                
+                // Set current directory to root
+                _currentDirectory.value = folder
+                
+                // Start monitoring
+                startFileObserver(folder)
+                
+                // Initial directory scan
+                refreshDirectory()
+                
+                true
+            } catch (e: Exception) {
+                false
+            }
+        }
+    }
+    
+    /**
+     * Create a new drop folder
+     */
+    suspend fun createDropFolder(parentPath: String, folderName: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val newFolder = File(parentPath, folderName)
+                if (newFolder.mkdirs()) {
+                    setDropFolder(newFolder.absolutePath)
+                } else {
+                    false
+                }
+            } catch (e: Exception) {
+                false
+            }
+        }
+    }
+    
+    /**
+     * Navigate to a subdirectory
+     */
+    suspend fun navigateToDirectory(directory: File) {
+        withContext(Dispatchers.IO) {
+            val config = _dropFolderConfig.value
+            if (config != null && directory.absolutePath.startsWith(config.path)) {
+                _currentDirectory.value = directory
+                refreshDirectory()
+            }
+        }
+    }
+    
+    /**
+     * Navigate to parent directory
+     */
+    suspend fun navigateToParent() {
+        withContext(Dispatchers.IO) {
+            val current = _currentDirectory.value
+            val config = _dropFolderConfig.value
+            
+            if (current != null && config != null) {
+                val parent = current.parentFile
+                if (parent != null && parent.absolutePath.startsWith(config.path)) {
+                    _currentDirectory.value = parent
+                    refreshDirectory()
+                }
+            }
+        }
+    }
+    
+    /**
+     * Get breadcrumb path for navigation
+     */
+    fun getBreadcrumbPath(): List<Pair<String, File>> {
+        val current = _currentDirectory.value
+        val config = _dropFolderConfig.value
+        
+        if (current == null || config == null) return emptyList()
+        
+        val breadcrumbs = mutableListOf<Pair<String, File>>()
+        val rootFolder = File(config.path)
+        
+        var pathFile = current
+        while (pathFile != null && pathFile.absolutePath.startsWith(config.path)) {
+            val displayName = if (pathFile == rootFolder) "📁 Drop Folder" else pathFile.name
+            breadcrumbs.add(0, displayName to pathFile)
+            
+            if (pathFile == rootFolder) break
+            pathFile = pathFile.parentFile
+        }
+        
+        return breadcrumbs
+    }
+    
+    /**
+     * Refresh directory contents
+     */
+    suspend fun refreshDirectory() {
+        withContext(Dispatchers.IO) {
+            val current = _currentDirectory.value ?: return@withContext
+            
+            try {
+                val files = current.listFiles() ?: emptyArray()
+                val items = files.map { file ->
+                    val replicaInfo = if (!file.isDirectory) {
+                        getReplicaInfo(file)
+                    } else null
+                    
+                    FileDirectoryItem(
+                        file = file,
+                        replicaInfo = replicaInfo
+                    )
+                }.sortedWith(compareBy<FileDirectoryItem> { !it.isDirectory }.thenBy { it.name.lowercase() })
+                
+                _directoryContents.value = items
+                updateFolderStats()
+                
+                // Queue files for replication if needed
+                items.filter { !it.isDirectory && it.replicaInfo == null }
+                    .forEach { queueFileForReplication(it.file) }
+                
+            } catch (e: Exception) {
+                _directoryContents.value = emptyList()
+            }
+        }
+    }
+    
+    /**
+     * Get replica information for a file
+     */
+    private suspend fun getReplicaInfo(file: File): ReplicaInfo? {
+        return withContext(Dispatchers.IO) {
+            val cacheKey = file.absolutePath
+            replicaInfoCache[cacheKey] ?: run {
+                // Query the distributed storage system for replica info
+                val meshFileRef = meshCoordinator.getFileReference(file.absolutePath)
+                if (meshFileRef != null) {
+                    val availableNodes = meshCoordinator.getAvailableStorageNodes()
+                    val replicaNodes = meshCoordinator.getFileReplicaNodes(meshFileRef.fileId)
+                    
+                    val replicaInfo = ReplicaInfo(
+                        replicaCount = replicaNodes.size,
+                        targetReplicas = getReplicationValue(meshFileRef.replicationLevel),
+                        nodeIds = replicaNodes,
+                        status = determineReplicationStatus(replicaNodes.size, getReplicationValue(meshFileRef.replicationLevel))
+                    )
+                    
+                    replicaInfoCache[cacheKey] = replicaInfo
+                    replicaInfo
+                } else null
+            }
+        }
+    }
+    
+    /**
+     * Queue a file for replication to distributed storage
+     */
+    private suspend fun queueFileForReplication(file: File) {
+        withContext(Dispatchers.IO) {
+            try {
+                val config = _dropFolderConfig.value
+                if (config == null || !config.autoReplication) return@withContext
+                
+                // Check file size limits
+                if (file.length() > config.maxFileSize) return@withContext
+                
+                // Check exclude patterns
+                if (config.excludePatterns.any { pattern ->
+                    file.name.matches(pattern.replace("*", ".*").toRegex())
+                }) return@withContext
+                
+                // Store file in distributed storage
+                val meshFileRef = meshCoordinator.storeFileInMesh(
+                    filePath = file.absolutePath,
+                    replicationLevel = config.targetReplicas
+                )
+                
+                if (meshFileRef != null) {
+                    // Update cache with pending status
+                    val replicaInfo = ReplicaInfo(
+                        replicaCount = 0,
+                        targetReplicas = config.targetReplicas,
+                        nodeIds = emptyList(),
+                        status = ReplicationStatus.PENDING
+                    )
+                    replicaInfoCache[file.absolutePath] = replicaInfo
+                }
+                
+            } catch (e: Exception) {
+                // Log error but don't crash
+            }
+        }
+    }
+    
+    /**
+     * Start file system observer for automatic replication
+     */
+    private fun startFileObserver(folder: File) {
+        stopFileObserver()
+        
+        fileObserver = object : FileObserver(folder.absolutePath, CREATE or MODIFY or DELETE) {
+            override fun onEvent(event: Int, path: String?) {
+                if (path != null) {
+                    scope.launch {
+                        delay(1000) // Debounce file system events
+                        val file = File(folder, path)
+                        
+                        when (event and ALL_EVENTS) {
+                            CREATE, MODIFY -> {
+                                if (file.isFile) {
+                                    queueFileForReplication(file)
+                                }
+                                refreshDirectory()
+                            }
+                            DELETE -> {
+                                replicaInfoCache.remove(file.absolutePath)
+                                refreshDirectory()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        fileObserver?.startWatching()
+    }
+    
+    /**
+     * Stop file system observer
+     */
+    private fun stopFileObserver() {
+        fileObserver?.stopWatching()
+        fileObserver = null
+    }
+    
+    /**
+     * Update folder statistics
+     */
+    private suspend fun updateFolderStats() {
+        withContext(Dispatchers.IO) {
+            val config = _dropFolderConfig.value ?: return@withContext
+            val rootFolder = File(config.path)
+            
+            val allFiles = getAllFilesRecursively(rootFolder)
+            val totalFiles = allFiles.size
+            val totalSize = allFiles.sumOf { it.length() }
+            
+            var replicatedFiles = 0
+            var pendingFiles = 0
+            var failedFiles = 0
+            
+            allFiles.forEach { file ->
+                when (getReplicaInfo(file)?.status) {
+                    ReplicationStatus.SYNCED -> replicatedFiles++
+                    ReplicationStatus.PENDING, ReplicationStatus.SYNCING -> pendingFiles++
+                    ReplicationStatus.FAILED -> failedFiles++
+                    else -> pendingFiles++
+                }
+            }
+            
+            val availableNodes = meshCoordinator.getAvailableStorageNodes().size
+            
+            _folderStats.value = DropFolderStats(
+                totalFiles = totalFiles,
+                totalSize = totalSize,
+                replicatedFiles = replicatedFiles,
+                pendingFiles = pendingFiles,
+                failedFiles = failedFiles,
+                availableStorageNodes = availableNodes
+            )
+        }
+    }
+    
+    /**
+     * Get all files recursively from a directory
+     */
+    private fun getAllFilesRecursively(directory: File): List<File> {
+        val files = mutableListOf<File>()
+        directory.listFiles()?.forEach { file ->
+            if (file.isFile) {
+                files.add(file)
+            } else if (file.isDirectory) {
+                files.addAll(getAllFilesRecursively(file))
+            }
+        }
+        return files
+    }
+    
+    /**
+     * Determine replication status based on replica count vs target
+     */
+    private fun determineReplicationStatus(replicaCount: Int, targetReplicas: Int): ReplicationStatus {
+        return when {
+            replicaCount == 0 -> ReplicationStatus.PENDING
+            replicaCount >= targetReplicas -> ReplicationStatus.SYNCED
+            replicaCount < targetReplicas -> ReplicationStatus.PARTIAL
+            else -> ReplicationStatus.SYNCED
+        }
+    }
+    
+    /**
+     * Start periodic replication status check
+     */
+    private fun startPeriodicReplicationCheck() {
+        scope.launch {
+            while (true) {
+                delay(30000) // Check every 30 seconds
+                
+                val config = _dropFolderConfig.value
+                if (config != null && config.isActive) {
+                    // Clear cache periodically to refresh replica info
+                    replicaInfoCache.clear()
+                    refreshDirectory()
+                }
+            }
+        }
+    }
+    
+    /**
+     * Save configuration to preferences
+     */
+    private fun saveConfiguration(config: DropFolderConfig) {
+        prefs.edit().apply {
+            putString("path", config.path)
+            putString("displayName", config.displayName)
+            putBoolean("isActive", config.isActive)
+            putBoolean("autoReplication", config.autoReplication)
+            putInt("targetReplicas", config.targetReplicas)
+            putBoolean("watchSubfolders", config.watchSubfolders)
+            putLong("maxFileSize", config.maxFileSize)
+            apply()
+        }
+    }
+    
+    /**
+     * Load saved configuration
+     */
+    private fun loadSavedConfiguration() {
+        val path = prefs.getString("path", null)
+        if (path != null) {
+            val config = DropFolderConfig(
+                path = path,
+                displayName = prefs.getString("displayName", null),
+                isActive = prefs.getBoolean("isActive", false),
+                autoReplication = prefs.getBoolean("autoReplication", true),
+                targetReplicas = prefs.getInt("targetReplicas", 3),
+                watchSubfolders = prefs.getBoolean("watchSubfolders", true),
+                maxFileSize = prefs.getLong("maxFileSize", 100L * 1024 * 1024)
+            )
+            _dropFolderConfig.value = config
+            
+            if (config.isActive) {
+                scope.launch {
+                    val folder = File(config.path)
+                    if (folder.exists() && folder.isDirectory) {
+                        _currentDirectory.value = folder
+                        startFileObserver(folder)
+                        refreshDirectory()
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Clean up resources
+     */
+    fun cleanup() {
+        stopFileObserver()
+        scope.cancel()
+    }
+    
+    /**
+     * Convert ReplicationLevel enum to integer value
+     */
+    private fun getReplicationValue(level: com.ustadmobile.meshrabiya.storage.ReplicationLevel): Int {
+        return when (level) {
+            com.ustadmobile.meshrabiya.storage.ReplicationLevel.MINIMAL -> 1
+            com.ustadmobile.meshrabiya.storage.ReplicationLevel.STANDARD -> 3
+            com.ustadmobile.meshrabiya.storage.ReplicationLevel.HIGH -> 5
+            com.ustadmobile.meshrabiya.storage.ReplicationLevel.CRITICAL -> 7
+        }
+    }
+}

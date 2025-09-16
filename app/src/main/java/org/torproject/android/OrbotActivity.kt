@@ -157,6 +157,10 @@ class OrbotActivity : BaseActivity() {
                     R.id.kindnessFragment, null, navOptions
                 )
 
+                R.id.friendsFragment -> navController.navigate(
+                    R.id.friendsFragment, null, navOptions
+                )
+
                 R.id.meshFragment -> navController.navigate(
                     R.id.meshFragment, null, navOptions
                 )

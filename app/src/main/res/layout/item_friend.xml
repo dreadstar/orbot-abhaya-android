@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="@color/item_background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center_vertical">
+
+        <!-- Friend Info Column -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginEnd="8dp">
+
+            <!-- Nickname -->
+            <TextView
+                android:id="@+id/tv_nickname"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Friend Nickname"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/primary_text_color"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <!-- Onion Address -->
+            <TextView
+                android:id="@+id/tv_onion_address"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="abcd1234...wxyz9876.onion"
+                android:textSize="12sp"
+                android:textColor="@color/secondary_text_color"
+                android:fontFamily="monospace"
+                android:layout_marginTop="2dp" />
+
+            <!-- Online Status -->
+            <TextView
+                android:id="@+id/tv_online_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Offline"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:layout_marginTop="4dp" />
+
+        </LinearLayout>
+
+        <!-- Action Buttons Column -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Info Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_info"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="4dp"
+                app:icon="@drawable/ic_info"
+                app:iconSize="16dp"
+                app:iconTint="@color/icon_color"
+                app:backgroundTint="@color/icon_button_background" />
+
+            <!-- Message Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_message"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="4dp"
+                app:icon="@drawable/ic_message"
+                app:iconSize="16dp"
+                app:iconTint="@color/icon_color"
+                app:backgroundTint="@color/icon_button_background" />
+
+            <!-- Delete Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_delete"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                app:icon="@drawable/ic_delete"
+                app:iconSize="16dp"
+                app:iconTint="@color/delete_icon_color"
+                app:backgroundTint="@color/delete_button_background" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

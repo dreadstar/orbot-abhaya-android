@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <!-- Scanned Address Display -->
+    <TextView
+        android:id="@+id/tv_scanned_address"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Address: example.onion"
+        android:textSize="12sp"
+        android:textColor="@color/secondary_text_color"
+        android:fontFamily="monospace"
+        android:padding="8dp"
+        android:background="@drawable/rounded_background"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Nickname Input -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/til_nickname"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        app:boxStrokeColor="@color/primary_color"
+        app:hintTextColor="@color/primary_color">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_nickname"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter nickname for friend"
+            android:inputType="textPersonName"
+            android:maxLines="1" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Instructions -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Enter a friendly nickname to identify this contact in your friends list."
+        android:textSize="12sp"
+        android:textColor="@color/tertiary_text_color"
+        android:textAlignment="center" />
+
+</LinearLayout>

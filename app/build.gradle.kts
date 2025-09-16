@@ -174,6 +174,16 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.appiconnamechanger)
 
+    // Camera and QR code dependencies (Hybrid approach: QRCode-kotlin + ML Kit)
+    implementation("androidx.camera:camera-core:1.3.4")
+    implementation("androidx.camera:camera-camera2:1.3.4")
+    implementation("androidx.camera:camera-lifecycle:1.3.4")
+    implementation("androidx.camera:camera-view:1.3.4")
+    
+    // QR Code generation and scanning (Pure hybrid: QRCode-kotlin + ML Kit)
+    implementation("io.github.g0dkar:qrcode-kotlin:4.5.0")  // Generation only
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")  // Scanning + computer vision
+
     testImplementation(libs.junit.jupiter)
     testImplementation("org.mockito:mockito-core:5.5.0")
     testImplementation("org.mockito:mockito-inline:5.2.0")

@@ -20,10 +20,26 @@ import java.io.File
  * - Store files from other nodes in distributed storage area
  * 
  * TODO: Security & Trust Management
- * - Implement peer trust and "friends lists" using Tor project methodologies
- * - Resolve .onion address scope (device vs user identification)
- * - Implement file validation and signature verification
- * - Add sandboxing for SharedWithMe content
+ * 
+ * .onion Address Architecture (Research Findings):
+ * - .onion addresses are SERVICE-SPECIFIC, not device or user identifiers
+ * - Each hidden service gets a unique .onion address via Tor's cryptographic key generation
+ * - Multiple services can run on same device with different .onion addresses
+ * - Orbot leverages native Tor daemon (via JNI) to generate addresses in service directories
+ * - Address is derived from Ed25519 public key (v3 onion services) stored in service's hostname file
+ * 
+ * Trust & Security Implementation Strategy:
+ * - For mesh networking: Each node runs a hidden service, gets unique .onion address as node ID
+ * - Peer trust: Implement allowlist/blocklist based on .onion addresses (service-level trust)
+ * - Device identification: Use device-specific hidden service for mesh network participation
+ * - File validation: Implement signature verification using service's private key
+ * - Sandboxing: Isolate SharedWithMe content in separate storage area with restricted permissions
+ * 
+ * Security Considerations:
+ * - .onion address rotation: Services can generate new addresses for privacy
+ * - Key escrow: Store service private keys securely (Android Keystore integration)
+ * - Network-level authentication: v3 client authentication for restricted access
+ * - Reputation system: Track peer behavior based on .onion address history
  */
 class DistributedStorageAgent(
     private val meshNetwork: IntelligentDistributedComputeService.MeshNetworkInterface,

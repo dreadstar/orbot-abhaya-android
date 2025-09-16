@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!-- Camera Preview -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/camera_preview"
+        android:layout_width="match_parent"
+        android:layout_height="400dp"
+        android:layout_margin="16dp" />
+
+    <!-- Controls -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Switch Camera Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_switch_camera"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Switch Camera"
+            android:textColor="@color/button_text_color"
+            app:icon="@drawable/ic_camera_switch"
+            app:iconGravity="textStart"
+            app:backgroundTint="@color/secondary_button_color"
+            app:cornerRadius="8dp"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Scan Status -->
+        <TextView
+            android:id="@+id/tv_scan_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Point camera at QR code to scan"
+            android:textSize="14sp"
+            android:textColor="@color/secondary_text_color"
+            android:textAlignment="center"
+            android:padding="8dp" />
+
+        <!-- Instructions -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Scan your friend's .onion address QR code to add them to your contacts."
+            android:textSize="12sp"
+            android:textColor="@color/tertiary_text_color"
+            android:textAlignment="center"
+            android:padding="8dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

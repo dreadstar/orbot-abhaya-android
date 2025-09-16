@@ -21,6 +21,11 @@
         android:label="fragment_kindness"
         tools:layout="@layout/fragment_kindness" />
     <fragment
+        android:id="@+id/friendsFragment"
+        android:name="org.torproject.android.ui.friends.FriendsFragment"
+        android:label="fragment_friends"
+        tools:layout="@layout/fragment_friends" />
+    <fragment
         android:id="@+id/meshFragment"
         android:name="org.torproject.android.ui.mesh.EnhancedMeshFragment"
         android:label="fragment_mesh"

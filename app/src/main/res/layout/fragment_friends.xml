@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/background_color">
+
+    <!-- Friends Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_friends"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="@color/card_background">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Card Title -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Friends"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@color/primary_text_color"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Buttons Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <!-- Show QR Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_qr"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="Show QR"
+                    android:textColor="@color/button_text_color"
+                    app:icon="@drawable/ic_qr_code"
+                    app:iconGravity="textStart"
+                    app:backgroundTint="@color/primary_button_color"
+                    app:cornerRadius="8dp" />
+
+                <!-- Scan QR Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_scan_qr"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:text="Scan QR"
+                    android:textColor="@color/button_text_color"
+                    app:icon="@drawable/ic_camera"
+                    app:iconGravity="textStart"
+                    app:backgroundTint="@color/primary_button_color"
+                    app:cornerRadius="8dp" />
+
+            </LinearLayout>
+
+            <!-- Friends List Header -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Friends List"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/secondary_text_color"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Friends List -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_friends"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false" />
+
+            <!-- Empty State -->
+            <TextView
+                android:id="@+id/tv_empty_state"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="No friends added yet.\nScan a friend's QR code to get started!"
+                android:textSize="14sp"
+                android:textColor="@color/secondary_text_color"
+                android:textAlignment="center"
+                android:padding="32dp"
+                android:visibility="visible" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Info Text -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Friends are identified by their .onion addresses and can be used for secure file sharing in the distributed storage system."
+        android:textSize="12sp"
+        android:textColor="@color/tertiary_text_color"
+        android:textAlignment="center"
+        android:padding="8dp" />
+
+</LinearLayout>

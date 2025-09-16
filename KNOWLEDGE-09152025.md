@@ -34,8 +34,26 @@
 **Requirements**: 
 - Implement peer trust and "friends lists" using Tor project methodologies
 - Questions to resolve:
-  - Is .onion address a device or user identifier? (Assume device for now)
-  - Does Orbot generate .onion addresses for device/user identification?
+  ### Security Questions & Research Results
+
+1. **✅ RESOLVED: .onion Address Scope**
+   - **Question**: Is .onion address a device or user identifier?
+   - **Answer**: .onion addresses are **SERVICE-SPECIFIC** identifiers
+   - **Details**: Each hidden service gets unique .onion address via Tor's Ed25519 key generation
+   - **Implication**: Multiple services per device = multiple .onion addresses per device
+
+2. **✅ RESOLVED: .onion Address Generation**
+   - **Question**: Does Orbot generate .onion addresses for device/user identification?
+   - **Answer**: Orbot uses native Tor daemon (via JNI) to generate service-specific addresses
+   - **Process**: Service directory → Tor generates key pair → reads hostname file → extracts .onion address
+   - **Architecture**: `TorService` (JNI) → `torrc` config → `HiddenServiceDir` → Tor daemon → `hostname` file
+
+3. **Security Architecture for Mesh Networking**:
+   - Each mesh node runs dedicated hidden service → unique .onion node identifier
+   - Peer trust based on .onion address allowlist/blocklist (service-level trust)
+   - File signatures using service's Ed25519 private key for validation
+   - Client authentication (v3) for restricted peer access
+   - Device-level trust = collection of service-level trust relationships
 **Status**: TODO - Design trust model inspired by Tor project approaches
 **Security Considerations**:
 - File validation before download

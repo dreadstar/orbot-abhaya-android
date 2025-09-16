@@ -8,6 +8,10 @@
         android:icon="@drawable/ic_kindness_selector"
         android:title="@string/menu_kindness"/>
     <item
+        android:id="@+id/friendsFragment"
+        android:icon="@drawable/ic_friends"
+        android:title="@string/menu_friends"/>
+    <item
         android:id="@+id/meshFragment"
         android:icon="@drawable/ic_mesh_network"
         android:title="@string/menu_mesh"/>

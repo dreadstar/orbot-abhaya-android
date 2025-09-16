@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center">
+
+    <!-- QR Code Image -->
+    <ImageView
+        android:id="@+id/iv_qr_code"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
+        android:layout_marginBottom="16dp"
+        android:scaleType="fitCenter"
+        android:contentDescription="QR Code for .onion address" />
+
+    <!-- Onion Address Text -->
+    <TextView
+        android:id="@+id/tv_onion_address"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="your-onion-address.onion"
+        android:textSize="12sp"
+        android:textColor="@color/secondary_text_color"
+        android:textAlignment="center"
+        android:fontFamily="monospace"
+        android:padding="8dp"
+        android:background="@drawable/rounded_background"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Instructions -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Share this QR code with friends to let them add you to their contact list."
+        android:textSize="14sp"
+        android:textColor="@color/tertiary_text_color"
+        android:textAlignment="center" />
+
+</LinearLayout>

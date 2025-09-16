@@ -1,0 +1,96 @@
+package org.torproject.android.ui.mesh
+
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
+import org.torproject.android.R
+
+/**
+ * RecyclerView adapter for displaying files and folders in the drop folder directory
+ */
+class FileDirectoryAdapter(
+    private var items: List<FileDirectoryItem> = emptyList(),
+    private val onItemClick: (FileDirectoryItem) -> Unit = {},
+    private val onItemAction: (FileDirectoryItem) -> Unit = {}
+) : RecyclerView.Adapter<FileDirectoryAdapter.FileViewHolder>() {
+
+    class FileViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val fileIcon: TextView = itemView.findViewById(R.id.fileIcon)
+        val fileName: TextView = itemView.findViewById(R.id.fileName)
+        val fileDetails: TextView = itemView.findViewById(R.id.fileDetails)
+        val replicaStatusContainer: View = itemView.findViewById(R.id.replicaStatusContainer)
+        val replicaCount: TextView = itemView.findViewById(R.id.replicaCount)
+        val replicationStatus: TextView = itemView.findViewById(R.id.replicationStatus)
+        val fileActionButton: MaterialButton = itemView.findViewById(R.id.fileActionButton)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FileViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_file_directory, parent, false)
+        return FileViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: FileViewHolder, position: Int) {
+        val item = items[position]
+        
+        // Set basic file info
+        holder.fileIcon.text = item.getIcon()
+        holder.fileName.text = item.name
+        holder.fileDetails.text = item.getDetailsText()
+        
+        // Handle replica information
+        val replicaInfo = item.replicaInfo
+        if (replicaInfo != null && !item.isDirectory) {
+            holder.replicaStatusContainer.visibility = View.VISIBLE
+            holder.replicaCount.text = replicaInfo.replicaCount.toString()
+            holder.replicationStatus.text = replicaInfo.getStatusText()
+            holder.replicationStatus.setTextColor(replicaInfo.getStatusColor())
+        } else {
+            holder.replicaStatusContainer.visibility = View.GONE
+        }
+        
+        // Set click listeners
+        holder.itemView.setOnClickListener {
+            onItemClick(item)
+        }
+        
+        holder.fileActionButton.setOnClickListener {
+            onItemAction(item)
+        }
+        
+        // Update action button based on item type
+        holder.fileActionButton.text = if (item.isDirectory) "📂" else "⋮"
+    }
+
+    override fun getItemCount(): Int = items.size
+
+    /**
+     * Update the adapter with new items
+     */
+    fun updateItems(newItems: List<FileDirectoryItem>) {
+        items = newItems
+        notifyDataSetChanged()
+    }
+
+    /**
+     * Update replica info for a specific file
+     */
+    fun updateFileReplicaInfo(fileName: String, replicaInfo: ReplicaInfo) {
+        val updatedItems = items.map { item ->
+            if (item.name == fileName && !item.isDirectory) {
+                item.copy(replicaInfo = replicaInfo)
+            } else {
+                item
+            }
+        }
+        updateItems(updatedItems)
+    }
+
+    /**
+     * Get current items for external access
+     */
+    fun getCurrentItems(): List<FileDirectoryItem> = items
+}
