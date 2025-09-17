@@ -263,12 +263,81 @@ truncate -s 0 qrcode_getbytes_test.log && ./gradlew compileFullpermDebugKotlin -
 
 ---
 
+## Distributed Service Layer - Mesh-Aware File Service Strategy
+
+### Overview
+Strategy for implementing distributed file storage service optimized for flat mesh network topology using direct peer connections and multi-hop routing coordination.
+
+### Mesh Network Architecture Understanding
+- **Flat mesh topology** - No traditional IP subnets
+- **Hop-based routing** - Distance measured in mesh hops, not subnet boundaries
+- **Direct peer connections** - 1-hop neighbors for optimal transfers
+- **Multi-hop coordination** - Service manages routing through intermediate nodes
+
+### File Service Strategy
+
+#### Transfer Types
+1. **Local Cluster Transfers (1-hop neighbors)**
+   - Direct peer-to-peer transfers
+   - Most efficient, lowest latency
+   - Minimal service coordination needed
+
+2. **Extended Mesh Transfers (2+ hops)**
+   - Store-and-forward via distributed file service
+   - Service coordinates routing through intermediate nodes
+   - Handles mesh path optimization and redundancy
+
+#### Service Value Proposition
+The distributed file service becomes valuable specifically for multi-hop scenarios:
+- **Mesh-aware routing** - Finding optimal paths through mesh topology
+- **Disconnection handling** - Managing temporary node unavailability
+- **Chunk distribution** - Optimizing data flow across available mesh paths
+- **Path redundancy** - Providing alternatives when direct routes fail
+
+#### UI Metrics Design
+Replace current "Ready(5.0GB Max)" with mesh-aware activity indicators:
+
+**Active State:**
+```
+Distributed File Storage: Active (2 local, 1 mesh-wide, 850KB/s)
+```
+
+**Idle State:**
+```
+Distributed File Storage: Ready (12 files cached)
+```
+
+**Disabled State:**
+```
+Distributed File Storage: Disabled
+```
+
+Where:
+- **"2 local"** = transfers within 1-hop neighbors
+- **"1 mesh-wide"** = transfers requiring multi-hop routing  
+- **"850KB/s"** = current throughput
+- **"12 files cached"** = files available for distribution
+
+#### Implementation Considerations
+- **Prioritize local cluster** transfers for efficiency
+- **Service coordination** only for multi-hop requirements
+- **Mesh topology awareness** in routing decisions
+- **No artificial subnet concepts** in flat mesh design
+
+### Benefits Over Traditional Approaches
+1. **Mesh-native design** - Aligns with actual network topology
+2. **Efficient resource usage** - Direct transfers when possible
+3. **Scalable coordination** - Service involvement only when needed
+4. **Realistic metrics** - Shows actual service activity vs configuration limits
+
+---
+
 ## Next Session Priorities
 
 ### Immediate (Next Session)
-1. **Device Testing**: Deploy and test Friends feature on physical Android device
-2. **Data Persistence**: Implement local storage for friends list
-3. **Error Handling**: Add robust error handling and user feedback
+1. **UI State Management**: Fix service status display when participation toggle is off
+2. **Timing Bug Resolution**: Deploy fixes for large number display issues
+3. **Service Metrics**: Implement mesh-aware file service metrics
 
 ### Strategic (Future Sessions)
 1. **Mesh Integration**: Connect Friends to distributed computing layer

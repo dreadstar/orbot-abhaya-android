@@ -1,6 +1,7 @@
 package org.torproject.android.ui.mesh
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -356,10 +357,8 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     }
     
     private fun updateDistributedServiceLayerUI() {
-        // Only update service statuses if service layer is active
-        if (serviceLayerParticipationSwitch.isChecked) {
-            updateServiceStatuses()
-        }
+        // Always update service statuses to reflect current participation state
+        updateServiceStatuses()
     }
     
     private fun updateGatewayStatus() {
@@ -439,6 +438,8 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
                 appendLine("\nNetwork Information:")
                 appendLine("• Connected Nodes: ${meshStatus.nodeCount}")
                 appendLine("• Traffic: ${meshStatus.trafficBytes} bytes")
+                
+                Log.d("EnhancedMeshFragment", "Network info display: nodeCount=${meshStatus.nodeCount}, trafficBytes=${meshStatus.trafficBytes}")
                 
                 // Get neighbors from virtual node if available
                 virtualNode?.let { node ->
@@ -621,6 +622,8 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
                 appendLine("• Traffic Bytes: ${meshStatus.trafficBytes}")
                 appendLine("• Network Latency: ${healthCheck.networkLatency}ms")
                 appendLine("• Service Health: ${if (healthCheck.success) "Healthy" else "Issues Detected"}")
+                
+                Log.d("EnhancedMeshFragment", "Mesh statistics display: nodeCount=${meshStatus.nodeCount}, trafficBytes=${meshStatus.trafficBytes}, latency=${healthCheck.networkLatency}")
                 
                 val currentRoles = meshCoordinator.getCurrentlyAssignedRoles()
                 if (currentRoles.isNotEmpty()) {
@@ -858,6 +861,11 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
         // Update UI
         updateServiceLayerStatus(isParticipating)
         
+        // Immediately update service statuses to reflect new participation state
+        if (!isParticipating) {
+            updateServiceStatuses() // This will show "Disabled" for all services
+        }
+        
         // Start or stop the actual service coordinator
         lifecycleScope.launch {
             if (isParticipating) {
@@ -1001,11 +1009,15 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
             }
             
             val uptimeMinutes = (stats.serviceUptimeMs / (1000 * 60)).toInt()
-            taskSchedulerServiceStatus.text = if (capabilities.computeEnabled) {
+            val statusText = if (capabilities.computeEnabled) {
                 "Ready (${uptimeMinutes}m uptime)"
             } else {
                 requireContext().getString(R.string.service_unavailable)
             }
+            
+            Log.d("EnhancedMeshFragment", "updateServiceLayerStatus: uptimeMs=${stats.serviceUptimeMs}, uptimeMin=$uptimeMinutes, status='$statusText'")
+            
+            taskSchedulerServiceStatus.text = statusText
         }
     }
     
@@ -1025,6 +1037,8 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
         val context = requireContext()
         val isParticipating = serviceLayerParticipationSwitch.isChecked
         
+        Log.d("EnhancedMeshFragment", "updateServiceStatuses: isParticipating=$isParticipating, starting=$starting, stopping=$stopping, stopped=$stopped")
+        
         when {
             starting -> {
                 pythonServiceStatus.text = "Starting..."
@@ -1038,14 +1052,22 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
                 distributedStorageServiceStatus.text = "Stopping..."
                 taskSchedulerServiceStatus.text = "Stopping..."
             }
-            stopped || !isParticipating -> {
+            !isParticipating -> {
+                // When participation is disabled, all services should show "Disabled"
+                pythonServiceStatus.text = context.getString(R.string.service_disabled)
+                mlInferenceServiceStatus.text = context.getString(R.string.service_disabled)
+                distributedStorageServiceStatus.text = context.getString(R.string.service_disabled)
+                taskSchedulerServiceStatus.text = context.getString(R.string.service_disabled)
+            }
+            stopped -> {
+                // When stopped but participation is enabled, show "Unavailable"
                 pythonServiceStatus.text = context.getString(R.string.service_unavailable)
                 mlInferenceServiceStatus.text = context.getString(R.string.service_unavailable)
                 distributedStorageServiceStatus.text = context.getString(R.string.service_unavailable)
                 taskSchedulerServiceStatus.text = context.getString(R.string.service_unavailable)
             }
             else -> {
-                // Check actual service availability
+                // When participation is enabled and services are running, check actual availability
                 pythonServiceStatus.text = if (isPythonServiceAvailable()) {
                     context.getString(R.string.service_ready)
                 } else {
@@ -1069,6 +1091,7 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
                 } else {
                     context.getString(R.string.service_error)
                 }
+            }
             }
         }
     }

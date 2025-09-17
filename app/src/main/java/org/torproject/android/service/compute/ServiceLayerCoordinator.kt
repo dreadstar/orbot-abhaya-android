@@ -1,5 +1,6 @@
 package org.torproject.android.service.compute
 
+import android.util.Log
 import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -11,6 +12,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 class ServiceLayerCoordinator(
     private val meshNetwork: IntelligentDistributedComputeService.MeshNetworkInterface
 ) {
+    
+    companion object {
+        private const val TAG = "ServiceLayerCoordinator"
+    }
     
     private val computeService by lazy { 
         IntelligentDistributedComputeService(
@@ -44,7 +49,7 @@ class ServiceLayerCoordinator(
         var totalBytesProcessed: Long = 0L,
         var totalComputeTimeMs: Long = 0L,
         var meshContributionScore: Float = 0.0f,
-        var serviceUptimeMs: Long = 0L
+        var serviceUptimeMs: Long = 0L // Stores service start time when active
     )
     
     data class ComputeTaskStatus(
@@ -91,8 +96,11 @@ class ServiceLayerCoordinator(
                 // Register with mesh network
                 registerWithMesh()
                 
-                // Update statistics
-                serviceStats.serviceUptimeMs = System.currentTimeMillis()
+                // Update statistics - store start time
+                val startTime = System.currentTimeMillis()
+                serviceStats.serviceUptimeMs = startTime
+                
+                Log.d(TAG, "Service layer started at: $startTime")
                 
                 true
             } else {
@@ -285,10 +293,19 @@ class ServiceLayerCoordinator(
     // === SERVICE MONITORING ===
     
     fun getServiceStatistics(): ServiceStatistics {
-        if (isActive()) {
-            serviceStats.serviceUptimeMs = System.currentTimeMillis() - serviceStats.serviceUptimeMs
+        return if (isActive()) {
+            // Calculate uptime without modifying the stored start time
+            val currentTime = System.currentTimeMillis()
+            val startTime = serviceStats.serviceUptimeMs
+            val currentUptime = currentTime - startTime
+            
+            Log.d(TAG, "getServiceStatistics: currentTime=$currentTime, startTime=$startTime, uptime=${currentUptime}ms (${currentUptime/60000}min)")
+            
+            serviceStats.copy(serviceUptimeMs = currentUptime)
+        } else {
+            Log.d(TAG, "getServiceStatistics: service not active, returning copy")
+            serviceStats.copy()
         }
-        return serviceStats.copy()
     }
     
     fun getServiceCapabilities(): ServiceCapabilities {

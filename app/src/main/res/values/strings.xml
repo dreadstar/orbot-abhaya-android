@@ -259,6 +259,7 @@
     <string name="task_scheduler_service">Intelligent Task Scheduler</string>
     <string name="service_ready">Ready</string>
     <string name="service_unavailable">Unavailable</string>
+    <string name="service_disabled">Disabled</string>
     <string name="service_busy">Busy</string>
     <string name="service_error">Error</string>
 

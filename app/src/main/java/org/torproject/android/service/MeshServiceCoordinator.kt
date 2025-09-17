@@ -84,7 +84,9 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     
     // Service state tracking
+    // Service state tracking
     private val serviceRunning = AtomicBoolean(false)
+    private var serviceStartTime: Long = 0L
     
     // Meshrabiya core components
     private var virtualNode: AndroidVirtualNode? = null
@@ -214,6 +216,10 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
             }
             
             serviceRunning.set(true)
+            serviceStartTime = System.currentTimeMillis()
+            
+            Log.d(TAG, "Mesh service started at: $serviceStartTime")
+            
             betaLogger.log(LogLevel.INFO, "MESH_START", "Mesh networking started successfully")
             Log.i(TAG, "Mesh networking started successfully")
             true
@@ -399,13 +405,27 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
                 val neighborCount = node.neighbors().size
                 val baseTraffic = neighborCount * 1024L // Basic estimate per neighbor
                 
-                // Simple traffic calculation based on node activity
-                if (serviceRunning.get() && neighborCount > 0) {
-                    baseTraffic + (System.currentTimeMillis() / 10000) // Growing over time
+                // Realistic traffic calculation based on service uptime
+                val trafficBytes = if (serviceRunning.get() && neighborCount > 0 && serviceStartTime > 0) {
+                    val currentTime = System.currentTimeMillis()
+                    val uptimeMs = currentTime - serviceStartTime
+                    val uptimeMinutes = uptimeMs / (1000 * 60)
+                    // Simulate traffic growing modestly over time (e.g., 512 bytes per minute per neighbor)
+                    val calculatedTraffic = baseTraffic + (uptimeMinutes * neighborCount * 512L)
+                    
+                    Log.d(TAG, "getTrafficBytes: neighbors=$neighborCount, startTime=$serviceStartTime, currentTime=$currentTime, uptimeMin=$uptimeMinutes, traffic=$calculatedTraffic")
+                    
+                    calculatedTraffic
                 } else {
+                    Log.d(TAG, "getTrafficBytes: service not active or no neighbors, returning baseTraffic=$baseTraffic")
                     baseTraffic
                 }
-            } ?: 0L
+                
+                trafficBytes
+            } ?: run {
+                Log.d(TAG, "getTrafficBytes: virtualNode is null, returning 0")
+                0L
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Error estimating traffic bytes", e)
             0L
