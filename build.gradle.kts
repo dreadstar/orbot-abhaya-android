@@ -1,4 +1,9 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+// TODO: Consider enabling configuration cache to speed up builds
+// See: https://docs.gradle.org/9.0.0/userguide/configuration_cache_enabling.html
+// Add 'org.gradle.configuration-cache=true' to gradle.properties after testing compatibility
+
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.android.library) apply false

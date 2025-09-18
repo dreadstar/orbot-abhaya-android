@@ -66,7 +66,8 @@ class ServiceLayerCoordinator(
         val fileId: String,
         val status: String,
         val progress: Float,
-        val startTime: Long
+        val startTime: Long,
+        val fileSizeBytes: Long = 0L
     )
     
     data class ServiceCapabilities(
@@ -101,6 +102,9 @@ class ServiceLayerCoordinator(
                 serviceStats.serviceUptimeMs = startTime
                 
                 Log.d(TAG, "Service layer started at: $startTime")
+                
+                // Simulate some initial tasks for demonstration
+                simulateActiveTasks()
                 
                 true
             } else {
@@ -200,7 +204,8 @@ class ServiceLayerCoordinator(
             fileId = fileId,
             status = "STARTED",
             progress = 0.0f,
-            startTime = System.currentTimeMillis()
+            startTime = System.currentTimeMillis(),
+            fileSizeBytes = data.size.toLong()
         )
         
         // Execute storage request
@@ -264,9 +269,11 @@ class ServiceLayerCoordinator(
             val response = storageAgent.retrieveFile(request)
             
             // Update operation status
+            val finalFileSize = response.data?.size?.toLong() ?: 0L
             activeStorageOps[operationId] = activeStorageOps[operationId]?.copy(
                 status = if (response.success) "COMPLETED" else "FAILED",
-                progress = 1.0f
+                progress = 1.0f,
+                fileSizeBytes = finalFileSize
             ) ?: return null
             
             // Update statistics
@@ -328,6 +335,54 @@ class ServiceLayerCoordinator(
             "storageOperations" to activeStorageOps.values.toList()
         )
     }
+    
+    /**
+     * Get the count of active storage operations (file transfers)
+     */
+    fun getActiveStorageOperationsCount(): Int {
+        return activeStorageOps.size
+    }
+    
+    /**
+     * Get the count of active compute tasks (Python scripts, ML inference)
+     */
+    fun getActiveComputeTasksCount(): Int {
+        return activeComputeTasks.values.count { it.status == "STARTED" || it.status == "IN_PROGRESS" }
+    }
+    
+    /**
+     * Get storage transfer statistics including throughput
+     */
+    fun getStorageTransferStats(): StorageTransferStats {
+        val activeOps = activeStorageOps.values.filter { it.status == "STARTED" || it.status == "IN_PROGRESS" }
+        val totalTransfers = activeOps.size
+        
+        if (totalTransfers == 0) {
+            return StorageTransferStats(0, 0.0)
+        }
+        
+        val currentTime = System.currentTimeMillis()
+        var totalThroughput = 0.0
+        var validCalculations = 0
+        
+        activeOps.forEach { op ->
+            val elapsedTimeMs = currentTime - op.startTime
+            if (elapsedTimeMs > 1000 && op.fileSizeBytes > 0) { // At least 1 second elapsed
+                val bytesTransferred = (op.progress * op.fileSizeBytes).toLong()
+                val throughputBytesPerSec = (bytesTransferred.toDouble() / elapsedTimeMs) * 1000
+                totalThroughput += throughputBytesPerSec
+                validCalculations++
+            }
+        }
+        
+        val avgThroughput = if (validCalculations > 0) totalThroughput / validCalculations else 0.0
+        return StorageTransferStats(totalTransfers, avgThroughput)
+    }
+    
+    data class StorageTransferStats(
+        val activeTransfers: Int,
+        val avgThroughputBytesPerSec: Double
+    )
     
     // === MESH NETWORK INTEGRATION ===
     
@@ -485,6 +540,200 @@ class ServiceLayerCoordinator(
                     executionTimeMs = 1000L,
                     nodeId = "mock_node"
                 )
+        }
+    }
+    
+    // === TASK MANAGEMENT METHODS FOR TESTING ===
+    
+    /**
+     * Get count of active Python script execution tasks
+     */
+    fun getActivePythonTaskCount(): Int {
+        return activeComputeTasks.values.count { task ->
+            task.taskId.startsWith("python_") && 
+            (task.status == "STARTED" || task.status == "IN_PROGRESS")
+        }
+    }
+    
+    /**
+     * Get count of active Machine Learning inference tasks
+     */
+    fun getActiveMLTaskCount(): Int {
+        return activeComputeTasks.values.count { task ->
+            task.taskId.startsWith("ml_") && 
+            (task.status == "STARTED" || task.status == "IN_PROGRESS")
+        }
+    }
+    
+    /**
+     * Get status string for Python Script Execution service
+     */
+    fun getPythonExecutionStatus(): String {
+        val activeCount = getActivePythonTaskCount()
+        return if (activeCount > 0) {
+            "Active ($activeCount tasks)"
+        } else {
+            "Ready"
+        }
+    }
+    
+    /**
+     * Get status string for Machine Learning Inference service
+     */
+    fun getMLInferenceStatus(): String {
+        val activeCount = getActiveMLTaskCount()
+        return if (activeCount > 0) {
+            "Active ($activeCount tasks)"
+        } else {
+            "Ready"
+        }
+    }
+    
+    /**
+     * Add a Python task for testing
+     */
+    fun addPythonTask(taskId: String, scriptName: String): String {
+        val fullTaskId = "python_${taskId}_${System.currentTimeMillis()}"
+        activeComputeTasks[fullTaskId] = ComputeTaskStatus(
+            taskId = fullTaskId,
+            status = "STARTED",
+            progress = 0.0f,
+            startTime = System.currentTimeMillis()
+        )
+        Log.d(TAG, "Added Python task: $fullTaskId ($scriptName)")
+        return fullTaskId
+    }
+    
+    /**
+     * Add an ML task for testing
+     */
+    fun addMLTask(taskId: String, modelType: String): String {
+        val fullTaskId = "ml_${taskId}_${System.currentTimeMillis()}"
+        activeComputeTasks[fullTaskId] = ComputeTaskStatus(
+            taskId = fullTaskId,
+            status = "STARTED",
+            progress = 0.0f,
+            startTime = System.currentTimeMillis()
+        )
+        Log.d(TAG, "Added ML task: $fullTaskId ($modelType)")
+        return fullTaskId
+    }
+    
+    /**
+     * Complete a Python task for testing
+     */
+    fun completePythonTask(taskId: String): Boolean {
+        val fullTaskId = activeComputeTasks.keys.find { it.contains(taskId) }
+        return if (fullTaskId != null) {
+            activeComputeTasks.remove(fullTaskId)
+            serviceStats.computeTasksCompleted++
+            Log.d(TAG, "Completed Python task: $fullTaskId")
+            true
+        } else {
+            Log.w(TAG, "Python task not found: $taskId")
+            false
+        }
+    }
+    
+    /**
+     * Complete an ML task for testing
+     */
+    fun completeMLTask(taskId: String): Boolean {
+        val fullTaskId = activeComputeTasks.keys.find { it.contains(taskId) }
+        return if (fullTaskId != null) {
+            activeComputeTasks.remove(fullTaskId)
+            serviceStats.computeTasksCompleted++
+            Log.d(TAG, "Completed ML task: $fullTaskId")
+            true
+        } else {
+            Log.w(TAG, "ML task not found: $taskId")
+            false
+        }
+    }
+    
+    /**
+     * Check if service layer is currently active
+     */
+    fun isServiceLayerActive(): Boolean {
+        return isActive()
+    }
+    
+    /**
+     * Get count of active Python tasks for UI display
+     */
+    fun getActivePythonTasksCount(): Int {
+        return activeComputeTasks.values.count { it.taskId.startsWith("python_") }
+    }
+    
+    /**
+     * Get count of active ML tasks for UI display  
+     */
+    fun getActiveMLTasksCount(): Int {
+        return activeComputeTasks.values.count { it.taskId.startsWith("ml_") }
+    }
+    
+    // === SIMULATION METHODS FOR TESTING ===
+    
+    /**
+     * Simulate some active tasks for demonstration purposes
+     */
+    private fun simulateActiveTasks() {
+        serviceScope.launch {
+            // Simulate 2 Python tasks
+            activeComputeTasks["python_task_1"] = ComputeTaskStatus(
+                taskId = "python_data_analysis_1",
+                status = "IN_PROGRESS",
+                progress = 0.6f,
+                startTime = System.currentTimeMillis() - 30000 // Started 30 seconds ago
+            )
+            
+            activeComputeTasks["python_task_2"] = ComputeTaskStatus(
+                taskId = "python_web_scraper_2",
+                status = "STARTED",
+                progress = 0.2f,
+                startTime = System.currentTimeMillis() - 10000 // Started 10 seconds ago
+            )
+            
+            // Simulate 1 ML inference task
+            activeComputeTasks["ml_task_1"] = ComputeTaskStatus(
+                taskId = "ml_image_inference_1",
+                status = "IN_PROGRESS",
+                progress = 0.8f,
+                startTime = System.currentTimeMillis() - 45000 // Started 45 seconds ago
+            )
+            
+            // Simulate some storage operations
+            activeStorageOps["storage_op_1"] = StorageOperationStatus(
+                operationId = "storage_upload_1",
+                type = "STORE",
+                fileId = "file_123",
+                status = "IN_PROGRESS",
+                progress = 0.4f,
+                startTime = System.currentTimeMillis() - 20000,
+                fileSizeBytes = 2048 * 1024 // 2MB
+            )
+            
+            activeStorageOps["storage_op_2"] = StorageOperationStatus(
+                operationId = "storage_upload_2",
+                type = "STORE",
+                fileId = "file_456",
+                status = "STARTED",
+                progress = 0.1f,
+                startTime = System.currentTimeMillis() - 5000,
+                fileSizeBytes = 5120 * 1024 // 5MB
+            )
+            
+            activeStorageOps["storage_op_3"] = StorageOperationStatus(
+                operationId = "storage_retrieve_3",
+                type = "RETRIEVE",
+                fileId = "file_789",
+                status = "IN_PROGRESS",
+                progress = 0.7f,
+                startTime = System.currentTimeMillis() - 35000,
+                fileSizeBytes = 1024 * 1024 // 1MB
+            )
+            
+            Log.d(TAG, "Simulated active tasks: ${activeComputeTasks.size} compute, ${activeStorageOps.size} storage")
         }
     }
 }

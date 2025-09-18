@@ -175,14 +175,20 @@ implementation("androidx.camera:camera-view:1.3.4")
    - Add user feedback for scanning failures
    - Enhance validation messages
 
+4. **Build Performance Optimization**
+   - **TODO**: Evaluate Gradle configuration cache for build speed improvements
+   - See: https://docs.gradle.org/9.0.0/userguide/configuration_cache_enabling.html
+   - Test compatibility with existing plugins and build scripts
+   - Add `org.gradle.configuration-cache=true` to gradle.properties after validation
+
 ### Medium Priority
-4. **Friends Feature Enhancement**
+5. **Friends Feature Enhancement**
    - Add friend status indicators (online/offline)
    - Implement friend categories or groups
    - Add friend search/filter functionality
    - Create friends export/import via QR codes
 
-5. **Integration with Distributed Computing**
+6. **Integration with Distributed Computing**
    - Connect friends list to mesh networking layer
    - Implement trust scoring for friends
    - Add computation task sharing with trusted friends

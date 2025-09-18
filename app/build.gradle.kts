@@ -185,7 +185,9 @@ dependencies {
     implementation("com.google.mlkit:barcode-scanning:17.2.0")  // Scanning + computer vision
 
     testImplementation(libs.junit.jupiter)
+    testImplementation("junit:junit:4.13.2") // JUnit 4 support
     testImplementation("org.mockito:mockito-core:5.5.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0") // Kotlin extensions
     testImplementation("org.mockito:mockito-inline:5.2.0")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.0")

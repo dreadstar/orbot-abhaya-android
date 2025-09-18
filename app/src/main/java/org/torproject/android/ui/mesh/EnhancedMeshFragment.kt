@@ -846,11 +846,28 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     private fun initializeDistributedServiceLayerUI() {
         // Initialize service layer participation state from preferences
         val prefs = requireContext().getSharedPreferences("mesh_service_layer", android.content.Context.MODE_PRIVATE)
+        // Default to false for new installs, but respect saved preference for existing users
         val isParticipating = prefs.getBoolean("service_layer_participation", false)
         
         serviceLayerParticipationSwitch.isChecked = isParticipating
         updateServiceLayerStatus(isParticipating)
-        updateServiceStatuses()
+        
+        // If participation was previously enabled, start services automatically
+        if (isParticipating) {
+            Log.d("EnhancedMeshFragment", "Auto-starting distributed services on app launch")
+            lifecycleScope.launch {
+                updateServiceStatuses(starting = true)
+                val success = startDistributedServices()
+                if (!success) {
+                    // If services fail to start, disable participation
+                    serviceLayerParticipationSwitch.isChecked = false
+                    prefs.edit().putBoolean("service_layer_participation", false).apply()
+                }
+                updateServiceStatuses()
+            }
+        } else {
+            updateServiceStatuses()
+        }
     }
     
     private fun updateServiceLayerParticipation(isParticipating: Boolean) {
@@ -1003,7 +1020,14 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
             }
             
             distributedStorageServiceStatus.text = if (capabilities.storageEnabled) {
-                "Ready (${String.format("%.1fGB", capabilities.maxStorageGB)} max)"
+                // Get storage transfer statistics from service layer
+                val transferStats = serviceLayerCoordinator?.getStorageTransferStats()
+                if (transferStats != null && transferStats.activeTransfers > 0) {
+                    val throughputMBps = transferStats.avgThroughputBytesPerSec / (1024 * 1024) // Convert to MB/s
+                    "(${transferStats.activeTransfers} files ${String.format("%.1f", throughputMBps)} mb/s)"
+                } else {
+                    "Ready"
+                }
             } else {
                 requireContext().getString(R.string.service_unavailable)
             }
@@ -1069,19 +1093,28 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
             else -> {
                 // When participation is enabled and services are running, check actual availability
                 pythonServiceStatus.text = if (isPythonServiceAvailable()) {
-                    context.getString(R.string.service_ready)
+                    // Use the proper status method from ServiceLayerCoordinator
+                    serviceLayerCoordinator?.getPythonExecutionStatus() ?: "Error"
                 } else {
                     context.getString(R.string.service_error)
                 }
                 
                 mlInferenceServiceStatus.text = if (isMLInferenceServiceAvailable()) {
-                    context.getString(R.string.service_ready)
+                    // Use the proper status method from ServiceLayerCoordinator
+                    serviceLayerCoordinator?.getMLInferenceStatus() ?: "Error"
                 } else {
                     context.getString(R.string.service_error)
                 }
                 
                 distributedStorageServiceStatus.text = if (isDistributedStorageServiceAvailable()) {
-                    context.getString(R.string.service_ready)
+                    // Get storage transfer statistics from service layer
+                    val transferStats = serviceLayerCoordinator?.getStorageTransferStats()
+                    if (transferStats != null && transferStats.activeTransfers > 0) {
+                        val throughputMBps = transferStats.avgThroughputBytesPerSec / (1024 * 1024) // Convert to MB/s
+                        "(${transferStats.activeTransfers} files ${String.format("%.1f", throughputMBps)} mb/s)"
+                    } else {
+                        "Ready"
+                    }
                 } else {
                     context.getString(R.string.service_error)
                 }
@@ -1092,26 +1125,17 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
                     context.getString(R.string.service_error)
                 }
             }
-            }
         }
     }
     
     private fun isPythonServiceAvailable(): Boolean {
-        // TODO: Check if Python runtime is available and functional
-        // For now, simulate based on device capabilities
-        return try {
-            // Check if we can execute a simple Python command
-            Runtime.getRuntime().exec("python3 --version")
-            true
-        } catch (e: Exception) {
-            false
-        }
+        // Check if service layer coordinator is active and services are running
+        return serviceLayerCoordinator?.isServiceLayerActive() == true
     }
     
     private fun isMLInferenceServiceAvailable(): Boolean {
-        // TODO: Check if TensorFlow Lite is available and models are loaded
-        // For now, always return true as TensorFlow Lite is included in the build
-        return true
+        // Check if service layer coordinator is active and ML services are available
+        return serviceLayerCoordinator?.isServiceLayerActive() == true
     }
     
     private fun isDistributedStorageServiceAvailable(): Boolean {
