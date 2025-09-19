@@ -1008,13 +1008,13 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
             
             // Update service status indicators based on actual capabilities
             pythonServiceStatus.text = if (capabilities.supportedComputeTypes.contains("PYTHON_SCRIPT")) {
-                "Ready (${stats.computeTasksCompleted} tasks)"
+                coordinator.getPythonExecutionStatus()
             } else {
                 requireContext().getString(R.string.service_unavailable)
             }
             
             mlInferenceServiceStatus.text = if (capabilities.supportedComputeTypes.contains("ML_INFERENCE")) {
-                "Ready (${String.format("%.1fMB", stats.totalBytesProcessed / (1024f * 1024f))})"
+                coordinator.getMLInferenceStatus()
             } else {
                 requireContext().getString(R.string.service_unavailable)
             }
@@ -1093,14 +1093,12 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
             else -> {
                 // When participation is enabled and services are running, check actual availability
                 pythonServiceStatus.text = if (isPythonServiceAvailable()) {
-                    // Use the proper status method from ServiceLayerCoordinator
                     serviceLayerCoordinator?.getPythonExecutionStatus() ?: "Error"
                 } else {
                     context.getString(R.string.service_error)
                 }
                 
                 mlInferenceServiceStatus.text = if (isMLInferenceServiceAvailable()) {
-                    // Use the proper status method from ServiceLayerCoordinator
                     serviceLayerCoordinator?.getMLInferenceStatus() ?: "Error"
                 } else {
                     context.getString(R.string.service_error)
@@ -1120,7 +1118,8 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
                 }
                 
                 taskSchedulerServiceStatus.text = if (isTaskSchedulerServiceAvailable()) {
-                    context.getString(R.string.service_ready)
+                    // Use the proper status method from ServiceLayerCoordinator
+                    serviceLayerCoordinator?.getTaskSchedulerStatus() ?: "Error"
                 } else {
                     context.getString(R.string.service_error)
                 }

@@ -14,7 +14,7 @@ class ServiceLayerCoordinator(
 ) {
     
     companion object {
-        private const val TAG = "ServiceLayerCoordinator"
+        private const val TAG = "Serv"
     }
     
     private val computeService by lazy { 
@@ -102,9 +102,6 @@ class ServiceLayerCoordinator(
                 serviceStats.serviceUptimeMs = startTime
                 
                 Log.d(TAG, "Service layer started at: $startTime")
-                
-                // Simulate some initial tasks for demonstration
-                simulateActiveTasks()
                 
                 true
             } else {
@@ -546,47 +543,38 @@ class ServiceLayerCoordinator(
     // === TASK MANAGEMENT METHODS FOR TESTING ===
     
     /**
-     * Get count of active Python script execution tasks
-     */
-    fun getActivePythonTaskCount(): Int {
-        return activeComputeTasks.values.count { task ->
-            task.taskId.startsWith("python_") && 
-            (task.status == "STARTED" || task.status == "IN_PROGRESS")
-        }
-    }
-    
-    /**
-     * Get count of active Machine Learning inference tasks
-     */
-    fun getActiveMLTaskCount(): Int {
-        return activeComputeTasks.values.count { task ->
-            task.taskId.startsWith("ml_") && 
-            (task.status == "STARTED" || task.status == "IN_PROGRESS")
-        }
-    }
-    
-    /**
      * Get status string for Python Script Execution service
      */
     fun getPythonExecutionStatus(): String {
-        val activeCount = getActivePythonTaskCount()
+        val activeCount = getActivePythonTasksCount()
         return if (activeCount > 0) {
             "Active ($activeCount tasks)"
         } else {
             "Ready"
         }
     }
-    
+
     /**
      * Get status string for Machine Learning Inference service
      */
     fun getMLInferenceStatus(): String {
-        val activeCount = getActiveMLTaskCount()
+        val activeCount = getActiveMLTasksCount()
         return if (activeCount > 0) {
             "Active ($activeCount tasks)"
         } else {
             "Ready"
         }
+    }    /**
+     * Get status string for Intelligent Task Scheduler service
+     */
+    fun getTaskSchedulerStatus(): String {
+        if (!isActive()) {
+            return "Disabled"
+        }
+        
+        val uptimeMs = System.currentTimeMillis() - serviceStats.serviceUptimeMs
+        val uptimeMinutes = uptimeMs / (1000 * 60)
+        return "Ready (${uptimeMinutes}m uptime)"
     }
     
     /**
