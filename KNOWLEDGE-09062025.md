@@ -3,7 +3,241 @@
 ## Project: Orbot-Meshrabiya Integration
 **Date**: September 6, 2025  
 **Status**: ✅ BUILD SUCCESSFUL - All major integration issues resolved
-**Last Updated**: September 18, 2025
+**Last Updated**: September 19, 2025
+
+## 🌐 STRANGERS-SAFE DISTRIBUTED COMPUTE CLOUD - September 19, 2025
+
+### ✅ Critical Security Questions - RESOLVED
+**Achievement**: Comprehensive mobile-friendly security architecture designed for distributed compute with strangers
+
+#### **1. 🏗️ Sandboxing Solution: Ultra-Lightweight Bulletproof Isolation**
+**Decision**: Process-based isolation using Android's existing security instead of heavy containers
+**Implementation**: 
+- Each service runs in separate Android process with restricted permissions
+- Syscall filtering (seccomp-bpf) allows only 12 essential syscalls: read, write, compute, exit
+- Real-time monitoring with automatic termination on violations
+- Communication-only processes: can ONLY read input pipe and write output pipe
+- Resource limits: 64MB memory, 30-second execution time
+- Zero file system access, zero network access
+
+**Key Benefits**:
+✅ **Mobile-Optimized**: Uses existing Android process isolation (no new dependencies)
+✅ **APK Size Friendly**: No heavy containers or virtualization
+✅ **Mathematical Security**: Kernel prevents dangerous operations at syscall level
+✅ **Resource Efficient**: Strict limits prevent battery drain
+
+#### **2. 🔐 Cryptographic Signing: Decentralized Web of Trust**
+**Decision**: Use existing .onion address infrastructure for service author identity and signing
+**Implementation**:
+- Service authors identified by long-term .onion addresses
+- Services distributed as signed ZIP bundles via I2P sites + BitTorrent
+- Ed25519 signatures using same crypto as Tor for consistency
+- Web of trust between maintainers, leveraging existing friends system
+- Automatic reputation tracking based on verifiable behavior
+
+**Distribution Architecture**:
+```
+Discovery: I2P Sites (meshcompute1.i2p, meshservices.i2p, trustednodes.i2p)
+Distribution: Signed BitTorrent magnets for censorship resistance
+Verification: Cryptographic signatures + reputation scores + audit reports
+```
+
+#### **3. 🔒 Privacy Model: Layered Protection**
+**Decision**: Multi-layer privacy protection for cross-device processing
+**Implementation**:
+- **End-to-End Encryption**: Data encrypted before leaving device (AES-256-GCM)
+- **Differential Privacy**: Calibrated noise protects individual data points
+- **Data Minimization**: Only send absolutely necessary data (compressed/downsampled)
+
+### ⚡ POWER MANAGEMENT ARCHITECTURE - September 19, 2025
+
+#### **🎛️ User-Configurable Power Controls**
+**Design Principle**: Give users complete control over battery impact through intuitive slider controls
+
+**UI Components** (`PowerManagementSettingsView.kt`):
+- **Battery Impact Slider**: 0-20% overhead (user selects acceptable range)
+- **Thermal Sensitivity**: 0-100% throttling aggressiveness 
+- **Service Priority**: Essential vs Optional services during low power
+- **Dynamic Descriptions**: Slider values update help text explaining impact
+- **Real-time Preview**: Shows estimated battery life impact
+
+**AdaptivePowerManager.kt Features**:
+```kotlin
+data class PowerSettings(
+    val batteryImpactPercent: Int = 10,      // User-configurable via slider
+    val thermalSensitivity: Int = 70,        // User-configurable throttling
+    val prioritizeEssentialServices: Boolean = true,
+    val enableThermalProtection: Boolean = true,
+    val maxServiceConcurrency: Int = 2
+)
+```
+
+#### **📱 Device Profiling System**
+**Intelligent Defaults**: Power settings auto-adjust based on device category
+
+**Device Detection**:
+- **Flagship**: High-end devices (8GB+ RAM) → Default 15% battery impact, moderate thermal sensitivity
+- **Mid-range**: Standard devices (4-8GB RAM) → Default 10% battery impact, higher thermal sensitivity  
+- **Budget**: Low-end devices (<4GB RAM) → Default 5% battery impact, aggressive thermal protection
+
+**Real-time Monitoring**:
+- Battery level tracking with StateFlow
+- Thermal state monitoring (COOL/WARM/HOT/CRITICAL)
+- Performance throttling based on thermal conditions
+- Automatic service suspension during critical states
+
+#### **🔄 EmergentRoleManager Integration**
+**Power-Aware Role Assignment**: Mesh roles automatically adjust based on power constraints
+
+**PowerConstraints Data Class**:
+```kotlin
+data class PowerConstraints(
+    val canProvideMLInference: Boolean,
+    val canProvideStorage: Boolean, 
+    val canRelayTraffic: Boolean,
+    val thermalState: String,
+    val batteryLevel: Int,
+    val powerSavingMode: String
+)
+```
+
+**Intelligent Role Adjustment**:
+- **ML Inference**: Disabled when thermal throttling active or battery <30%
+- **Storage Services**: Reduced allocation during power saving mode
+- **Traffic Relay**: Limited bandwidth when battery <50% or thermal constraints
+- **Performance Scaling**: CPU-intensive roles scaled by thermal performance multiplier
+
+**Dynamic Re-evaluation**:
+- Roles automatically re-assessed when power constraints change significantly
+- Thermal state changes (COOL→HOT) trigger immediate role adjustment  
+- Battery threshold crossing (50%→30%) updates service capabilities
+- User power setting changes propagate to mesh role decisions
+
+### 📦 SERVICE PACKAGING & DISTRIBUTION - September 19, 2025
+
+#### **🗜️ Standardized Package Format (.meshsvc)**
+**Decision**: Compressed ZIP archives with standardized structure for reliable distribution
+
+**Package Structure**:
+```
+service.meshsvc (ZIP archive)
+├── manifest.json           // Service metadata and requirements
+├── service/                 // Service code and entry point
+│   └── main.kt             // Primary service implementation
+├── models/                  // ML models and data files
+│   └── *.onnx, *.pt        // Model files with hash verification
+├── assets/                  // Additional resources
+│   └── config.json         // Configuration files
+└── meta/                    // Package metadata
+    └── package.json        // Creation timestamp, format version
+```
+
+**Manifest Schema** (`ServiceManifest` data class):
+- **Core Identity**: packageId, version, author .onion address
+- **Execution Requirements**: memory limits, CPU usage, execution timeout
+- **Security Profile**: allowed syscalls, sandbox restrictions, permissions
+- **Model Specifications**: file hashes, sizes, compression types
+- **Distribution Metadata**: tags, categories, license, documentation URLs
+
+#### **🔐 Cryptographic Package Signing**
+**Integration**: Leverages existing .onion infrastructure for service author identity
+
+**Signing Process**:
+1. **Package Hash**: SHA-256 of entire .meshsvc file
+2. **Author Signature**: Ed25519 signature using .onion private key
+3. **Web of Trust**: Endorsements from known maintainers
+4. **Audit Reports**: Third-party security evaluations (optional)
+
+**Distribution Chain**:
+```
+Discovery: I2P Sites (meshcompute1.i2p, meshservices.i2p)
+Distribution: BitTorrent magnets for censorship resistance  
+Verification: Cryptographic signatures + reputation scores
+Installation: Secure extraction to app private directory
+```
+
+#### **🛠️ Local Development & Testing Workflow**
+
+**ServiceDevelopmentTools Features**:
+- **Project Scaffolding**: Auto-generate service projects with templates
+- **Service Types**: ML Inference, Data Processing, Cryptographic, Computational, Utility
+- **Template Generation**: Code templates optimized for each service type
+- **Local Test Suite**: Comprehensive validation before distribution
+
+**Local Testing Architecture**:
+```kotlin
+// Create development project
+createServiceProject(packageId, serviceName, ServiceType.ML_INFERENCE)
+
+// Run comprehensive test suite
+runLocalTestSuite(projectPath) -> TestResults {
+    - Manifest validation
+    - Code structure verification  
+    - Security compliance checks
+    - Resource usage validation
+    - Functional testing
+    - Package creation simulation
+}
+
+// Preview service listing
+previewServiceListing(projectPath) -> ServiceListing {
+    - How service appears in discovery
+    - Technical specifications display
+    - Author trust information
+    - Package size and requirements
+}
+```
+
+**Development Package Format**:
+- **Unsigned Development**: `.meshsvc` packages marked with `DEV_UNSIGNED` signature
+- **Local Testing**: Execute in sandbox without cryptographic verification
+- **Iterative Development**: Rapid test-code-test cycles without distribution overhead
+
+#### **🎯 TODO: Enhanced Local Testing**
+
+**Priority Items for Local Development**:
+1. **Interactive Test Runner**: Real-time feedback with performance metrics
+2. **Security Vulnerability Scanner**: Automated detection of common security issues
+3. **Performance Profiling**: Resource usage monitoring and optimization suggestions
+4. **Mock Distribution Environment**: Simulate I2P/BitTorrent discovery and download
+5. **Android Studio Integration**: Debugging support for service development
+6. **Automated Test Generation**: Type-specific test cases based on service category
+
+**User Testing Workflow Requirements**:
+- **Simple UI**: Drag-and-drop service code, one-click testing
+- **Visual Feedback**: Test progress, resource usage graphs, security compliance status
+- **Error Diagnostics**: Clear explanations of test failures with suggested fixes
+- **Publishing Preview**: Show exactly how service will appear to users
+- **Distribution Simulation**: Test complete download-install-execute flow locally
+
+**Integration with Existing Tools**:
+- Leverage Android development environment for service coding
+- Use existing Orbot .onion infrastructure for author identity
+- Integrate with BulletproofSandbox for realistic testing environment
+- Connect to DistributedStorageManager for storage testing scenarios
+2. **Service-Shared**: Tasks from same service share files (model caching)
+3. **Mesh-Global**: Access any distributed files (high trust only)
+
+### 📡 Distributed Service Library (I2P + Torrents)
+**Architecture**: Hybrid approach for trustworthy service distribution
+- **I2P Sites**: Discovery of available services with metadata + magnet links
+- **BitTorrent**: Efficient, censorship-resistant distribution of service bundles
+- **Cryptographic Verification**: Every service signed by maintainer's Ed25519 key
+- **Reputation System**: Mathematical track record, not social endorsements
+
+**Scaling Solution**: Works with millions of strangers because trust is mathematical, not social
+
+### 💰 Economic Incentive Layer
+**Principle**: Make honesty more profitable than cheating
+**Implementation**:
+- Base payment for compute + honesty bonus for verified execution
+- Reputation multiplier (higher reputation = more profitable tasks)
+- Penalty risk (lose 2x if caught cheating)
+- Automatic reputation updates based on execution proofs
+
+**Result**: Self-regulating compute cloud where participants incentivized to be honest
+
+---
 
 ## 🚀 RECENT PROGRESS UPDATE - September 18, 2025
 
@@ -22,11 +256,40 @@
 **Build & Deploy Status**: ✅ Successful compilation and APK deployment completed
 **Testing Result**: UI now correctly shows "Ready" for Python Scripts and Machine Learning Inference services when idle
 
-### 📋 Future Work Planning
-**Added**: Briar chat client integration research to TODO list
-- Investigate Briar mesh networking compatibility with our infrastructure
-- Explore integration paths for decentralized chat over mesh + Tor
-- Plan unified UI for mesh networking, Tor routing, and secure messaging
+### ✅ MAJOR: Release Test Infrastructure Fixed
+**Critical Achievement**: Fixed all release test failures (66 → 0 failures)
+**Issue Resolved**: MockitoInitializationException and ByteBuddyAgent errors in release builds
+**Root Cause**: Missing test dependencies and improper ProGuard configuration for release builds
+**Solution Applied**:
+- Added comprehensive test dependencies (Mockito Kotlin, Robolectric, AndroidX Test)
+- Created test-specific ProGuard rules (`proguard-test-rules.pro`)
+- Configured proper test build type in `build.gradle.kts`
+
+**Files Modified**:
+- `Meshrabiya/lib-meshrabiya/build.gradle.kts` - Added test dependencies and ProGuard rules
+- `Meshrabiya/lib-meshrabiya/proguard-test-rules.pro` - Created test-specific ProGuard configuration
+- `build.gradle.kts` - Restored full test coverage including release tests
+
+**Test Results**: 
+- **Previous**: 66 failures out of 122 tests (45% success rate)
+- **Current**: ✅ **364 tests passed** (100% success rate)
+- **Performance**: ~5-7 minute execution time for comprehensive test suite
+
+### 📋 TODO: Enhanced Security Architecture Implementation
+**Priority Items**:
+- [ ] **Three Access Levels Deep Dive**: Implement and test Task-Isolated, Service-Shared, and Mesh-Global storage access patterns
+- [ ] **Storage Proxy Agent**: Build intelligent storage routing system with fallback mechanisms
+- [ ] **I2P Service Registry**: Implement discovery system for distributed service libraries
+- [ ] **Zero-Knowledge Proof Integration**: Research zk-SNARK libraries for mobile (libsnark alternatives)
+- [ ] **Economic Incentive Layer**: Design reputation scoring and payment mechanisms
+- [ ] **Briar Chat Integration**: Investigate Briar mesh networking compatibility with infrastructure
+
+**Future Work Planning**:
+- Integrate security architecture with existing ServiceLayerCoordinator
+- Performance testing of bulletproof sandbox on real Android devices
+- User experience design for strangers-safe compute cloud
+
+---
 
 ---
 
