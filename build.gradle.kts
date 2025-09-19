@@ -50,13 +50,13 @@ tasks.register("runAllTests") {
     // Clean build outputs first to ensure fresh runs
     dependsOn("clean")
     
-    // Automatically discover and depend on all test tasks
+    // Automatically discover and depend on all test tasks (include both debug and release)
     dependsOn(provider {
         project.allprojects.flatMap { proj ->
             proj.tasks.withType<Test>().map { task ->
                 "${proj.path}:${task.name}"
             }.filter { taskPath ->
-                // Include unit tests, exclude Android instrumentation tests
+                // Include all unit tests, both debug and release
                 taskPath.contains("UnitTest", ignoreCase = true) || 
                 taskPath.matches(Regex(".*:test$"))
             }
