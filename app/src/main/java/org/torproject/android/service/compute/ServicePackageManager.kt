@@ -61,13 +61,17 @@ class ServicePackageManager(private val context: Context) {
         val authorOnionAddress: String,           // .onion address of service author
         val createdTimestamp: Long,               // Unix timestamp of creation
         
-        // SERVICE EXECUTION
+    // SERVICE EXECUTION
         val entryPoint: String,                   // Main service class/function
         val runtime: RuntimeSpec,                 // Programming language and runtime
-        val supportedPlatforms: List<String>,     // ["android", "linux", "any"]
-        val requiredPermissions: List<String>,    // Android permissions needed
-        val resourceRequirements: ResourceSpec,   // CPU, memory, storage needs
-        val executionTimeoutSeconds: Int,         // Maximum execution time
+        val runtimeRequired: List<String>,        // Always-available runtimes ("jvm", "native")
+        val runtimeOptional: List<String>,        // Modular runtimes ("python", "nodejs", "go", "rust", "wasm")
+        val deviceProfile: String,                // "flagship", "mid-range", "budget"
+        val serviceType: String,                  // "workflow", "ml", "data_processing", etc.
+    val supportedPlatforms: List<String>,     // ["android", "linux", "any"]
+    val requiredPermissions: List<String>,    // Android permissions needed
+    val resourceRequirements: ResourceSpec,   // CPU, memory, storage needs
+    val executionTimeoutSeconds: Int,         // Maximum execution time
         
         // SECURITY & VALIDATION
         val signatureInfo: SignatureInfo,         // Cryptographic signatures
