@@ -16,11 +16,13 @@ internal class ServiceLayerCoordinatorTest {
     
     private lateinit var coordinator: ServiceLayerCoordinator
     private lateinit var mockMeshNetwork: MockMeshNetworkInterface
+    private lateinit var fakeMeshrabiya: FakeMeshrabiyaAdapter
     
     @BeforeEach
     fun setUp() {
         mockMeshNetwork = MockMeshNetworkInterface()
-        coordinator = ServiceLayerCoordinator(mockMeshNetwork)
+        fakeMeshrabiya = FakeMeshrabiyaAdapter()
+        coordinator = ServiceLayerCoordinator(mockMeshNetwork, meshrabiyaAdapter = fakeMeshrabiya)
     }
     
     @AfterEach
@@ -281,8 +283,12 @@ internal class ServiceLayerCoordinatorTest {
                     tags = setOf("retrieval")
                 )
                 
+                // storeFile executes storage asynchronously. Use the coordinator's test
+                // helper to await deterministic completion of a storage handling event.
+                val handled = coordinator.awaitStorageHandled(5000L)
+                assertTrue(handled, "Background storage task did not complete in time")
+
                 val retrievedData = coordinator.retrieveFile(fileId)
-                
                 assertNotNull(retrievedData)
                 assertArrayEquals(testData, retrievedData)
             } else {
@@ -451,6 +457,30 @@ internal class ServiceLayerCoordinatorTest {
                     executionTimeMs = 100L
                 )
             }
+        }
+    }
+
+    // Simple fake Meshrabiya adapter used for tests that don't need full mesh behavior
+    private class FakeMeshrabiyaAdapter : com.ustadmobile.meshrabiya.storage.MeshNetworkInterface {
+        override suspend fun sendStorageRequest(targetNodeId: String, fileInfo: com.ustadmobile.meshrabiya.storage.DistributedFileInfo, operation: com.ustadmobile.meshrabiya.storage.StorageOperation) {
+            // no-op for tests
+        }
+
+        override suspend fun queryFileAvailability(path: String): List<String> {
+            // Return empty list (no nodes report availability)
+            return listOf()
+        }
+
+        override suspend fun requestFileFromNode(nodeId: String, path: String): ByteArray? {
+            return null
+        }
+
+        override suspend fun getAvailableStorageNodes(): List<String> {
+            return listOf()
+        }
+
+        override suspend fun broadcastStorageAdvertisement(capabilities: com.ustadmobile.meshrabiya.mmcp.StorageCapabilities) {
+            // no-op
         }
     }
     

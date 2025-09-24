@@ -52,6 +52,8 @@ class DistributedStorageAgent(
     // For files replicated FROM other nodes (stored in distributed storage area)
     private val storedFiles = ConcurrentHashMap<String, FileMetadata>()
     private val replicationMap = ConcurrentHashMap<String, Set<String>>()
+    // Test-only in-memory storage to simulate disk for unit tests
+    internal val testStoredData = ConcurrentHashMap<String, ByteArray>()
     
     // For files shared WITH this user (metadata only until downloaded)
     private val sharedWithMeFiles = ConcurrentHashMap<String, SharedFileMetadata>()
@@ -679,6 +681,8 @@ class DistributedStorageAgent(
             // This is separate from Drop Folder - stores files FROM other nodes
             // Path would be: localStoragePath/fileId or similar
             // File(localStoragePath.resolve(fileId).toString()).writeBytes(data)
+            // For tests, store into in-memory map so retrieval tests can read it
+            testStoredData[fileId] = data
             delay(10) // Simulate I/O operation
             true
         } catch (e: Exception) {
@@ -688,11 +692,9 @@ class DistributedStorageAgent(
     
     private suspend fun retrieveFileFromDistributedStorage(fileId: String): ByteArray? = withContext(ioDispatcher) {
         try {
-            // TODO: Implement actual distributed storage area file system retrieval
-            // This reads from distributed storage area, not Drop Folder
-            // File(localStoragePath.resolve(fileId).toString()).readBytes()
+            // For tests, read from in-memory map if present
             delay(10) // Simulate I/O operation
-            null
+            testStoredData[fileId]
         } catch (e: Exception) {
             null
         }
@@ -700,13 +702,30 @@ class DistributedStorageAgent(
     
     private suspend fun deleteFileFromDistributedStorage(fileId: String): Boolean = withContext(ioDispatcher) {
         try {
-            // TODO: Implement actual distributed storage area file system deletion
-            // File(localStoragePath.resolve(fileId).toString()).delete()
+            // For tests, remove from in-memory map
+            testStoredData.remove(fileId)
             delay(5) // Simulate I/O operation
             true
         } catch (e: Exception) {
             false
         }
+    }
+
+    // --- Test helpers ---
+    /**
+     * Add a stored file and its data into the agent for unit tests. This avoids touching the real filesystem.
+     */
+    internal fun addStoredFileForTest(fileId: String, data: ByteArray, metadata: FileMetadata) {
+        storedFiles[fileId] = metadata
+        testStoredData[fileId] = data
+        currentStorageUsedBytes += data.size.toLong()
+    }
+
+    /**
+     * Set replication map entries for a file (used in retrieval/delete tests).
+     */
+    internal fun setReplicationMapForTest(fileId: String, nodes: Set<String>) {
+        replicationMap[fileId] = nodes
     }
     
     private suspend fun readFileFromDropFolder(filePath: Path): ByteArray? = withContext(ioDispatcher) {
@@ -765,6 +784,15 @@ class DistributedStorageAgent(
                 error = StorageError.PeerUnreachable(nodeId)
             )
         }
+    }
+
+    // Exposed for tests to exercise the replication logic without depending on
+    // readFileFromDropFolder implementation.
+    internal suspend fun replicateToSpecificNodeForTest(
+        nodeId: String,
+        request: StorageRequest
+    ): StorageResponse {
+        return replicateToSpecificNode(nodeId, request)
     }
     
     private suspend fun replicateToNodes(

@@ -4,6 +4,8 @@ import android.util.Log
 import com.ustadmobile.meshrabiya.beta.BetaTestLogger
 import com.ustadmobile.meshrabiya.beta.LogLevel
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.first
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -13,6 +15,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class ServiceLayerCoordinator(
     private val meshNetwork: IntelligentDistributedComputeService.MeshNetworkInterface,
+    // Optional Meshrabiya Mesh adapter for storage operations. Tests should provide this to avoid
+    // depending on runtime MeshServiceCoordinator initialization.
+    private val meshrabiyaAdapter: com.ustadmobile.meshrabiya.storage.MeshNetworkInterface? = null,
     // Optional beta logger - if not provided, attempt to obtain from MeshServiceCoordinator context
     private val betaLogger: BetaTestLogger? = try {
         org.torproject.android.service.MeshServiceCoordinator.getInstance(org.torproject.android.OrbotApp.instance.applicationContext).let {
@@ -38,12 +43,12 @@ class ServiceLayerCoordinator(
     }
     // Use the coordinator-provided Meshrabiya MeshNetworkInterface. Fail fast if it's not available.
     private val meshrabiyaMeshAdapter: com.ustadmobile.meshrabiya.storage.MeshNetworkInterface
-        get() = try {
+        get() = meshrabiyaAdapter ?: try {
             org.torproject.android.service.MeshServiceCoordinator.getInstance(org.torproject.android.OrbotApp.instance.applicationContext)
                 .provideMeshNetworkInterface()
         } catch (e: Exception) {
             null
-        } ?: throw IllegalStateException("MeshServiceCoordinator did not provide a Meshrabiya MeshNetworkInterface. Ensure MeshServiceCoordinator is initialized before constructing ServiceLayerCoordinator.")
+        } ?: throw IllegalStateException("MeshServiceCoordinator did not provide a Meshrabiya MeshNetworkInterface. Ensure MeshServiceCoordinator is initialized before constructing ServiceLayerCoordinator or provide a meshrabiyaAdapter for tests.")
 
     // Initialize storage agent lazily to avoid construction-time failures when the coordinator
     // may not yet have registered the adapter.
@@ -55,6 +60,33 @@ class ServiceLayerCoordinator(
     
     // Service statistics
     private val serviceStats = ServiceStatistics()
+    // Notifier used for tests to wait for storage request handling to complete
+    private val storageHandledNotifier = MutableSharedFlow<Unit>(extraBufferCapacity = 64)
+
+    /**
+     * Test helper: suspend until at least one storage request has been handled or timeout.
+     * Returns true if a storage request was observed, false if the timeout elapsed.
+     */
+    internal suspend fun awaitStorageHandled(timeoutMs: Long = 5000L): Boolean {
+        // Fast path: maybe already handled
+        if (serviceStats.storageRequestsHandled > 0) return true
+
+        // Wait for a flow emission (best-effort), with timeout
+        return try {
+            withTimeout(timeoutMs) {
+                storageHandledNotifier.first()
+                true
+            }
+        } catch (e: Exception) {
+            // Fallback: short polling check in case the emission raced the collector
+            val deadline = System.currentTimeMillis() + 200L
+            while (System.currentTimeMillis() < deadline) {
+                if (serviceStats.storageRequestsHandled > 0) return true
+                delay(10)
+            }
+            false
+        }
+    }
     
     // Active service operations
     private val activeComputeTasks = ConcurrentHashMap<String, ComputeTaskStatus>()
@@ -248,6 +280,12 @@ class ServiceLayerCoordinator(
                 // Update statistics
                 if (response.success) {
                     serviceStats.storageRequestsHandled++
+                    // Notify any test waiters that a storage request was handled
+                    try {
+                        storageHandledNotifier.tryEmit(Unit)
+                    } catch (_: Exception) {
+                        // best-effort notify
+                    }
                     serviceStats.totalBytesProcessed += data.size
                 } else {
                     serviceStats.storageErrorsEncountered++
@@ -298,6 +336,11 @@ class ServiceLayerCoordinator(
             // Update statistics
             if (response.success) {
                 serviceStats.storageRequestsHandled++
+                try {
+                    storageHandledNotifier.tryEmit(Unit)
+                } catch (_: Exception) {
+                    // best-effort notify
+                }
                 response.data?.let { serviceStats.totalBytesProcessed += it.size }
             } else {
                 serviceStats.storageErrorsEncountered++
@@ -366,7 +409,10 @@ class ServiceLayerCoordinator(
      * Get the count of active compute tasks (Python scripts, ML inference)
      */
     fun getActiveComputeTasksCount(): Int {
-        return activeComputeTasks.values.count { it.status == "STARTED" || it.status == "IN_PROGRESS" }
+        // Return only "generic" compute tasks (not Python or ML specific).
+        // Python and ML tasks are tracked separately via getActivePythonTasksCount and getActiveMLTasksCount.
+        return activeComputeTasks.values.count { (it.status == "STARTED" || it.status == "IN_PROGRESS") &&
+                !it.taskId.startsWith("python_") && !it.taskId.startsWith("ml_") }
     }
     
     /**
