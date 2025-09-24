@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/shareDialogTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Share Item"
+        android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+        android:textStyle="bold"
+        android:paddingBottom="12dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/shareWithFriendButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Share with Friend" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/shareWithEveryoneButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Share with Everyone"
+        android:layout_marginTop="8dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/shareWithTaskButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Share with Task"
+        android:layout_marginTop="8dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/shareAsTaskTriggerButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Share as Task Trigger"
+        android:layout_marginTop="8dp"
+        android:visibility="gone" />
+
+</LinearLayout>

@@ -15,6 +15,10 @@ This document captures the full technical and strategic plan for the Orbot-Abhay
 ---
 
 ## 1. Architecture & Design Choices
+### Application Context Access
+The global application context is provided via the singleton:
+`org.torproject.android.OrbotApp.instance.applicationContext`
+Use this for all context-dependent operations and service initializations throughout the codebase.
 
 ### Modular, Device-Aware Runtime Strategy
 - **Manifest Schema**: Services must declare:
@@ -111,13 +115,91 @@ This document captures the full technical and strategic plan for the Orbot-Abhay
 
 ---
 
-## 5. Implementation Status
 
-### Implemented
-- Manifest schema for modular runtimes and device profiles (`ServicePackageManager.kt`)
-- Security architecture: sandboxing (process-based, seccomp-bpf, resource limits), cryptographic signing (.onion, Ed25519), privacy layers (encryption, differential privacy)
-- Service card metrics and participation status testing (comprehensive test suite)
-- Developer onboarding and workflow rules (documented in knowledge base)
+---
+
+## 6. Distributed Task Request Workflow & Recommendations
+
+### Workflow Steps
+1. **Service Query Broadcast:**
+  - User/device can broadcast a service_query for services on the mesh.
+  - Devices receiving the broadcast search their libraries for matches and respond with results.
+  - Results include service metadata (name, version, description, type, inputs, outputs).
+
+2. **Smart Caching of Service Metadata:**
+  - Devices cache a limited number of service metadata entries per service/version, prioritizing closest, lowest latency, and fastest connections.
+  - Cache is updated dynamically based on mesh topology and recent performance.
+
+3. **Task Request Broadcast:**
+  - User/device/task broadcasts a task_request with identifying info (service, version, required role or requirements).
+  - Devices able to handle the task respond with a fitness score (latency, bandwidth, resource availability, etc.).
+  - Parallel fitness evaluation: responses are processed as they arrive, with a timeout for late responses.
+
+4. **Selection & Task Start:**
+  - Requesting device evaluates responses and selects the most fit device.
+  - Sends a task_start call to the selected device, including inputs and result handling instructions.
+
+5. **Service Retrieval (if needed):**
+  - Chosen device checks for the service; if missing, broadcasts a service_query.
+  - Devices with the service respond with availability.
+  - Chosen device selects the best source (proximity, bandwidth, fitness) and sends a retrieve_service call.
+  - Selected device responds with the full library entry (including service files).
+  - Chosen device validates and adds the entry to its library.
+
+6. **Task Execution:**
+  - Chosen device instantiates the task in a sandbox (Android process), passing operational parameters.
+  - Task runs and generates results, which are sent to target recipients (e.g., drop folders).
+
+7. **Result Acknowledgement:**
+  - Recipients acknowledge receipt of results to confirm delivery.
+
+### Additional Recommendations
+
+---
+
+## 7. Enhanced Input/Output Workflows & Storage Integration
+
+### File/Image/Camera Input Workflow
+- **UI/UX:** Dynamic input fields for file picker, camera capture, and image preview.
+- **Backend:** Manifest-driven input validation, permission handling (camera, storage), and input mapping.
+- **Security:** Sandboxing and permission checks for all input sources.
+
+### File-Output Destination Selection
+- **UI:** Folder picker/creator for selecting or creating destination folders for file-output tasks.
+- **Backend:** Stores destination folder in task context, validates write permissions, and prepares for streaming.
+
+### Streaming Results to Local/Distributed Storage
+- **StorageProxyAgent:** Receives file-output requests, determines best storage backend (local, distributed, memory) based on device capabilities, quota, and network conditions.
+- **DistributedStorageManager:** Handles folder management, quota enforcement, and file replication across mesh.
+- **Security:** All file operations are namespaced and quota-protected; no direct file system access from services.
+
+### Unique Filename Generation
+- **Logic:** Filenames for output files are generated using datetime and increment logic to ensure uniqueness and avoid collisions.
+- **Manifest:** Output schema can specify filename format requirements.
+
+### Manifest Schema Updates
+- **Fields:**
+  - `runtimeRequired`, `runtimeOptional`, `deviceProfile`, `serviceType`, `resourceRequirements`, `platformSupport`, `version`, `author`, `signature`, `files`, `capabilities`, `builtin`, `inputs`, `outputs`
+- **Validation:** All inputs/outputs are validated against manifest schema before task execution.
+
+### Enhanced Local Testing Workflow
+- **Interactive Test Runner:** Real-time feedback during service development.
+- **Security Scanner:** Automated detection of security issues and sandbox compliance.
+- **Performance Profiling:** Resource usage monitoring and optimization.
+- **Mock Distribution Environment:** Simulate I2P/BitTorrent flow locally.
+- **Android Studio Integration:** Full debugging support for service development.
+
+### New TODOs
+- Implement actual file streaming logic to StorageProxyAgent.
+- Integrate unique filename generation for all file-output tasks.
+- Add zero-knowledge proof integration for mobile (zk-SNARK research).
+- Finalize economic incentive and reputation systems.
+- Expand developer documentation and onboarding materials.
+- Add enhanced local testing features (interactive runner, security scanner, performance profiling, mock distribution, Android Studio integration).
+
+---
+
+---
 - Build and debugging protocols (environment setup, log analysis, error resolution)
 - Service library distribution architecture (I2P + BitTorrent, signing, reputation)
 

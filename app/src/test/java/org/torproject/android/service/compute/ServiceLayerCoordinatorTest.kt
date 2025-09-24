@@ -419,10 +419,10 @@ internal class ServiceLayerCoordinatorTest {
             inputData = mapOf("input" to "test"),
             libraries = setOf(),
             estimatedExecutionMs = 1000L,
-            resourceRequirements = IntelligentDistributedComputeService.ResourceRequirements(
+            resourceRequirements = ResourceRequirements(
                 minRAMMB = 100,
                 preferredRAMMB = 200,
-                cpuIntensity = IntelligentDistributedComputeService.CPUIntensity.LIGHT,
+                cpuIntensity = CPUIntensity.LIGHT,
                 requiresGPU = false
             ),
             dependencies = emptyList(),

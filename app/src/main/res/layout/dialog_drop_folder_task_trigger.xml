@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/taskTriggerTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Setup Task Trigger"
+        android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+        android:textStyle="bold"
+        android:paddingBottom="12dp" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/taskTriggerListRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:clipToPadding="false"
+        android:paddingBottom="8dp"
+        tools:listitem="@layout/item_task_list_entry" />
+
+    <TextView
+        android:id="@+id/taskTriggerInputLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Assign new file to task input:"
+        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+        android:paddingTop="16dp" />
+
+    <Spinner
+        android:id="@+id/taskInputSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/setupTaskTriggerButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Setup Trigger"
+        android:layout_marginTop="16dp" />
+
+</LinearLayout>

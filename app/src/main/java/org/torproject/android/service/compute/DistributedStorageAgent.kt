@@ -42,7 +42,7 @@ import java.io.File
  * - Reputation system: Track peer behavior based on .onion address history
  */
 class DistributedStorageAgent(
-    private val meshNetwork: IntelligentDistributedComputeService.MeshNetworkInterface,
+    private val meshNetwork: com.ustadmobile.meshrabiya.storage.MeshNetworkInterface,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val localStoragePath: Path = Paths.get("distributed_storage"), // TODO: Use Android Context
     private val dropFolderPath: Path = Paths.get("drop_folder"), // TODO: Get from user selection
@@ -630,6 +630,18 @@ class DistributedStorageAgent(
             averageFileSize = if (storedFiles.isNotEmpty()) currentStorageUsedBytes / storedFiles.size else 0L
         )
     }
+
+    /**
+     * Check whether this agent has a file with the given id (either stored from other nodes
+     * or present in the 'shared with me' list).
+     */
+    fun hasFile(fileId: String): Boolean {
+        return try {
+            storedFiles.containsKey(fileId) || sharedWithMeFiles.containsKey(fileId)
+        } catch (e: Exception) {
+            false
+        }
+    }
     
     suspend fun performMaintenance() {
         // Cleanup old or rarely accessed files
@@ -736,10 +748,12 @@ class DistributedStorageAgent(
         request: StorageRequest
     ): StorageResponse {
         return try {
-            // TODO: Implement mesh network replication to specific node
-            // This sends the file to a specific target node
+            // Convert to Meshrabiya transport type and send via MeshNetworkInterface if available
+            val dfInfo = request.toDistributedFileInfo()
+            // meshNetwork is required to be a Meshrabiya MeshNetworkInterface (constructor enforces it)
+            meshNetwork.sendStorageRequest(nodeId, dfInfo, com.ustadmobile.meshrabiya.storage.StorageOperation.REPLICATE)
             StorageResponse(
-                success = true, // Simulated success
+                success = true,
                 fileId = request.fileId,
                 replicatedNodes = setOf(nodeId)
             )
@@ -760,10 +774,13 @@ class DistributedStorageAgent(
         val replicatedNodes = mutableSetOf<String>()
         
         try {
-            // TODO: Implement mesh network replication
-            // For now, simulate successful replication
-            val simulatedNodes = listOf("node1", "node2", "node3")
-            replicatedNodes.addAll(simulatedNodes.take(request.replicationFactor - 1))
+            // Ask the meshrabiya mesh for candidate nodes and attempt replication
+            val candidates = meshNetwork.getAvailableStorageNodes()
+            val toAttempt = candidates.take(request.replicationFactor - 1)
+            for (node in toAttempt) {
+                val resp = replicateToSpecificNode(node, request)
+                if (resp.success) replicatedNodes.add(node)
+            }
         } catch (e: Exception) {
             // Log error
         }
@@ -775,18 +792,49 @@ class DistributedStorageAgent(
         nodeId: String,
         request: RetrievalRequest
     ): RetrievalResponse {
-        // TODO: Implement mesh network retrieval
-        return RetrievalResponse(
-            success = false,
-            fileId = request.fileId,
-            data = null,
-            error = StorageError.NotImplemented("Remote retrieval")
-        )
+        return try {
+            val data = meshNetwork.requestFileFromNode(nodeId, request.fileId)
+            if (data != null) {
+                RetrievalResponse(
+                    success = true,
+                    fileId = request.fileId,
+                    data = data,
+                    sourceNode = nodeId,
+                    metadata = storedFiles[request.fileId]
+                )
+            } else {
+                RetrievalResponse(
+                    success = false,
+                    fileId = request.fileId,
+                    data = null,
+                    error = StorageError.PeerUnreachable(nodeId)
+                )
+            }
+        } catch (e: Exception) {
+            RetrievalResponse(
+                success = false,
+                fileId = request.fileId,
+                data = null,
+                error = StorageError.PeerUnreachable(nodeId)
+            )
+        }
     }
     
     private suspend fun deleteFromNode(nodeId: String, fileId: String): Boolean {
-        // TODO: Implement mesh network deletion
-        return false
+        return try {
+            val df = com.ustadmobile.meshrabiya.storage.DistributedFileInfo(
+                path = fileId,
+                localReference = com.ustadmobile.meshrabiya.storage.LocalFileReference(fileId, "", ""),
+                replicationLevel = com.ustadmobile.meshrabiya.storage.ReplicationLevel.MINIMAL,
+                priority = com.ustadmobile.meshrabiya.storage.SyncPriority.NORMAL,
+                createdAt = System.currentTimeMillis(),
+                lastAccessed = 0L
+            )
+            meshNetwork.sendStorageRequest(nodeId, df, com.ustadmobile.meshrabiya.storage.StorageOperation.DELETE)
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
     
     private fun isAuthorizedNode(nodeId: String): Boolean {

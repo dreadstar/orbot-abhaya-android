@@ -5,8 +5,158 @@ package org.torproject.android.service.compute
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import org.torproject.android.service.storage.StorageDropFolderManager
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.*
+// === SERVICE SEARCH RESULT DATA CLASS ===
+data class ServiceSearchResult(
+    val serviceId: String,
+    val manifest: ServiceManifest,
+    val executionProfile: ExecutionProfile,
+    val capabilities: Set<ServiceCapability>,
+    val nodeId: String // network identifier of respondent
+)
+
+/**
+ * Utility to extract manifest/meta and node info from LibraryEntry for search responses.
+ */
+fun toSearchResult(entry: LibraryEntry, nodeId: String): ServiceSearchResult {
+    return ServiceSearchResult(
+        serviceId = entry.serviceId,
+        manifest = entry.manifest,
+        executionProfile = entry.executionProfile,
+        capabilities = entry.capabilities,
+        nodeId = nodeId
+    )
+}
+
+
+// === SERVICE LIBRARY ENTRY SCHEMA ===
+sealed class LibraryEntry {
+    abstract val serviceId: String
+    abstract val manifest: ServiceManifest
+    abstract val executionProfile: ExecutionProfile
+    abstract val inputs: List<ServiceInput>
+    abstract val outputs: List<ServiceOutput>
+    abstract val capabilities: Set<ServiceCapability>
+
+    data class PythonServiceEntry(
+        override val serviceId: String,
+        val scriptCode: String,
+        val libraries: Set<PythonLibrary>,
+        override val manifest: ServiceManifest,
+        override val executionProfile: ExecutionProfile,
+        override val inputs: List<ServiceInput>,
+        override val outputs: List<ServiceOutput>,
+        override val capabilities: Set<ServiceCapability>
+    ) : LibraryEntry()
+
+    data class LiteRTServiceEntry(
+        override val serviceId: String,
+        val modelId: String,
+        val modelConfig: LiteRTConfig,
+        override val manifest: ServiceManifest,
+        override val executionProfile: ExecutionProfile,
+        override val inputs: List<ServiceInput>,
+        override val outputs: List<ServiceOutput>,
+        override val capabilities: Set<ServiceCapability>
+    ) : LibraryEntry()
+
+    data class HybridServiceEntry(
+        override val serviceId: String,
+        val pythonPreprocessing: PythonServiceEntry?,
+        val liteRTInference: LiteRTServiceEntry,
+        val pythonPostprocessing: PythonServiceEntry?,
+        override val manifest: ServiceManifest,
+        override val executionProfile: ExecutionProfile,
+        override val inputs: List<ServiceInput>,
+        override val outputs: List<ServiceOutput>,
+        override val capabilities: Set<ServiceCapability>
+    ) : LibraryEntry()
+
+    data class JavaServiceEntry(
+        override val serviceId: String,
+        val className: String,
+        val jarPath: String,
+        override val manifest: ServiceManifest,
+        override val executionProfile: ExecutionProfile,
+        override val inputs: List<ServiceInput>,
+        override val outputs: List<ServiceOutput>,
+        override val capabilities: Set<ServiceCapability>
+    ) : LibraryEntry()
+
+    data class NDKServiceEntry(
+        override val serviceId: String,
+        val soPath: String,
+        val entryFunction: String,
+        override val manifest: ServiceManifest,
+        override val executionProfile: ExecutionProfile,
+        override val inputs: List<ServiceInput>,
+        override val outputs: List<ServiceOutput>,
+        override val capabilities: Set<ServiceCapability>
+    ) : LibraryEntry()
+
+    data class WorkflowServiceEntry(
+        override val serviceId: String,
+        val steps: List<String>,
+        override val manifest: ServiceManifest,
+        override val executionProfile: ExecutionProfile,
+        override val inputs: List<ServiceInput>,
+        override val outputs: List<ServiceOutput>,
+        override val capabilities: Set<ServiceCapability>
+    ) : LibraryEntry()
+}
+
+data class ServiceManifest(
+    val serviceType: ServiceType,
+    val version: String,
+    val author: String,
+    val signature: String?,
+    val runtimeRequired: List<String> = emptyList(),
+    val runtimeOptional: List<String> = emptyList(),
+    val deviceProfile: String? = null,
+    val resourceRequirements: ResourceRequirements,
+    val platformSupport: List<String> = emptyList(),
+    val files: List<String> = emptyList(),
+    val builtin: Boolean = false
+)
+
+enum class ServiceType {
+    PYTHON, LITERT, HYBRID, JAVA, NDK, WORKFLOW, STORAGE
+}
+
+data class ExecutionProfile(
+    val deterministic: Boolean = false,
+    val zkpRequired: Boolean = false,
+    val accessLevel: String = "user"
+)
+
+/**
+ * Lightweight service metadata used by task orchestration and UI layers.
+ */
+data class ServiceMeta(
+    val serviceId: String,
+    val manifest: ServiceManifest,
+    val executionProfile: ExecutionProfile,
+    val inputs: List<ServiceInput> = emptyList(),
+    val outputs: List<ServiceOutput> = emptyList(),
+    val capabilities: Set<ServiceCapability> = emptySet()
+)
+
+data class ServiceInput(val name: String, val type: String, val required: Boolean = true)
+data class ServiceOutput(val name: String, val type: String)
+enum class ServiceCapability {
+    ML, CV, NLP, STORAGE, AUDIO, SIGNAL, CRYPTO, WORKFLOW, JAVA, NDK
+}
+
+// ...existing code...
+    // === ATOMICITY & CONSISTENCY ===
+    // After file delivery, verify integrity (e.g., checksum). If failed, gray out item in UI and show retry button.
+    // On retry, attempt download again. If still failed, keep item grayed out.
+    // On failed download, clean up any partial file but keep grayed-out listing in Drop Folder widget.
+
+    // === TODO: Notification/Confirmation to Recipient ===
+    // TODO: Implement notification/confirmation to recipient on successful file delivery. See KNOWLEDGE doc.
 
 class IntelligentDistributedComputeService(
     private val meshNetwork: MeshNetworkInterface,
@@ -14,8 +164,151 @@ class IntelligentDistributedComputeService(
     private val quorumManager: QuorumManager,
     private val resourceManager: ResourceManager,
     private val pythonExecutor: PythonExecutor,
-    private val liteRTEngine: LiteRTEngine
+    private val liteRTEngine: LiteRTEngine,
+    // Optional beta logger for detailed internal logging
+    private val betaLogger: com.ustadmobile.meshrabiya.beta.BetaTestLogger? = null
 ) {
+    // === BUILT-IN SERVICE LIBRARY REGISTRY ===
+    val builtinLibraryEntries: List<LibraryEntry> = listOf(
+        LibraryEntry.PythonServiceEntry(
+            serviceId = "builtin_image_preprocessing",
+            scriptCode = generateImagePreprocessingScript(),
+            libraries = setOf(PythonLibrary.OPENCV, PythonLibrary.NUMPY, PythonLibrary.JSON, PythonLibrary.BASE64),
+            manifest = ServiceManifest(
+                serviceType = ServiceType.PYTHON,
+                version = "1.0.0",
+                author = "Orbot Team",
+                signature = null,
+                resourceRequirements = ResourceRequirements(
+                    minRAMMB = 512,
+                    preferredRAMMB = 1024,
+                    cpuIntensity = CPUIntensity.MODERATE
+                ),
+                builtin = true
+            ),
+            executionProfile = ExecutionProfile(deterministic = true),
+            inputs = listOf(ServiceInput("images", "List<Base64Image>", true)),
+            outputs = listOf(ServiceOutput("processed_tensors", "List<Base64Tensor>")),
+            capabilities = setOf(ServiceCapability.ML, ServiceCapability.CV)
+        ).also { betaLogger?.log(com.ustadmobile.meshrabiya.beta.LogLevel.DEBUG, "COMPUTE", "Registered builtin Python service: builtin_image_preprocessing") },
+        LibraryEntry.LiteRTServiceEntry(
+            serviceId = "builtin_mobilenet_v3_inference",
+            modelId = "mobilenet_v3_quantized",
+            modelConfig = LiteRTConfig(useGPU = true, useNNAPI = true, numThreads = 2),
+            manifest = ServiceManifest(
+                serviceType = ServiceType.LITERT,
+                version = "1.0.0",
+                author = "Orbot Team",
+                signature = null,
+                resourceRequirements = ResourceRequirements(
+                    minRAMMB = 256,
+                    preferredRAMMB = 512,
+                    cpuIntensity = CPUIntensity.LIGHT,
+                    requiresGPU = true
+                ),
+                builtin = true
+            ),
+            executionProfile = ExecutionProfile(deterministic = true),
+            inputs = listOf(ServiceInput("input_tensors", "List<Base64Tensor>", true)),
+            outputs = listOf(ServiceOutput("inference_results", "List<FloatArray>")),
+            capabilities = setOf(ServiceCapability.ML, ServiceCapability.CV)
+        ),
+        LibraryEntry.HybridServiceEntry(
+            serviceId = "builtin_hybrid_image_pipeline",
+            pythonPreprocessing = null, // Could reference the above PythonServiceEntry
+            liteRTInference = LibraryEntry.LiteRTServiceEntry(
+                serviceId = "builtin_mobilenet_v3_inference",
+                modelId = "mobilenet_v3_quantized",
+                modelConfig = LiteRTConfig(useGPU = true, useNNAPI = true, numThreads = 2),
+                manifest = ServiceManifest(
+                    serviceType = ServiceType.LITERT,
+                    version = "1.0.0",
+                    author = "Orbot Team",
+                    signature = null,
+                    resourceRequirements = ResourceRequirements(
+                        minRAMMB = 256,
+                        preferredRAMMB = 512,
+                        cpuIntensity = CPUIntensity.LIGHT,
+                        requiresGPU = true
+                    ),
+                    builtin = true
+                ),
+                executionProfile = ExecutionProfile(deterministic = true),
+                inputs = listOf(ServiceInput("input_tensors", "List<Base64Tensor>", true)),
+                outputs = listOf(ServiceOutput("inference_results", "List<FloatArray>")),
+                capabilities = setOf(ServiceCapability.ML, ServiceCapability.CV)
+            ),
+            pythonPostprocessing = null,
+            manifest = ServiceManifest(
+                serviceType = ServiceType.HYBRID,
+                version = "1.0.0",
+                author = "Orbot Team",
+                signature = null,
+                resourceRequirements = ResourceRequirements(
+                    minRAMMB = 512,
+                    preferredRAMMB = 1024,
+                    cpuIntensity = CPUIntensity.MODERATE
+                ),
+                builtin = true
+            ),
+            executionProfile = ExecutionProfile(deterministic = true),
+            inputs = listOf(ServiceInput("images", "List<Base64Image>", true)),
+            outputs = listOf(ServiceOutput("inference_results", "List<FloatArray>")),
+            capabilities = setOf(ServiceCapability.ML, ServiceCapability.CV)
+        )
+        // Add more built-in entries for Java, NDK, Workflow, etc. as needed
+    )
+
+    // === FOLDER SELECTION DIALOG FOR TASK MANAGEMENT TAB ===
+    /**
+     * Shows a folder picker dialog to select a destination subfolder from the Drop Folder.
+     * @param context The Android context (Activity or Fragment).
+     * @param initialPath The initial folder path to display (default: root of Drop Folder).
+     * @param onFolderSelected Callback invoked with the selected folder path.
+     */
+    fun showFolderPickerDialog(
+        context: android.content.Context,
+        initialPath: String = "/DropFolder",
+        onFolderSelected: (String) -> Unit
+    ) {
+        // Use AlertDialog with a simple ArrayAdapter for folder hierarchy
+        val dialogBuilder = androidx.appcompat.app.AlertDialog.Builder(context)
+        dialogBuilder.setTitle("Select Destination Folder")
+
+        // TODO: Replace with actual Drop Folder manager logic
+        val folderList = getDropFolderSubfolders(initialPath)
+        val adapter = object : android.widget.ArrayAdapter<String>(context, android.R.layout.simple_list_item_1, folderList) {}
+
+        dialogBuilder.setAdapter(adapter) { _, which ->
+            val selectedFolder = folderList[which]
+            onFolderSelected(selectedFolder)
+        }
+        dialogBuilder.setNegativeButton("Cancel", null)
+        dialogBuilder.show()
+    }
+
+    /**
+     * Returns a list of subfolders for the given Drop Folder path using StorageDropFolderManager.
+     */
+    private fun getDropFolderSubfolders(path: String): List<String> {
+        // Integrate with StorageDropFolderManager for real folder navigation
+        // Assumes StorageDropFolderManager is accessible and provides getSubfolders(path: String): List<String>
+        return StorageDropFolderManager.getSubfolders(path)
+    }
+
+    /**
+     * Example usage: Call this from TaskManagerFragment when user wants to pick a destination folder.
+     * Updates the destinationPath for the current job/task.
+     */
+    fun pickDestinationFolder(
+        context: android.content.Context,
+        onPathSelected: (String) -> Unit
+    ) {
+        showFolderPickerDialog(context) { selectedPath ->
+            // Update destinationPath in job/task creation logic
+            onPathSelected(selectedPath)
+        }
+    }
     
     private val activeJobs = ConcurrentHashMap<String, DistributedJob>()
     private val nodeCapabilities = ConcurrentHashMap<String, NodeCapabilitySnapshot>()
@@ -70,27 +363,12 @@ class IntelligentDistributedComputeService(
             val replicationFactor: Int,
             override val estimatedExecutionMs: Long,
             override val resourceRequirements: ResourceRequirements,
-            override val dependencies: List<String> = emptyList()
+            override val dependencies: List<String> = emptyList(),
+            val destinationPath: String? = null // Recipient subfolder path for file delivery
         ) : ComputeTask()
     }
     
-    data class ResourceRequirements(
-        val minRAMMB: Int,
-        val preferredRAMMB: Int,
-        val cpuIntensity: CPUIntensity,
-        val requiresGPU: Boolean = false,
-        val requiresNPU: Boolean = false,
-        val maxNetworkLatencyMs: Int = 1000,
-        val minBatteryLevel: Int = 25,
-        val thermalConstraints: Set<ThermalState> = setOf(ThermalState.COLD, ThermalState.WARM),
-        val requiresStorage: Boolean = false,
-        val minStorageGB: Float = 0f
-    )
-    
-    enum class PythonLibrary {
-        NUMPY, PANDAS, OPENCV, PILLOW, SCIKIT_LEARN, 
-        MATPLOTLIB, SCIPY, REQUESTS, JSON, BASE64
-    }
+    // ResourceRequirements, PythonLibrary and related types are defined in SupportTypes.kt to avoid duplicates.
     
     enum class StorageOperation {
         STORE, RETRIEVE, DELETE, REPLICATE, VERIFY
@@ -229,6 +507,7 @@ class IntelligentDistributedComputeService(
             val operation = job.inputData["operation"] as? StorageOperation ?: StorageOperation.STORE
             val data = job.inputData["data"] as? ByteArray
             val replicationFactor = job.inputData["replicationFactor"] as? Int ?: 3
+            val destinationPath = job.destinationPath ?: job.inputData["destinationPath"] as? String
             
             when (operation) {
                 StorageOperation.STORE -> {
@@ -247,7 +526,8 @@ class IntelligentDistributedComputeService(
                                 cpuIntensity = CPUIntensity.LIGHT,
                                 requiresStorage = true,
                                 minStorageGB = (data?.size ?: 0) / (1024f * 1024f * 1024f)
-                            )
+                            ),
+                            destinationPath = destinationPath
                         ))
                     }
                 }
@@ -264,7 +544,8 @@ class IntelligentDistributedComputeService(
                             preferredRAMMB = 128,
                             cpuIntensity = CPUIntensity.LIGHT,
                             requiresStorage = true
-                        )
+                        ),
+                        destinationPath = destinationPath
                     ))
                 }
                 else -> {
@@ -281,7 +562,8 @@ class IntelligentDistributedComputeService(
                             preferredRAMMB = 64,
                             cpuIntensity = CPUIntensity.LIGHT,
                             requiresStorage = true
-                        )
+                        ),
+                        destinationPath = destinationPath
                     ))
                 }
             }
@@ -738,20 +1020,7 @@ print(json.dumps(result))
         }
     }
     
-    data class LiteRTConfig(
-        val useGPU: Boolean = false,
-        val useNNAPI: Boolean = false,
-        val numThreads: Int = 2
-    )
-    
-    data class InferenceConfig(
-        val batchSize: Int = 1,
-        val precision: Precision = Precision.QUANTIZED
-    )
-    
-    enum class Precision {
-        FLOAT32, FLOAT16, QUANTIZED
-    }
+    // LiteRTConfig, InferenceConfig and Precision are defined in SupportTypes.kt
     
     enum class JobType {
         IMAGE_PROCESSING, DATA_ANALYSIS, ML_PIPELINE, 
@@ -766,6 +1035,27 @@ print(json.dumps(result))
     
     interface MeshNetworkInterface {
         suspend fun executeRemoteTask(nodeId: String, request: TaskExecutionRequest): TaskExecutionResponse
+    }
+
+    // Backwards-compatible helper shims that DistributedStorageAgent expects.
+    // Implementations (e.g., MeshServiceCoordinator) may provide these methods via
+    // an implementing class. Provide default extension implementations that throw
+    // NotImplemented so build-time linkage succeeds; runtime implementations should
+    // override by providing a concrete class with these methods.
+    suspend fun MeshNetworkInterface.sendStorageRequest(targetNodeId: String, fileInfo: com.ustadmobile.meshrabiya.storage.DistributedFileInfo, operation: String): Boolean {
+        throw NotImplementedError("sendStorageRequest not implemented by MeshNetworkInterface bridge")
+    }
+
+    suspend fun MeshNetworkInterface.requestFileFromNode(nodeId: String, fileIdOrPath: String): com.ustadmobile.meshrabiya.storage.FileReference? {
+        throw NotImplementedError("requestFileFromNode not implemented by MeshNetworkInterface bridge")
+    }
+
+    suspend fun MeshNetworkInterface.getAvailableStorageNodes(): List<String> {
+        throw NotImplementedError("getAvailableStorageNodes not implemented by MeshNetworkInterface bridge")
+    }
+
+    suspend fun MeshNetworkInterface.deleteFileOnNode(nodeId: String, fileId: String): Boolean {
+        throw NotImplementedError("deleteFileOnNode not implemented by MeshNetworkInterface bridge")
     }
 
     interface EnhancedGossipProtocol {
@@ -794,8 +1084,8 @@ print(json.dumps(result))
     data class NetworkLatencyInfo(val avgLatency: Long = 50L)
     data class BatteryInfo(val level: Int, val isCharging: Boolean = false)
     
-    enum class CPUIntensity { LIGHT, MODERATE, HEAVY, BURST }
-    enum class ThermalState { COLD, WARM, HOT, CRITICAL }
+    // CPUIntensity and ThermalState are provided by SupportTypes.kt to avoid duplicate definitions.
+    
     enum class QuorumType { COMPUTE, STORAGE, GATEWAY, HYBRID }
     
     data class DistributedJob(
@@ -804,7 +1094,8 @@ print(json.dumps(result))
         val inputData: Map<String, Any>,
         val priority: JobPriority,
         val maxExecutionTimeMs: Long,
-        val aggregationStrategy: AggregationStrategy
+        val aggregationStrategy: AggregationStrategy,
+        val destinationPath: String? = null // Recipient subfolder path for file delivery
     )
 
     enum class JobPriority { BACKGROUND, NORMAL, HIGH, CRITICAL }

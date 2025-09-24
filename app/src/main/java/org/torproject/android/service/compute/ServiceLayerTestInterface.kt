@@ -113,10 +113,10 @@ class ServiceLayerTestInterface(
                 inputData = emptyMap(),
                 libraries = emptySet(),
                 estimatedExecutionMs = 1000L,
-                resourceRequirements = IntelligentDistributedComputeService.ResourceRequirements(
+                resourceRequirements = ResourceRequirements(
                     minRAMMB = 64,
                     preferredRAMMB = 128,
-                    cpuIntensity = IntelligentDistributedComputeService.CPUIntensity.LIGHT,
+                    cpuIntensity = CPUIntensity.LIGHT,
                     requiresGPU = false
                 ),
                 outputSchema = IntelligentDistributedComputeService.OutputSchema(
@@ -322,10 +322,10 @@ class ServiceLayerTestInterface(
                             inputData = emptyMap(),
                             libraries = emptySet(),
                             estimatedExecutionMs = 500L,
-                            resourceRequirements = IntelligentDistributedComputeService.ResourceRequirements(
+                            resourceRequirements = ResourceRequirements(
                                 minRAMMB = 32,
                                 preferredRAMMB = 64,
-                                cpuIntensity = IntelligentDistributedComputeService.CPUIntensity.LIGHT,
+                                cpuIntensity = CPUIntensity.LIGHT,
                                 requiresGPU = false
                             ),
                             outputSchema = IntelligentDistributedComputeService.OutputSchema(
@@ -415,10 +415,10 @@ class ServiceLayerTestInterface(
                     inputData = emptyMap(),
                     libraries = emptySet(),
                     estimatedExecutionMs = 100L,
-                    resourceRequirements = IntelligentDistributedComputeService.ResourceRequirements(
+                    resourceRequirements = ResourceRequirements(
                         minRAMMB = 16,
                         preferredRAMMB = 32,
-                        cpuIntensity = IntelligentDistributedComputeService.CPUIntensity.LIGHT,
+                        cpuIntensity = CPUIntensity.LIGHT,
                         requiresGPU = false
                     ),
                     outputSchema = IntelligentDistributedComputeService.OutputSchema(

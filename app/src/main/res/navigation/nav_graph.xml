@@ -30,4 +30,9 @@
         android:name="org.torproject.android.ui.mesh.EnhancedMeshFragment"
         android:label="fragment_mesh"
         tools:layout="@layout/fragment_mesh_enhanced" />
+    <fragment
+        android:id="@+id/taskManagerFragment"
+        android:name="org.orbotabhaya.ui.TaskManagerFragment"
+        android:label="fragment_task_manager"
+        tools:layout="@layout/fragment_task_manager" />
 </navigation>

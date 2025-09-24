@@ -1,3 +1,4 @@
+    // downloadSharedItem implementation is provided as a member method lower in this file; remove the orphaned duplicate.
 package org.torproject.android.service.storage
 
 import android.content.Context
@@ -25,6 +26,12 @@ class StorageDropFolderManager private constructor(private val context: Context)
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: StorageDropFolderManager(context.applicationContext).also { INSTANCE = it }
             }
+        }
+
+        // Helper used by compute layer for quick folder listing (returns top-level folder names)
+        fun getSubfolders(path: String): List<String> {
+            // Minimal safe implementation: return a few defaults if no selected folder
+            return listOf("/DropFolder", "/DropFolder/SharedWithMe")
         }
     }
 
@@ -189,6 +196,55 @@ class StorageDropFolderManager private constructor(private val context: Context)
         // TODO: Implement actual sharing status retrieval
         // This would connect to the mesh service to get sharing information
         return Pair(false, emptySet())
+    }
+
+    /**
+     * Download a shared item to the local SharedWithMe subfolder in the Drop Folder
+     */
+    fun downloadSharedItem(item: StorageItem): Boolean {
+        return try {
+            val sharedWithMeFolderName = "SharedWithMe"
+            val folderUri = getSelectedFolderUri()
+            val folderPath = getSelectedFolderPath()
+
+            // Determine destination (SAF or file path)
+            if (folderUri != null) {
+                val dropFolder = DocumentFile.fromTreeUri(context, Uri.parse(folderUri))
+                val sharedWithMeFolder = dropFolder?.findFile(sharedWithMeFolderName)
+                    ?: dropFolder?.createDirectory(sharedWithMeFolderName)
+                if (sharedWithMeFolder != null) {
+                    // Copy file using SAF
+                    val sourceFile = DocumentFile.fromSingleUri(context, Uri.parse(item.path))
+                    if (sourceFile != null && sourceFile.isFile) {
+                        val inputStream = context.contentResolver.openInputStream(sourceFile.uri)
+                        val destFile = sharedWithMeFolder.createFile("application/octet-stream", item.name)
+                        val outputStream = destFile?.let { context.contentResolver.openOutputStream(it.uri) }
+                        if (inputStream != null && outputStream != null) {
+                            inputStream.copyTo(outputStream)
+                            inputStream.close()
+                            outputStream.close()
+                            return true
+                        }
+                    }
+                }
+            } else if (folderPath != null) {
+                val sharedWithMeDir = File(folderPath, sharedWithMeFolderName)
+                if (!sharedWithMeDir.exists()) sharedWithMeDir.mkdirs()
+                val sourceFile = File(item.path)
+                val destFile = File(sharedWithMeDir, item.name)
+                if (sourceFile.exists() && sourceFile.isFile) {
+                    sourceFile.inputStream().use { input ->
+                        destFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    return true
+                }
+            }
+            false
+        } catch (e: Exception) {
+            false
+        }
     }
 
     /**

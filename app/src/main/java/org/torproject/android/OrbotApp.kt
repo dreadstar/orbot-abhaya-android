@@ -28,6 +28,19 @@ import java.util.concurrent.Executors
 private val Context.meshDataStore: DataStore<Preferences> by preferencesDataStore(name = "mesh_settings")
 
 class OrbotApp : Application() {
+    companion object {
+        @JvmStatic
+        lateinit var instance: OrbotApp
+            private set
+
+        var shouldRequestAuthentication: Boolean = true
+        // see https://github.com/guardianproject/orbot-android/issues/1340
+        var isAuthenticationPromptOpenLegacyFlag: Boolean = false
+        fun resetLockFlags() {
+            shouldRequestAuthentication = true
+            isAuthenticationPromptOpenLegacyFlag = false
+        }
+    }
     // Meshrabiya core types
     lateinit var virtualNode: AndroidVirtualNode
     lateinit var meshLogger: MNetLogger
@@ -35,6 +48,8 @@ class OrbotApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+    instance = this
 
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStop(owner: LifecycleOwner) {
@@ -96,13 +111,5 @@ class OrbotApp : Application() {
         }
     }
 
-    companion object {
-        var shouldRequestAuthentication: Boolean = true
-        // see https://github.com/guardianproject/orbot-android/issues/1340
-        var isAuthenticationPromptOpenLegacyFlag: Boolean = false
-        fun resetLockFlags() {
-            shouldRequestAuthentication = true
-            isAuthenticationPromptOpenLegacyFlag = false
-        }
-    }
+    
 }

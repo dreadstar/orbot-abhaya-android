@@ -1,6 +1,10 @@
 # KNOWLEDGE-09062025.md
 
 ## Project: Orbot-Meshrabiya Integration
+### Application Context Access
+The canonical way to access the global application context is:
+`org.torproject.android.OrbotApp.instance.applicationContext`
+This should be used for all Android context-dependent operations, including service initialization, storage, and mesh networking components.
 **Date**: September 6, 2025  
 **Status**: ✅ BUILD SUCCESSFUL - All major integration issues resolved
 **Last Updated**: September 19, 2025

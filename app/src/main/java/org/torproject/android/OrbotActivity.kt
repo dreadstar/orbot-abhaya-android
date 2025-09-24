@@ -165,7 +165,10 @@ class OrbotActivity : BaseActivity() {
                     R.id.meshFragment, null, navOptions
                 )
 
-                R.id.moreFragment -> navController.navigate(R.id.moreFragment, null, navOptions)
+                    R.id.taskManagerFragment -> navController.navigate(
+                        R.id.taskManagerFragment, null, navOptions
+                    )
+                    R.id.moreFragment -> navController.navigate(R.id.moreFragment, null, navOptions)
             }
 
             lastSelectedItemId = item.itemId

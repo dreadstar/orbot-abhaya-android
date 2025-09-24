@@ -1,6 +1,8 @@
 package org.torproject.android.service.compute
 
 import android.util.Log
+import com.ustadmobile.meshrabiya.beta.BetaTestLogger
+import com.ustadmobile.meshrabiya.beta.LogLevel
 import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -10,7 +12,13 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Manages compute tasks, storage operations, and mesh network coordination
  */
 class ServiceLayerCoordinator(
-    private val meshNetwork: IntelligentDistributedComputeService.MeshNetworkInterface
+    private val meshNetwork: IntelligentDistributedComputeService.MeshNetworkInterface,
+    // Optional beta logger - if not provided, attempt to obtain from MeshServiceCoordinator context
+    private val betaLogger: BetaTestLogger? = try {
+        org.torproject.android.service.MeshServiceCoordinator.getInstance(org.torproject.android.OrbotApp.instance.applicationContext).let {
+            BetaTestLogger.getInstance(org.torproject.android.OrbotApp.instance.applicationContext)
+        }
+    } catch (_: Exception) { null }
 ) {
     
     companion object {
@@ -24,10 +32,22 @@ class ServiceLayerCoordinator(
             quorumManager = mockQuorumManager(),
             resourceManager = mockResourceManager(),
             pythonExecutor = mockPythonExecutor(),
-            liteRTEngine = mockLiteRTEngine()
+            liteRTEngine = mockLiteRTEngine(),
+            betaLogger = betaLogger
         )
     }
-    private val storageAgent = DistributedStorageAgent(meshNetwork)
+    // Use the coordinator-provided Meshrabiya MeshNetworkInterface. Fail fast if it's not available.
+    private val meshrabiyaMeshAdapter: com.ustadmobile.meshrabiya.storage.MeshNetworkInterface
+        get() = try {
+            org.torproject.android.service.MeshServiceCoordinator.getInstance(org.torproject.android.OrbotApp.instance.applicationContext)
+                .provideMeshNetworkInterface()
+        } catch (e: Exception) {
+            null
+        } ?: throw IllegalStateException("MeshServiceCoordinator did not provide a Meshrabiya MeshNetworkInterface. Ensure MeshServiceCoordinator is initialized before constructing ServiceLayerCoordinator.")
+
+    // Initialize storage agent lazily to avoid construction-time failures when the coordinator
+    // may not yet have registered the adapter.
+    private val storageAgent by lazy { DistributedStorageAgent(meshrabiyaMeshAdapter) }
     
     private val isActiveFlag = AtomicBoolean(false)
     private fun isActive() = isActiveFlag.get()
@@ -100,7 +120,7 @@ class ServiceLayerCoordinator(
                 // Update statistics - store start time
                 val startTime = System.currentTimeMillis()
                 serviceStats.serviceUptimeMs = startTime
-                
+                betaLogger?.log(LogLevel.INFO, "SERVICES", "Service layer started at: $startTime")
                 Log.d(TAG, "Service layer started at: $startTime")
                 
                 true
@@ -121,6 +141,7 @@ class ServiceLayerCoordinator(
                 
                 // Unregister from mesh
                 unregisterFromMesh()
+                betaLogger?.log(LogLevel.INFO, "SERVICES", "Service layer stopped")
                 
                 // Cancel maintenance tasks
                 serviceScope.cancel()
@@ -216,6 +237,7 @@ class ServiceLayerCoordinator(
                 )
                 
                 val response = storageAgent.storeFileFromOtherNode(request)
+                betaLogger?.log(LogLevel.DEBUG, "STORAGE", "storeFileFromOtherNode response success=${response.success}, fileId=${request.fileId}")
                 
                 // Update operation status
                 activeStorageOps[operationId] = activeStorageOps[operationId]?.copy(
@@ -490,54 +512,65 @@ class ServiceLayerCoordinator(
     // === MOCK IMPLEMENTATIONS FOR MISSING DEPENDENCIES ===
     
     private fun mockGossipProtocol(): IntelligentDistributedComputeService.EnhancedGossipProtocol {
-        return object : IntelligentDistributedComputeService.EnhancedGossipProtocol {
-            override fun getCurrentNodeStates(): Map<String, IntelligentDistributedComputeService.NodeCapabilitySnapshot> = emptyMap()
-        }
+        return SimpleGossipProtocol()
     }
     
     private fun mockQuorumManager(): IntelligentDistributedComputeService.QuorumManager {
-        return object : IntelligentDistributedComputeService.QuorumManager {
-            override fun getActiveQuorums(): List<IntelligentDistributedComputeService.ActiveQuorum> = emptyList()
-        }
+        return SimpleQuorumManager()
     }
     
     private fun mockResourceManager(): IntelligentDistributedComputeService.ResourceManager {
-        return object : IntelligentDistributedComputeService.ResourceManager {
-            override fun getClusterResourceState(): IntelligentDistributedComputeService.ClusterResourceState = 
-                IntelligentDistributedComputeService.ClusterResourceState(
-                    availableNodes = 3,
-                    totalRAMMB = 24576L,
-                    averageRAMMB = 8192,
-                    totalStorageGB = 150L,
-                    averageCPULoad = 0.25f,
-                    nodesWithGPU = 1,
-                    nodesWithNPU = 0
-                )
-        }
+        return SimpleResourceManager()
     }
     
     private fun mockPythonExecutor(): IntelligentDistributedComputeService.PythonExecutor {
-        return object : IntelligentDistributedComputeService.PythonExecutor {
-            override suspend fun executeTask(task: IntelligentDistributedComputeService.ComputeTask.PythonTask): IntelligentDistributedComputeService.TaskExecutionResult = 
-                IntelligentDistributedComputeService.TaskExecutionResult.Success(
-                    taskId = task.taskId,
-                    result = mapOf("output" to "Mock result"),
-                    executionTimeMs = 1000L,
-                    nodeId = "mock_node"
-                )
-        }
+        return MockPythonExecutor()
     }
     
     private fun mockLiteRTEngine(): IntelligentDistributedComputeService.LiteRTEngine {
-        return object : IntelligentDistributedComputeService.LiteRTEngine {
-            override suspend fun executeTask(task: IntelligentDistributedComputeService.ComputeTask.LiteRTTask): IntelligentDistributedComputeService.TaskExecutionResult = 
-                IntelligentDistributedComputeService.TaskExecutionResult.Success(
-                    taskId = task.taskId,
-                    result = mapOf("output" to byteArrayOf()),
-                    executionTimeMs = 1000L,
-                    nodeId = "mock_node"
-                )
-        }
+        return MockLiteRTEngine()
+    }
+
+    // --- Named mock implementations (previously returned as anonymous objects) ---
+    private class SimpleGossipProtocol : IntelligentDistributedComputeService.EnhancedGossipProtocol {
+        override fun getCurrentNodeStates(): Map<String, IntelligentDistributedComputeService.NodeCapabilitySnapshot> = emptyMap()
+    }
+
+    private class SimpleQuorumManager : IntelligentDistributedComputeService.QuorumManager {
+        override fun getActiveQuorums(): List<IntelligentDistributedComputeService.ActiveQuorum> = emptyList()
+    }
+
+    private class SimpleResourceManager : IntelligentDistributedComputeService.ResourceManager {
+        override fun getClusterResourceState(): IntelligentDistributedComputeService.ClusterResourceState =
+            IntelligentDistributedComputeService.ClusterResourceState(
+                availableNodes = 3,
+                totalRAMMB = 24576L,
+                averageRAMMB = 8192,
+                totalStorageGB = 150L,
+                averageCPULoad = 0.25f,
+                nodesWithGPU = 1,
+                nodesWithNPU = 0
+            )
+    }
+
+    private class MockPythonExecutor : IntelligentDistributedComputeService.PythonExecutor {
+        override suspend fun executeTask(task: IntelligentDistributedComputeService.ComputeTask.PythonTask): IntelligentDistributedComputeService.TaskExecutionResult =
+            IntelligentDistributedComputeService.TaskExecutionResult.Success(
+                taskId = task.taskId,
+                result = mapOf("output" to "Mock result"),
+                executionTimeMs = 1000L,
+                nodeId = "mock_node"
+            )
+    }
+
+    private class MockLiteRTEngine : IntelligentDistributedComputeService.LiteRTEngine {
+        override suspend fun executeTask(task: IntelligentDistributedComputeService.ComputeTask.LiteRTTask): IntelligentDistributedComputeService.TaskExecutionResult =
+            IntelligentDistributedComputeService.TaskExecutionResult.Success(
+                taskId = task.taskId,
+                result = mapOf("output" to byteArrayOf()),
+                executionTimeMs = 1000L,
+                nodeId = "mock_node"
+            )
     }
     
     // === TASK MANAGEMENT METHODS FOR TESTING ===

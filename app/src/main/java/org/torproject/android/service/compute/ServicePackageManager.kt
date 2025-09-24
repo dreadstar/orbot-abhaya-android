@@ -15,6 +15,9 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
+import java.security.PrivateKey
+import java.security.PublicKey
+import com.ustadmobile.meshrabiya.service.security.DecentralizedServiceSigning
 
 /**
  * SERVICE PACKAGE MANAGEMENT SYSTEM
@@ -322,6 +325,49 @@ class ServicePackageManager(private val context: Context) {
             
         } catch (e: Exception) {
             Log.e(TAG, "Package validation failed", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Create a signed service bundle (ZIP) and corresponding Meshrabiya ServiceAnnouncement.
+     * Returns the signed bundle bytes and the Meshrabiya announcement so callers can publish it.
+     */
+    suspend fun createSignedBundleForPackage(
+        packagePath: String,
+        authorKeyPair: Pair<PrivateKey, PublicKey>,
+        authorOnionAddress: String
+    ): Result<Pair<ByteArray, com.ustadmobile.meshrabiya.model.ServiceAnnouncement>> = withContext(Dispatchers.IO) {
+        try {
+            val packageFile = File(packagePath)
+            if (!packageFile.exists()) return@withContext Result.failure(FileNotFoundException("Package not found: $packagePath"))
+
+            // Load manifest from package
+            val manifest = loadManifestFromPackage(packageFile)
+
+            // Build in-memory map of service files (path -> bytes) from the ZIP
+            val serviceFiles = mutableMapOf<String, ByteArray>()
+            ZipFile(packageFile).use { zip ->
+                val entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    if (!entry.isDirectory) {
+                        val data = zip.getInputStream(entry).readBytes()
+                        serviceFiles[entry.name] = data
+                    }
+                }
+            }
+
+            // Convert manifest -> Meshrabiya ServiceAnnouncement using the centralized interop helper
+            val announcement = manifest.toMeshrabiyaAnnouncement(sizeKB = (packageFile.length() / 1024).toInt())
+
+            // Create signed bundle using Meshrabiya signing helper
+            val signer = DecentralizedServiceSigning()
+            val signedBundle = signer.createSignedBundle(serviceFiles, authorKeyPair, authorOnionAddress, announcement)
+
+            Result.success(Pair(signedBundle, announcement))
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create signed bundle for package", e)
             Result.failure(e)
         }
     }

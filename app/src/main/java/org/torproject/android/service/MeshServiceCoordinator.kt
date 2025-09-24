@@ -31,6 +31,9 @@ import kotlinx.coroutines.launch
 // Java Concurrent Imports
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.Executors
+import org.torproject.android.service.compute.DistributedStorageAgent
+import java.io.File
+import org.torproject.android.service.compute.toAppFileMetadata
 
 // ===============================================================================
 // DATASTORE CONFIGURATION
@@ -95,6 +98,9 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
     
     // Storage participation components
     private var distributedStorageManager: com.ustadmobile.meshrabiya.storage.DistributedStorageManager? = null
+    // Hold a reference to the mesh adapter provided to DistributedStorageManager so
+    // other app components can obtain the MeshNetworkInterface instance.
+    private var currentMeshAdapter: com.ustadmobile.meshrabiya.storage.MeshNetworkInterface? = null
     private val storageScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
     // Threading and logging
@@ -595,18 +601,223 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
                 if (distributedStorageManager == null && virtualNode != null) {
                     // Use REAL DistributedStorageManager from Meshrabiya
                     // Create a simple adapter for AndroidVirtualNode to MeshNetworkInterface
-                    val meshAdapter = object : com.ustadmobile.meshrabiya.storage.MeshNetworkInterface {
-                        override suspend fun sendStorageRequest(targetNodeId: String, fileInfo: com.ustadmobile.meshrabiya.storage.DistributedFileInfo, operation: com.ustadmobile.meshrabiya.storage.StorageOperation) {
-                            // TODO: Implement when needed
+                    // Adapter between Meshrabiya's MeshNetworkInterface and app-level storage handling.
+                    // We provide lightweight conversion/logging scaffolding here so future implementation
+                    // can plug real network send/receive behavior and convert Meshrabiya model types
+                    // into app canonical types using MeshrabiyaInterop where appropriate.
+                    data class AppStorageCapabilities(
+                        val totalOffered: Long,
+                        val currentlyUsed: Long,
+                        val replicationFactor: Int,
+                        val compressionSupported: Boolean,
+                        val encryptionSupported: Boolean,
+                        val accessPatterns: List<String>
+                    )
+
+                    var lastRemoteStorageCapabilities: AppStorageCapabilities? = null
+
+                    fun convertMmcpStorageCapabilities(cap: com.ustadmobile.meshrabiya.mmcp.StorageCapabilities): AppStorageCapabilities {
+                        return AppStorageCapabilities(
+                            totalOffered = cap.totalOffered,
+                            currentlyUsed = cap.currentlyUsed,
+                            replicationFactor = cap.replicationFactor,
+                            compressionSupported = cap.compressionSupported,
+                            encryptionSupported = cap.encryptionSupported,
+                            accessPatterns = cap.accessPatterns.map { it.toString() }
+                        )
+                    }
+
+                    // Create meshAdapter and then use it to construct DistributedStorageAgent so
+                    // the same adapter is passed into the manager and used for delegation.
+                    lateinit var storageAgent: DistributedStorageAgent
+
+                    // Local named class for the adapter to improve readability and testability
+                    // while preserving the same behavior and ability to capture local variables.
+                    class MeshAdapter : com.ustadmobile.meshrabiya.storage.MeshNetworkInterface {
+                        override suspend fun sendStorageRequest(
+                            targetNodeId: String,
+                            fileInfo: com.ustadmobile.meshrabiya.storage.DistributedFileInfo,
+                            operation: com.ustadmobile.meshrabiya.storage.StorageOperation
+                        ) {
+                            // Convert incoming DistributedFileInfo -> StorageRequest and delegate
+                            try {
+                                val data: ByteArray = try {
+                                    // Try to read local file referenced by localReference
+                                    val localPath = fileInfo.localReference.localPath
+                                    if (localPath.isNullOrEmpty()) ByteArray(0) else File(localPath).readBytes()
+                                } catch (_: Exception) { ByteArray(0) }
+
+                                // Use MeshrabiyaInterop mapping to determine replication factor
+                                val appFileMeta = fileInfo.toAppFileMetadata()
+                                val storageRequest = DistributedStorageAgent.StorageRequest(
+                                    fileId = fileInfo.path,
+                                    fileName = fileInfo.localReference.localPath ?: fileInfo.path,
+                                    data = data,
+                                    replicationFactor = appFileMeta.replicationFactor
+                                )
+
+                                when (operation) {
+                                    com.ustadmobile.meshrabiya.storage.StorageOperation.REPLICATE -> {
+                                        // Fire-and-forget replication to target node
+                                        storageAgent.replicateDropFolderFile(
+                                            storageRequest.fileId,
+                                            storageRequest.fileName,
+                                            java.nio.file.Paths.get(storageRequest.fileName),
+                                            setOf(targetNodeId),
+                                            storageRequest.replicationFactor
+                                        )
+                                    }
+                                    com.ustadmobile.meshrabiya.storage.StorageOperation.DELETE -> {
+                                        storageAgent.deleteFile(fileInfo.path)
+                                    }
+                                    com.ustadmobile.meshrabiya.storage.StorageOperation.RETRIEVE -> {
+                                        // Remote node requested this file — if we have it, trigger a
+                                        // targeted replication to the requester so it can fetch it.
+                                        try {
+                                            if (storageAgent.hasFile(fileInfo.path)) {
+                                                storageAgent.replicateDropFolderFile(
+                                                    storageRequest.fileId,
+                                                    storageRequest.fileName,
+                                                    java.nio.file.Paths.get(storageRequest.fileName),
+                                                    setOf(targetNodeId),
+                                                    storageRequest.replicationFactor
+                                                )
+                                            } else {
+                                                Log.d(TAG, "meshAdapter: RETRIEVE requested for missing file ${fileInfo.path}")
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.w(TAG, "meshAdapter: failed to handle RETRIEVE for ${fileInfo.path}", e)
+                                        }
+                                    }
+                                    else -> {
+                                        // For other operations, log and ignore
+                                        Log.d(TAG, "meshAdapter.sendStorageRequest: unsupported operation $operation")
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                Log.w(TAG, "meshAdapter.sendStorageRequest failed to delegate", e)
+                            }
                         }
-                        override suspend fun queryFileAvailability(path: String): List<String> = emptyList()
-                        override suspend fun requestFileFromNode(nodeId: String, path: String): ByteArray? = null
-                        override suspend fun getAvailableStorageNodes(): List<String> = emptyList()
+
+                        override suspend fun queryFileAvailability(path: String): List<String> {
+                            try {
+                                val results = mutableListOf<String>()
+                                if (storageAgent.hasFile(path)) results.add("LOCAL")
+                                // Add neighbor heuristics
+                                virtualNode?.neighbors()?.mapTo(results) { it.toString() }
+                                return results
+                            } catch (e: Exception) {
+                                Log.w(TAG, "meshAdapter.queryFileAvailability error", e)
+                                return emptyList()
+                            }
+                        }
+
+                        override suspend fun requestFileFromNode(nodeId: String, path: String): ByteArray? {
+                            try {
+                                val retrieval = DistributedStorageAgent.RetrievalRequest(fileId = path, preferredNodes = setOf(nodeId))
+                                val resp = storageAgent.retrieveFile(retrieval)
+                                return if (resp.success) resp.data else null
+                            } catch (e: Exception) {
+                                Log.w(TAG, "meshAdapter.requestFileFromNode failed", e)
+                                return null
+                            }
+                        }
+
+                        override suspend fun getAvailableStorageNodes(): List<String> {
+                            try {
+                                val nodes = mutableListOf<String>()
+                                // Local node participation
+                                distributedStorageManager?.let { mgr ->
+                                    if (mgr.participationEnabled.value) nodes.add("LOCAL")
+                                }
+                                // Include known neighbors from virtualNode as potential targets
+                                virtualNode?.neighbors()?.mapTo(nodes) { it.toString() }
+                                return nodes
+                            } catch (e: Exception) {
+                                Log.w(TAG, "meshAdapter.getAvailableStorageNodes error", e)
+                                return emptyList()
+                            }
+                        }
+
                         override suspend fun broadcastStorageAdvertisement(capabilities: com.ustadmobile.meshrabiya.mmcp.StorageCapabilities) {
-                            // TODO: Implement when needed
+                            try {
+                                val appCap = convertMmcpStorageCapabilities(capabilities)
+                                lastRemoteStorageCapabilities = appCap
+                                Log.i(TAG, "meshAdapter.broadcastStorageAdvertisement: $appCap")
+                                // Inform storageAgent or other components about capability snapshot
+                                // For now we store the snapshot and log; future work can push this
+                                // into DistributedStorageAgent or a capability registry for role decisions.
+                                lastRemoteStorageCapabilities = appCap
+                            } catch (e: Exception) {
+                                Log.w(TAG, "meshAdapter.broadcastStorageAdvertisement failed", e)
+                            }
                         }
                     }
-                    
+
+                    // Local named class for the outgoing proxy to avoid recursion and to centralize
+                    // behavior formerly in the anonymous object.
+                    class NetworkProxy : com.ustadmobile.meshrabiya.storage.MeshNetworkInterface {
+                        override suspend fun sendStorageRequest(targetNodeId: String, fileInfo: com.ustadmobile.meshrabiya.storage.DistributedFileInfo, operation: com.ustadmobile.meshrabiya.storage.StorageOperation) {
+                            // Outgoing send: delegate to distributedStorageManager if available, otherwise log
+                            try {
+                                distributedStorageManager?.let { manager ->
+                                    // If manager exposes an API to forward requests, use it. Fallback: ignore.
+                                }
+                            } catch (e: Exception) {
+                                Log.w(TAG, "networkProxy.sendStorageRequest failed", e)
+                            }
+                        }
+
+                        override suspend fun queryFileAvailability(path: String): List<String> {
+                            return try {
+                                // Use virtualNode neighbor list as a simple availability heuristic
+                                virtualNode?.neighbors()?.map { it.toString() } ?: emptyList()
+                            } catch (e: Exception) {
+                                Log.w(TAG, "networkProxy.queryFileAvailability failed", e)
+                                emptyList()
+                            }
+                        }
+
+                        override suspend fun requestFileFromNode(nodeId: String, path: String): ByteArray? {
+                            return try {
+                                // No direct mesh fetch implemented here; return null so
+                                // DistributedStorageAgent falls back to other strategies.
+                                null
+                            } catch (e: Exception) {
+                                Log.w(TAG, "networkProxy.requestFileFromNode failed", e)
+                                null
+                            }
+                        }
+
+                        override suspend fun getAvailableStorageNodes(): List<String> {
+                            return try {
+                                virtualNode?.neighbors()?.map { it.toString() } ?: emptyList()
+                            } catch (e: Exception) {
+                                Log.w(TAG, "networkProxy.getAvailableStorageNodes failed", e)
+                                emptyList()
+                            }
+                        }
+
+                        override suspend fun broadcastStorageAdvertisement(capabilities: com.ustadmobile.meshrabiya.mmcp.StorageCapabilities) {
+                            // For now, record capabilities and log
+                            try {
+                                val appCap = convertMmcpStorageCapabilities(capabilities)
+                                lastRemoteStorageCapabilities = appCap
+                                Log.d(TAG, "networkProxy.broadcastStorageAdvertisement: $appCap")
+                            } catch (e: Exception) {
+                                Log.w(TAG, "networkProxy.broadcastStorageAdvertisement failed", e)
+                            }
+                        }
+                    }
+
+                    // Instantiate storageAgent with networkProxy to avoid recursive calls
+                    val networkProxy = NetworkProxy()
+                    storageAgent = DistributedStorageAgent(meshNetwork = networkProxy)
+
+                    // Make meshAdapter available to other components
+                    val meshAdapter = MeshAdapter()
+                    currentMeshAdapter = meshAdapter
+
                     distributedStorageManager = com.ustadmobile.meshrabiya.storage.DistributedStorageManager(
                         context = context,
                         meshNetworkInterface = meshAdapter,  // Use adapter instead of virtualNode
@@ -622,6 +833,13 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
             }
         }
     }
+
+    /**
+     * Provide the current MeshNetworkInterface adapter if available.
+     * Components that require a concrete mesh adapter should call this method
+     * and handle the null case (adapter not yet initialized).
+     */
+    fun provideMeshNetworkInterface(): com.ustadmobile.meshrabiya.storage.MeshNetworkInterface? = currentMeshAdapter
     
     /**
      * Get storage participation status - follows getMeshServiceStatus() pattern

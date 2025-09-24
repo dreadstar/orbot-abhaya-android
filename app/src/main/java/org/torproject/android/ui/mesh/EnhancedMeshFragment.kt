@@ -932,19 +932,38 @@ class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapab
     
     private suspend fun startDistributedServices(): Boolean {
         return try {
-            // Create mock mesh network interface
-            // Create mock mesh network interface
-            val mockMeshNetwork = object : IntelligentDistributedComputeService.MeshNetworkInterface {
-                override suspend fun executeRemoteTask(nodeId: String, request: IntelligentDistributedComputeService.TaskExecutionRequest): IntelligentDistributedComputeService.TaskExecutionResponse {
-                    return IntelligentDistributedComputeService.TaskExecutionResponse.Success(
-                        result = mapOf("output" to "Mock result"),
-                        executionTimeMs = 1000L
-                    )
-                }
+            // Require the Meshrabiya mesh adapter to be available; fail fast otherwise.
+            val meshAdapter = try {
+                org.torproject.android.service.MeshServiceCoordinator.getInstance(requireContext()).provideMeshNetworkInterface()
+            } catch (e: Exception) {
+                null
             }
-            
-            // Initialize service coordinator
-            serviceLayerCoordinator = ServiceLayerCoordinator(mockMeshNetwork)
+
+            if (meshAdapter == null) {
+                view?.let { v ->
+                    com.google.android.material.snackbar.Snackbar.make(
+                        v,
+                        "Mesh adapter unavailable — initialize mesh service before starting distributed services",
+                        com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                    ).show()
+                }
+                return false
+            }
+
+            // Create a compute-level adapter. The adapter is a named class which
+            // makes later refactors or delegation easier and improves stack traces.
+            val coordinatorAdapter = try {
+                org.torproject.android.service.MeshServiceCoordinator.getInstance(requireContext()).provideMeshNetworkInterface()
+            } catch (e: Exception) {
+                null
+            }
+
+            val computeMeshNetwork = org.torproject.android.ui.mesh.ComputeMeshNetworkAdapter(
+                meshrabiyaDelegate = coordinatorAdapter
+            )
+
+            // Initialize service coordinator with the compute-level adapter
+            serviceLayerCoordinator = ServiceLayerCoordinator(computeMeshNetwork)
             
             // Start services
             val success = serviceLayerCoordinator?.startServices() ?: false

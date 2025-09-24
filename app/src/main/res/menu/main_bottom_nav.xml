@@ -16,6 +16,10 @@
         android:icon="@drawable/ic_mesh_network"
         android:title="@string/menu_mesh"/>
     <item
+        android:id="@+id/taskManagerFragment"
+        android:icon="@drawable/ic_task_manager"
+        android:title="@string/menu_task_manager"/>
+    <item
         android:id="@+id/moreFragment"
         android:icon="@drawable/ic_more"
         android:title="@string/menu_more"/>
