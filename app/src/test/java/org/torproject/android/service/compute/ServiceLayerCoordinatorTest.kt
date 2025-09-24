@@ -160,7 +160,8 @@ internal class ServiceLayerCoordinatorTest {
             
             // For now, just verify basic capabilities work
             val capabilities = coordinator.getServiceCapabilities()
-            println("getServiceCapabilities() worked: ${capabilities != null}")
+            // capabilities is non-nullable; avoid redundant null-check in println
+            println("getServiceCapabilities() returned: $capabilities")
             assertNotNull(capabilities)
         }
     }
