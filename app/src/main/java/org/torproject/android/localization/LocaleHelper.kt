@@ -42,7 +42,8 @@ object LocaleHelper {
             region = parts[1]
         }
 
-        val localeObj = Locale(language, region)
+        val localeTag = if (region.isNotEmpty()) "$language-$region" else language
+        val localeObj = Locale.forLanguageTag(localeTag)
         Locale.setDefault(localeObj)
         val configuration = context.resources.configuration
         configuration.setLocale(localeObj)

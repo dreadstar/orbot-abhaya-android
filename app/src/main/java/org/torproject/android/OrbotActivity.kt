@@ -21,7 +21,6 @@ import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.NavController
 import androidx.navigation.NavOptions
 import androidx.navigation.findNavController
@@ -175,17 +174,16 @@ class OrbotActivity : BaseActivity() {
             true
         }
 
-        with(LocalBroadcastManager.getInstance(this)) {
-            registerReceiver(
-                orbotServiceBroadcastReceiver, IntentFilter(OrbotConstants.LOCAL_ACTION_STATUS)
-            )
-            registerReceiver(
-                orbotServiceBroadcastReceiver, IntentFilter(OrbotConstants.LOCAL_ACTION_LOG)
-            )
-            registerReceiver(
-                orbotServiceBroadcastReceiver, IntentFilter(OrbotConstants.LOCAL_ACTION_PORTS)
-            )
-        }
+        // Use helper to centralize LocalBroadcastManager deprecation suppression
+        org.torproject.android.util.LocalBroadcast.registerReceiver(
+            this, orbotServiceBroadcastReceiver, IntentFilter(OrbotConstants.LOCAL_ACTION_STATUS)
+        )
+        org.torproject.android.util.LocalBroadcast.registerReceiver(
+            this, orbotServiceBroadcastReceiver, IntentFilter(OrbotConstants.LOCAL_ACTION_LOG)
+        )
+        org.torproject.android.util.LocalBroadcast.registerReceiver(
+            this, orbotServiceBroadcastReceiver, IntentFilter(OrbotConstants.LOCAL_ACTION_PORTS)
+        )
 
         requestNotificationPermission()
 
@@ -255,7 +253,7 @@ class OrbotActivity : BaseActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(orbotServiceBroadcastReceiver)
+    org.torproject.android.util.LocalBroadcast.unregisterReceiver(this, orbotServiceBroadcastReceiver)
     }
 
     @Deprecated("Deprecated in Java")

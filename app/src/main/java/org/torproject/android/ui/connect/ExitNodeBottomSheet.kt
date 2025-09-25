@@ -53,7 +53,8 @@ class ExitNodeBottomSheet : OrbotBottomSheetDialogFragment() {
         items.add("" to getString(R.string.globe) + " " + getString(R.string.vpn_default_world))
 
         COUNTRY_CODES.forEach {
-            val locale = Locale("", it)
+            // Create a Locale with only a region/country code
+            val locale = Locale.Builder().setRegion(it).build()
             sortedCountries[locale.displayCountry] = locale
         }
 

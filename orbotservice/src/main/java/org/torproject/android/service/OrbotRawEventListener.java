@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 
 import androidx.annotation.NonNull;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import net.freehaven.tor.control.RawEventListener;
 import net.freehaven.tor.control.TorControlCommands;
@@ -101,7 +100,7 @@ public class OrbotRawEventListener implements RawEventListener {
                 .putExtra(OrbotConstants.LOCAL_EXTRA_TOTAL_READ, mTotalBandwidthRead)
                 .putExtra(OrbotConstants.LOCAL_EXTRA_LAST_WRITTEN, written)
                 .putExtra(OrbotConstants.LOCAL_EXTRA_LAST_READ, read);
-        LocalBroadcastManager.getInstance(mService).sendBroadcast(bandwidthIntent);
+    LocalBroadcastHelper.sendLocalBroadcast(mService, bandwidthIntent);
     }
 
     private void handleNewDescriptors(String[] descriptors) {
@@ -126,7 +125,8 @@ public class OrbotRawEventListener implements RawEventListener {
                         var countryCode = mService.conn.getInfo("ip-to-country/" + node.ipAddress).toUpperCase(Locale.getDefault());
                         if (!countryCode.equals(TOR_CONTROLLER_COUNTRY_CODE_UNKNOWN)) {
                             var emoji = EmojiUtils.convertCountryCodeToFlagEmoji(countryCode);
-                            var countryName = new Locale("", countryCode).getDisplayName();
+                            var countryLocale = new Locale.Builder().setRegion(countryCode).build();
+                            var countryName = countryLocale.getDisplayName();
                             node.country = emoji + " " + countryName;
                         } else node.country = "";
                         mService.setNotificationSubtext(node.toString());

@@ -355,3 +355,63 @@ tasks.named("runAllTests") {
 tasks.named("aggregatedCoverageReport") {
     finalizedBy("calculateCoveragePercentages")
 }
+
+// Cross-platform task: assemble a chosen APK variant and list produced APK files
+tasks.register("assembleAndListApk") {
+    description = "Assembles the selected APK variant and lists produced APK files (portable)"
+    group = "distribution"
+
+    // Allow overriding the variant via -PapkVariant=fullpermDebug
+    val variantProp = findProperty("apkVariant") as String?
+    val apkVariant = variantProp ?: "fullpermDebug"
+
+    // Map a simple variant name to the assemble task path for :app
+    val assembleTaskPath = ":app:assemble${apkVariant.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }}"
+    dependsOn(assembleTaskPath)
+
+    doLast {
+        // Convert a camelCase variant name like `fullpermDebug` into the output subpath `fullperm/debug`
+        fun variantToOutputDir(variant: String): String {
+            val parts = variant.split(Regex("(?=[A-Z])")).map { it.lowercase() }
+            return parts.joinToString("/")
+        }
+
+        val outDir = project(":app").layout.buildDirectory.dir("outputs/apk/${variantToOutputDir(apkVariant)}").get().asFile
+        val reportFile = layout.buildDirectory.file("artifacts/apks.txt").get().asFile
+        reportFile.parentFile.mkdirs()
+
+        if (!outDir.exists() || !outDir.isDirectory) {
+            logger.lifecycle("No APK output directory found at: ${outDir.absolutePath}")
+            reportFile.writeText("No APK output directory found at: ${outDir.absolutePath}\n")
+            return@doLast
+        }
+
+        val files = outDir.listFiles()?.filter { it.isFile && (it.extension == "apk" || it.extension == "aab") }?.sortedBy { it.name } ?: emptyList()
+        if (files.isEmpty()) {
+            logger.lifecycle("No APK/AAB files found in ${outDir.absolutePath}")
+            reportFile.writeText("No APK/AAB files found in ${outDir.absolutePath}\n")
+            return@doLast
+        }
+
+        fun humanReadable(bytes: Long): String {
+            if (bytes <= 0) return "0 B"
+            val units = arrayOf("B","K","M","G","T")
+            var size = bytes.toDouble()
+            var idx = 0
+            while (size >= 1024 && idx < units.size - 1) {
+                size /= 1024
+                idx++
+            }
+            return String.format("%.1f%s", size, units[idx])
+        }
+
+        val sb = StringBuilder()
+        sb.append("APK files in ${outDir.absolutePath}:\n")
+        files.forEach { f ->
+            sb.append("  ${humanReadable(f.length())}\t${f.name}\n")
+        }
+
+        logger.lifecycle(sb.toString())
+        reportFile.writeText(sb.toString())
+    }
+}

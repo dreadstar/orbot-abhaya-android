@@ -5,6 +5,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -30,6 +32,11 @@ class TaskManagerFragment : Fragment() {
     private var fileInputKey: String? = null
     private var fileInputUri: android.net.Uri? = null
     private var cameraImageUri: android.net.Uri? = null
+
+    // Activity Result API launchers
+    private lateinit var pickImageLauncher: ActivityResultLauncher<String>
+    private lateinit var takePhotoLauncher: ActivityResultLauncher<android.net.Uri?>
+    private lateinit var requestPermissionLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var viewModel: TaskManagerViewModel
     private lateinit var serviceSearchInput: TextInputEditText
     private lateinit var searchButton: MaterialButton
@@ -56,6 +63,33 @@ class TaskManagerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        // Register Activity Result API handlers
+        pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: android.net.Uri? ->
+            uri?.let {
+                fileInputUri = it
+                cameraImageUri = null
+                fileInputKey?.let { key -> inputViews[key]?.setText(it.toString()) }
+                imagePreview.setImageURI(it)
+                imagePreview.visibility = android.view.View.VISIBLE
+            }
+        }
+
+        takePhotoLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success: Boolean ->
+            if (success && cameraImageUri != null) {
+                fileInputUri = null
+                fileInputKey?.let { key -> inputViews[key]?.setText(cameraImageUri.toString()) }
+                imagePreview.setImageURI(cameraImageUri)
+                imagePreview.visibility = android.view.View.VISIBLE
+            }
+        }
+
+        requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { resultMap ->
+            val granted = resultMap.values.any { it }
+            if (!granted) {
+                android.widget.Toast.makeText(requireContext(), "Permission required", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+
         viewModel = ViewModelProvider(this)[TaskManagerViewModel::class.java]
 
         serviceResultsList.layoutManager = LinearLayoutManager(context)
@@ -105,40 +139,22 @@ class TaskManagerFragment : Fragment() {
                     val fileButton = MaterialButton(requireContext()).apply { text = "Select Image" }
                     fileButton.setOnClickListener {
                         fileInputKey = input.name
-                        // Request storage permission if needed
-                        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU &&
-                            android.content.pm.PackageManager.PERMISSION_GRANTED !=
-                            requireActivity().checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE)) {
-                            requestPermissions(arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE), FILE_PICKER_REQUEST_CODE)
-                            return@setOnClickListener
-                        }
-                        val intent = android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).apply {
-                            addCategory(android.content.Intent.CATEGORY_OPENABLE)
-                            type = "image/*"
-                        }
-                        startActivityForResult(intent, FILE_PICKER_REQUEST_CODE)
+                        // Use Activity Result API for picking images
+                        pickImageLauncher.launch("image/*")
                     }
                     inputLayout.addView(fileButton)
 
                     val cameraButton = MaterialButton(requireContext()).apply { text = "Take Photo" }
                     cameraButton.setOnClickListener {
                         fileInputKey = input.name
-                        // Request camera permission if needed
-                        if (android.content.pm.PackageManager.PERMISSION_GRANTED !=
-                            requireActivity().checkSelfPermission(android.Manifest.permission.CAMERA)) {
-                            requestPermissions(arrayOf(android.Manifest.permission.CAMERA), CAMERA_CAPTURE_REQUEST_CODE)
-                            return@setOnClickListener
-                        }
+                        // Create temp file and launch camera via Activity Result API
                         val photoFile = java.io.File.createTempFile("photo_${System.currentTimeMillis()}", ".jpg", requireContext().cacheDir)
                         cameraImageUri = androidx.core.content.FileProvider.getUriForFile(
                             requireContext(),
                             requireContext().packageName + ".provider",
                             photoFile
                         )
-                        val intent = android.content.Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE).apply {
-                            putExtra(android.provider.MediaStore.EXTRA_OUTPUT, cameraImageUri)
-                        }
-                        startActivityForResult(intent, CAMERA_CAPTURE_REQUEST_CODE)
+                        takePhotoLauncher.launch(cameraImageUri)
                     }
                     inputLayout.addView(cameraButton)
                 }
@@ -228,58 +244,7 @@ class TaskManagerFragment : Fragment() {
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == FILE_PICKER_REQUEST_CODE && resultCode == android.app.Activity.RESULT_OK) {
-            data?.data?.let { uri ->
-                fileInputUri = uri
-                cameraImageUri = null
-                fileInputKey?.let { key ->
-                    inputViews[key]?.setText(uri.toString())
-                }
-                // Show image preview
-                imagePreview.setImageURI(uri)
-                imagePreview.visibility = android.view.View.VISIBLE
-            }
-        } else if (requestCode == CAMERA_CAPTURE_REQUEST_CODE && resultCode == android.app.Activity.RESULT_OK) {
-            if (cameraImageUri != null) {
-                fileInputUri = null
-                fileInputKey?.let { key ->
-                    inputViews[key]?.setText(cameraImageUri.toString())
-                }
-                // Show image preview
-                imagePreview.setImageURI(cameraImageUri)
-                imagePreview.visibility = android.view.View.VISIBLE
-            }
-        }
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            if (requestCode == FILE_PICKER_REQUEST_CODE) {
-                val intent = android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).apply {
-                    addCategory(android.content.Intent.CATEGORY_OPENABLE)
-                    type = "image/*"
-                }
-                startActivityForResult(intent, FILE_PICKER_REQUEST_CODE)
-            } else if (requestCode == CAMERA_CAPTURE_REQUEST_CODE) {
-                val photoFile = java.io.File.createTempFile("photo_${System.currentTimeMillis()}", ".jpg", requireContext().cacheDir)
-                cameraImageUri = androidx.core.content.FileProvider.getUriForFile(
-                    requireContext(),
-                    requireContext().packageName + ".provider",
-                    photoFile
-                )
-                val intent = android.content.Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE).apply {
-                    putExtra(android.provider.MediaStore.EXTRA_OUTPUT, cameraImageUri)
-                }
-                startActivityForResult(intent, CAMERA_CAPTURE_REQUEST_CODE)
-            }
-        } else {
-            // Permission denied, show error or toast
-            android.widget.Toast.makeText(requireContext(), "Permission required", android.widget.Toast.LENGTH_SHORT).show()
-        }
-    }
+    // Duplicate onViewCreated removed — registrations are already present in the main onViewCreated above.
 }
 
 // ...existing code for adapters and viewmodel...

@@ -26,53 +26,53 @@ class Languages private constructor(activity: Activity) {
 
     companion object {
         private var defaultLocale: Locale? = null
-        val TIBETAN = Locale("bo")
+        val TIBETAN = Locale.forLanguageTag("bo")
         val localesToTest = arrayOf(
             Locale.ENGLISH, Locale.FRENCH, Locale.GERMAN,
             Locale.ITALIAN, Locale.JAPANESE, Locale.KOREAN,
             Locale.TRADITIONAL_CHINESE, Locale.SIMPLIFIED_CHINESE,
-            TIBETAN, Locale("af"), Locale("am"),
-            Locale("ar"), Locale("ay"), Locale("az"),
-            Locale("bg"), Locale("be"), Locale("bn", "BD"),
-            Locale("bn", "IN"),
-            Locale("bn"), Locale("ca"), Locale("cs"),
-            Locale("da"), Locale("el"), Locale("es"),
-            Locale("es", "MX"),
-            Locale("es", "CU"),
+            TIBETAN, Locale.forLanguageTag("af"), Locale.forLanguageTag("am"),
+            Locale.forLanguageTag("ar"), Locale.forLanguageTag("ay"), Locale.forLanguageTag("az"),
+            Locale.forLanguageTag("bg"), Locale.forLanguageTag("be"), Locale.forLanguageTag("bn-BD"),
+            Locale.forLanguageTag("bn-IN"),
+            Locale.forLanguageTag("bn"), Locale.forLanguageTag("ca"), Locale.forLanguageTag("cs"),
+            Locale.forLanguageTag("da"), Locale.forLanguageTag("el"), Locale.forLanguageTag("es"),
+            Locale.forLanguageTag("es-MX"),
+            Locale.forLanguageTag("es-CU"),
 
-            Locale("es", "AR"),
-            Locale("en", "GB"),
-            Locale("eo"),
-            Locale("et"), Locale("eu"), Locale("fa"),
-            Locale("fr"),
-            Locale("fi"), Locale("gl"),
-            Locale("gu"),
-            Locale("guc"),
-            Locale("gum"),
-            Locale("nah"),
-            Locale("hi"),
-            Locale("hr"), Locale("hu"), Locale("hy", "AM"),
-            Locale("ia"),
-            Locale("in"), Locale("hy"), Locale("in"),
-            Locale("is"), Locale("it"), Locale("iw"),
-            Locale("ka"), Locale("kk"), Locale("km"),
-            Locale("kn"), Locale("ky"), Locale("lo"),
-            Locale("lt"), Locale("lv"), Locale("mk"),
-            Locale("ml"), Locale("mn"), Locale("mr"),
-            Locale("ms"), Locale("my"), Locale("nb"),
-            Locale("ne"), Locale("nl"),
-            Locale("pa"),
-            Locale("pbb"),
+            Locale.forLanguageTag("es-AR"),
+            Locale.forLanguageTag("en-GB"),
+            Locale.forLanguageTag("eo"),
+            Locale.forLanguageTag("et"), Locale.forLanguageTag("eu"), Locale.forLanguageTag("fa"),
+            Locale.forLanguageTag("fr"),
+            Locale.forLanguageTag("fi"), Locale.forLanguageTag("gl"),
+            Locale.forLanguageTag("gu"),
+            Locale.forLanguageTag("guc"),
+            Locale.forLanguageTag("gum"),
+            Locale.forLanguageTag("nah"),
+            Locale.forLanguageTag("hi"),
+            Locale.forLanguageTag("hr"), Locale.forLanguageTag("hu"), Locale.forLanguageTag("hy-AM"),
+            Locale.forLanguageTag("ia"),
+            Locale.forLanguageTag("in"), Locale.forLanguageTag("hy"), Locale.forLanguageTag("in"),
+            Locale.forLanguageTag("is"), Locale.forLanguageTag("it"), Locale.forLanguageTag("iw"),
+            Locale.forLanguageTag("ka"), Locale.forLanguageTag("kk"), Locale.forLanguageTag("km"),
+            Locale.forLanguageTag("kn"), Locale.forLanguageTag("ky"), Locale.forLanguageTag("lo"),
+            Locale.forLanguageTag("lt"), Locale.forLanguageTag("lv"), Locale.forLanguageTag("mk"),
+            Locale.forLanguageTag("ml"), Locale.forLanguageTag("mn"), Locale.forLanguageTag("mr"),
+            Locale.forLanguageTag("ms"), Locale.forLanguageTag("my"), Locale.forLanguageTag("nb"),
+            Locale.forLanguageTag("ne"), Locale.forLanguageTag("nl"),
+            Locale.forLanguageTag("pa"),
+            Locale.forLanguageTag("pbb"),
 
-            Locale("pl"),
-            Locale("pt", "BR"),
-            Locale("pt"), Locale("rm"), Locale("ro"),
-            Locale("ru"), Locale("si", "LK"), Locale("sk"),
-            Locale("sl"), Locale("sn"), Locale("sq"), Locale("sr"),
-            Locale("sv"), Locale("sw"), Locale("ta"),
-            Locale("te"), Locale("th"), Locale("tl"),
-            Locale("tr"), Locale("uk"), Locale("ur"),
-            Locale("uz"), Locale("vi"), Locale("zu")
+            Locale.forLanguageTag("pl"),
+            Locale.forLanguageTag("pt-BR"),
+            Locale.forLanguageTag("pt"), Locale.forLanguageTag("rm"), Locale.forLanguageTag("ro"),
+            Locale.forLanguageTag("ru"), Locale.forLanguageTag("si-LK"), Locale.forLanguageTag("sk"),
+            Locale.forLanguageTag("sl"), Locale.forLanguageTag("sn"), Locale.forLanguageTag("sq"), Locale.forLanguageTag("sr"),
+            Locale.forLanguageTag("sv"), Locale.forLanguageTag("sw"), Locale.forLanguageTag("ta"),
+            Locale.forLanguageTag("te"), Locale.forLanguageTag("th"), Locale.forLanguageTag("tl"),
+            Locale.forLanguageTag("tr"), Locale.forLanguageTag("uk"), Locale.forLanguageTag("ur"),
+            Locale.forLanguageTag("uz"), Locale.forLanguageTag("vi"), Locale.forLanguageTag("zu")
         )
         private const val USE_SYSTEM_DEFAULT = ""
         private const val DEFAULT_STRING = "Use System Default"
@@ -139,9 +139,10 @@ class Languages private constructor(activity: Activity) {
                     /* handle locales with the country in it, i.e. zh_CN, zh_TW, etc */
                     val localeSplit = language.split("_".toRegex()).toTypedArray()
                     if (localeSplit.size > 1) {
-                        Locale(localeSplit[0], localeSplit[1])
+                        // language_country format like zh_CN -> use language-tag with hyphen
+                        Locale.forLanguageTag(localeSplit[0] + "-" + localeSplit[1])
                     } else {
-                        Locale(language)
+                        Locale.forLanguageTag(language)
                     }
                 }
             setLocale(contextWrapper, locale)
