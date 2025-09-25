@@ -22,5 +22,12 @@ include(
     ":app",
     ":OrbotLib",
     ":orbotservice",
-    ":Meshrabiya:lib-meshrabiya"
+    ":Meshrabiya:lib-meshrabiya",
+    ":meshrabiya-api"
+    ,
+    ":abhaya-sensor-android"
 )
+
+// Wire the sensor subproject's app module into the root build
+include(":abhaya-sensor-android:app")
+project(":abhaya-sensor-android:app").projectDir = file("abhaya-sensor-android/app")
