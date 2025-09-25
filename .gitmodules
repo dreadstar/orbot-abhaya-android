@@ -1,3 +1,7 @@
 [submodule "Meshrabiya"]
 	path = Meshrabiya
 	url = git@github.com:dreadstar/Meshrabiya.git
+
+[submodule "abhaya-sensor-android"]
+	path = abhaya-sensor-android
+	url = git@github.com:dreadstar/abhaya-sensor-android.git
