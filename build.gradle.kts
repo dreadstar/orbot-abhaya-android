@@ -38,6 +38,47 @@ subprojects {
     }
 }
 
+// --- Repository-wide conventions: toolchain + consumer AIDL inclusion ---
+// Add a consistent Kotlin JVM toolchain and Java compatibility for Android
+// modules and ensure all Android modules compile the canonical AIDL from
+// :meshrabiya-api to make AIDL generation deterministic in this monorepo.
+subprojects {
+    // Ensure Kotlin compiler JVM target is consistent where Kotlin Android plugin is applied
+    plugins.withId("org.jetbrains.kotlin.android") {
+        // Configure Kotlin compile tasks to target JVM 21
+        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java).configureEach {
+            // Use the newer compilerOptions DSL where available
+            compilerOptions {
+                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+            }
+        }
+    }
+
+    // Configure Android library modules (do not set compileSdk here to avoid
+    // configuration-time errors; modules should declare compileSdk themselves)
+    plugins.withId("com.android.library") {
+        extensions.configure<com.android.build.gradle.LibraryExtension>("android") {
+            compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_21
+                targetCompatibility = JavaVersion.VERSION_21
+            }
+            // Ensure consumer modules see the canonical AIDL
+            sourceSets.getByName("main").aidl.srcDir(project(":meshrabiya-api").file("src/main/aidl"))
+        }
+    }
+
+    // Configure Android application modules
+    plugins.withId("com.android.application") {
+        extensions.configure<com.android.build.gradle.AppExtension>("android") {
+            compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_21
+                targetCompatibility = JavaVersion.VERSION_21
+            }
+            sourceSets.getByName("main").aidl.srcDir(project(":meshrabiya-api").file("src/main/aidl"))
+        }
+    }
+}
+
 tasks.register("clean", Delete::class) {
     delete(layout.buildDirectory)
 }

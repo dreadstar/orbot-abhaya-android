@@ -44,6 +44,14 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
+    // Include AIDL from the meshrabiya-api module so generated binder stubs are
+    // available at compile time.
+    sourceSets {
+        getByName("main") {
+            aidl.srcDir(project(":meshrabiya-api").file("src/main/aidl"))
+        }
+    }
+
     packaging {
         resources {
             excludes += setOf("META-INF/androidx.localbroadcastmanager_localbroadcastmanager.version")
@@ -60,6 +68,8 @@ android {
         xmlReport = false
     }
 }
+
+
 
 
 dependencies {
@@ -91,6 +101,8 @@ dependencies {
     implementation("org.bouncycastle:bcprov-jdk18on:1.75")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.75")
     implementation("org.bouncycastle:bcutil-jdk18on:1.75")
+    // Meshrabiya AIDL API module (provides AIDL interfaces under com.ustadmobile.meshrabiya.api)
+    api(project(":meshrabiya-api"))
     
     // Test dependencies
     testImplementation("junit:junit:4.13.2")

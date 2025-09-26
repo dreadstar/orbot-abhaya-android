@@ -2,4 +2,20 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Permission to bind to Meshrabiya service; signature protection level -->
+    <permission android:name="com.ustadmobile.meshrabiya.permission.BIND_MESHRABIYA"
+                android:protectionLevel="signature" />
+
+    <application>
+        <!-- Meshrabiya AIDL service skeleton; enforces signature permission -->
+        <service
+            android:name="com.ustadmobile.meshrabiya.service.MeshrabiyaAidlService"
+            android:exported="true"
+            android:permission="com.ustadmobile.meshrabiya.permission.BIND_MESHRABIYA">
+            <intent-filter>
+                <action android:name="com.ustadmobile.meshrabiya.ACTION_BIND" />
+            </intent-filter>
+        </service>
+    </application>
+
 </manifest>
