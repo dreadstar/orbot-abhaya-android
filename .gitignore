@@ -45,3 +45,7 @@ app/src/main/assets/LICENSE
 
 # local kotlin config 
 .kotlin/
+
+# AIDL generated files
+build/generated/meshrabiya-aidl/
+orbotservice/src/main/aidl/com/ustadmobile/meshrabiya/api/

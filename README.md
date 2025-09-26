@@ -685,6 +685,54 @@ java -version
 
 ---
 
+## AIDL distribution (meshrabiya-api -> consumers)
+
+The canonical Meshrabiya AIDL files live in the `meshrabiya-api` module and are the single source-of-truth:
+
+```
+meshrabiya-api/src/main/aidl/com/ustadmobile/meshrabiya/api/
+```
+
+To make these AIDL definitions available to consumer modules at compile time we run a distribution task that copies the canonical AIDL into each consumer's generated directory:
+
+```
+<consumer>/build/generated/meshrabiya-aidl/<variant>/com/ustadmobile/meshrabiya/api/
+```
+
+DO NOT commit the generated copies into consumer source trees. Instead add the generated directory to each consumer's AIDL source set so the compiler can find the files during build.
+
+Example (add to the consumer module `build.gradle.kts`, e.g. `abhaya-sensor-android/app/build.gradle.kts`):
+
+```kotlin
+// Place this near the bottom of the consumer module Gradle file
+afterEvaluate {
+   listOf("debug", "release").forEach { variant ->
+      val genDir = file("build/generated/meshrabiya-aidl/$variant")
+      // Attach to the variant sourceSet if it exists, otherwise attach to main
+      android.sourceSets.findByName(variant)?.aidl?.srcDir(genDir)
+         ?: android.sourceSets.getByName("main").aidl.srcDir(genDir)
+   }
+}
+```
+
+Suggested `.gitignore` entries for consumer modules so generated AIDL are not committed:
+
+```
+# Ignore generated Meshrabiya AIDL distributed into consumer modules
+/abhaya-sensor-android/app/src/main/aidl/com/ustadmobile/meshrabiya/api/
+/orbotservice/src/main/aidl/com/ustadmobile/meshrabiya/api/
+```
+
+If Meshrabiya AIDL files were already committed into a consumer module, remove them from the index (keeps history):
+
+```bash
+git rm --cached -r abhaya-sensor-android/app/src/main/aidl/com/ustadmobile/meshrabiya/api
+git commit -m "Remove generated meshrabiya AIDL from consumer; use generated copy instead"
+```
+
+The repository contains a task (`meshrabiya-api:distributeAidlToConsumers`) which is wired to run before consumer assemble tasks so the generated files are available during compilation.
+
+
 ***********************************************
 **Copyright &#169; 2009-2025, Nathan Freitas, The Guardian Project**
 

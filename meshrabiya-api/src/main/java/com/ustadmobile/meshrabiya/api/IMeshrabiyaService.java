@@ -1,17 +1,14 @@
 package com.ustadmobile.meshrabiya.api;
 
-import android.os.IBinder;
-import android.os.IInterface;
 import android.os.Binder;
 import android.os.ParcelFileDescriptor;
 
 /**
- * Minimal hand-written stub matching AIDL-generated shape so consumers can compile.
- * This is a short-term shim until the AIDL-generated binder classes are produced
- * by the Android build. Methods are abstract so implementations may extend
- * IMeshrabiyaService.Stub and provide concrete behavior.
+ * Minimal handwritten shim of the AIDL-generated binder interface.
+ * This file is a temporary shim to unblock compilation; the canonical
+ * AIDL should generate an equivalent Java class eventually.
  */
-public interface IMeshrabiyaService extends IInterface {
+public interface IMeshrabiyaService {
     String getOnionPubKey();
     String getKeyAlgorithm();
     int getApiVersion();
@@ -26,21 +23,14 @@ public interface IMeshrabiyaService extends IInterface {
             super();
         }
 
-        public static IMeshrabiyaService asInterface(IBinder obj) {
-            // Minimal implementation; real AIDL-generated code will return a proxy.
-            return null;
-        }
-
-        @Override
-        public android.os.IBinder asBinder() {
-            return this;
-        }
-
-        // onTransact would be implemented by AIDL-generated code; leave unimplemented.
-        @Override
-        protected boolean onTransact(int code, android.os.Parcel data, android.os.Parcel reply, int flags)
-                throws android.os.RemoteException {
-            return super.onTransact(code, data, reply, flags);
-        }
+        // Declare abstract methods so Kotlin implementation can override them.
+        @Override public abstract String getOnionPubKey();
+        @Override public abstract String getKeyAlgorithm();
+        @Override public abstract int getApiVersion();
+        @Override public abstract byte[] signData(byte[] data);
+        @Override public abstract MeshStatus ensureMeshActive();
+        @Override public abstract int publishToMesh(ParcelFileDescriptor data, String topic);
+        @Override public abstract String storeBlob(ParcelFileDescriptor blob);
+        @Override public abstract int requestCompute(byte[] taskSpec, IOperationCallback cb);
     }
 }

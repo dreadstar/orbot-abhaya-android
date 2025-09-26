@@ -48,7 +48,12 @@ android {
     // available at compile time.
     sourceSets {
         getByName("main") {
-            aidl.srcDir(project(":meshrabiya-api").file("src/main/aidl"))
+            // Include variant-aware generated AIDL directories produced by
+            // the :meshrabiya-api:distributeAidlToConsumers task. This keeps
+            // the repository source tree clean and ensures the generated
+            // stubs are available at compile time.
+            aidl.srcDir(layout.buildDirectory.dir("generated/meshrabiya-aidl/debug"))
+            aidl.srcDir(layout.buildDirectory.dir("generated/meshrabiya-aidl/release"))
         }
     }
 
@@ -67,6 +72,28 @@ android {
         textReport = false
         xmlReport = false
     }
+}
+
+// Copy canonical AIDL files from :meshrabiya-api into a generated build dir
+// so the consumer generates AIDL stubs locally. This avoids requiring
+// the Kotlin compile step to read files from another project's source tree
+// and makes ordering explicit.
+val generateMeshrabiyaAidl = tasks.register<Copy>("generateMeshrabiyaAidl") {
+    val src = project(":meshrabiya-api").file("src/main/aidl")
+    val dest = layout.buildDirectory.dir("generated/meshrabiya-aidl")
+    from(src)
+    into(dest)
+    duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.INCLUDE
+}
+
+// Ensure the preBuild step (and Kotlin compile tasks) run the copy first.
+// The distributor task is defined in the :meshrabiya-api project; reference it there.
+val distributorTask = project(":meshrabiya-api").tasks.named("distributeAidlToConsumers")
+tasks.named("preBuild").configure {
+    dependsOn(distributorTask)
+}
+tasks.matching { it.name.startsWith("compile") && it.name.endsWith("Kotlin") }.configureEach {
+    dependsOn(distributorTask)
 }
 
 
@@ -108,6 +135,22 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-core:5.6.0")
     testImplementation("androidx.test:core:1.5.0")
+}
+
+// Ensure AIDL generation runs before Kotlin compilation so generated stubs
+// (IMeshrabiyaService / IOperationCallback) are available to the compiler.
+// This adds a safe task ordering: for each compile*Kotlin task, if a
+// corresponding generate${Variant}Aidl task exists, make the compile depend on it.
+// This is a defensive fix to avoid race/order issues across project-local
+// AIDL sources and multi-module builds.
+tasks.matching { it.name.startsWith("compile") && it.name.endsWith("Kotlin") }.configureEach {
+    val compileTaskName = name
+    val variantPart = compileTaskName.removePrefix("compile").removeSuffix("Kotlin") // e.g. "Debug"
+    val generateAidlTaskName = "generate${'$'}{variantPart}Aidl"
+    // If a generateAidl task exists for this variant, depend on it.
+    tasks.findByName(generateAidlTaskName)?.let { genTask ->
+        dependsOn(genTask)
+    }
 }
 
 // Configure JaCoCo test coverage for orbotservice module

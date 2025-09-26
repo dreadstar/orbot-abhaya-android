@@ -77,4 +77,64 @@ afterEvaluate {
             logger.lifecycle("Attached AIDL sources into AAR: ${aarFile.absolutePath}")
         }
     }
+
+    val distributeAidlToConsumers = tasks.register("distributeAidlToConsumers") {
+        val consumers = listOf(":orbotservice", ":abhaya-sensor-android:app")
+        val variants = listOf("debug", "release")
+        dependsOn("bundleAarWithAidl")
+
+        doLast {
+            val aidlSrc = file("src/main/aidl")
+            if (!aidlSrc.exists()) {
+                logger.warn("No AIDL sources found in meshrabiya-api/src/main/aidl; nothing to distribute.")
+                return@doLast
+            }
+
+            consumers.forEach { projPath ->
+                val consumer = rootProject.findProject(projPath)
+                if (consumer == null) {
+                    logger.warn("Consumer project not found: $projPath; skipping")
+                    return@forEach
+                }
+
+                variants.forEach { variant ->
+                    val dest = File(consumer.projectDir, "build/generated/meshrabiya-aidl/${variant}")
+                    if (!dest.exists()) dest.mkdirs()
+                    copy {
+                        from(aidlSrc)
+                        into(dest)
+                    }
+                    logger.lifecycle("Copied AIDL to consumer $projPath -> ${dest.absolutePath}")
+                }
+            }
+        }
+    }
+
+    // Wire the distribution task to consumer assemble tasks and ensure consumer
+    // clean tasks run after distribution completes. Use afterEvaluate so consumer
+    // tasks are available.
+    afterEvaluate {
+        val consumers = listOf(":orbotservice", ":abhaya-sensor-android:app")
+        val variants = listOf("debug", "release")
+
+        consumers.forEach { projPath ->
+            val consumer = rootProject.findProject(projPath) ?: return@forEach
+
+            // Ensure consumers are cleaned before distribution runs so the generated
+            // AIDL folder is created in a clean state. Match any clean* task (clean,
+            // cleanDebug, etc.) to be robust to variant-specific clean tasks.
+            distributeAidlToConsumers.configure {
+                dependsOn(consumer.tasks.matching { it.name.startsWith("clean", ignoreCase = true) })
+            }
+
+            // Make each consumer assemble<Variant> depend on distribution so distribution
+            // runs once before any assemble task that needs it.
+            variants.forEach { variant ->
+                val assembleName = "assemble${variant.replaceFirstChar { it.uppercase() }}"
+                consumer.tasks.matching { it.name == assembleName }.configureEach {
+                    dependsOn(distributeAidlToConsumers)
+                }
+            }
+        }
+    }
 }

@@ -398,61 +398,98 @@ tasks.named("aggregatedCoverageReport") {
 }
 
 // Cross-platform task: assemble a chosen APK variant and list produced APK files
-tasks.register("assembleAndListApk") {
-    description = "Assembles the selected APK variant and lists produced APK files (portable)"
+// Report APK files (path + human-readable size) for one or more modules.
+// This task can be invoked directly, and is also executed automatically at
+// the very end of the build via `gradle.buildFinished` so it always runs once
+// after all assemble work completes. By default it reports the :app APK and
+// the sensor app APK at `:abhaya-sensor-android:app`.
+fun variantToOutputDir(variant: String): String {
+    val parts = variant.split(Regex("(?=[A-Z])")).map { it.lowercase() }
+    return parts.joinToString("/")
+}
+
+fun humanReadable(bytes: Long): String {
+    if (bytes <= 0) return "0 B"
+    val units = arrayOf("B","K","M","G","T")
+    var size = bytes.toDouble()
+    var idx = 0
+    while (size >= 1024 && idx < units.size - 1) {
+        size /= 1024
+        idx++
+    }
+    return String.format("%.1f%s", size, units[idx])
+}
+
+fun runApkReport(apkVariant: String, modulePaths: List<String>) {
+    val reportFile = layout.buildDirectory.file("artifacts/apks.txt").get().asFile
+    reportFile.parentFile.mkdirs()
+
+    val sb = StringBuilder()
+    modulePaths.forEach { modulePath ->
+        val consumerProject = rootProject.findProject(modulePath)
+        if (consumerProject == null) {
+            sb.append("Module not found: $modulePath\n")
+            return@forEach
+        }
+
+        val outDir = consumerProject.layout.buildDirectory.dir("outputs/apk/${variantToOutputDir(apkVariant)}").get().asFile
+        sb.append("Module: $modulePath -> ${outDir.absolutePath}\n")
+
+        // Prefer any APK/AAB found recursively under the expected variant output
+        // directory (handles both flat and nested variant layouts).
+        var files = if (outDir.exists()) {
+            outDir.walkTopDown().filter { it.isFile && (it.extension == "apk" || it.extension == "aab") }.toList().sortedBy { it.name }
+        } else emptyList()
+
+        // Fallback: recursively search build/outputs/apk for any APK/AAB in case the module
+        // produced outputs in a different variant folder (sensor app uses a simpler layout).
+        if (files.isEmpty()) {
+            val fallbackDir = consumerProject.layout.buildDirectory.dir("outputs/apk").get().asFile
+            sb.append("  No APKs in expected variant directory; scanning ${fallbackDir.absolutePath}\n")
+            files = if (fallbackDir.exists()) {
+                fallbackDir.walkTopDown().filter { it.isFile && (it.extension == "apk" || it.extension == "aab") }.toList().sortedBy { it.name }
+            } else emptyList()
+        }
+
+        if (files.isEmpty()) {
+            sb.append("  No APK/AAB files found in ${outDir.absolutePath}\n")
+            return@forEach
+        }
+
+        files.forEach { f ->
+            sb.append("  ${humanReadable(f.length())}\t${f.absolutePath}\n")
+        }
+    }
+
+    logger.lifecycle(sb.toString())
+    reportFile.writeText(sb.toString())
+}
+
+tasks.register("reportApks") {
+    description = "Report APK files (path + size) for configured modules and variant"
     group = "distribution"
 
-    // Allow overriding the variant via -PapkVariant=fullpermDebug
+    // Defaults: variant and modules. Can be overridden via -PapkVariant and -PapkModules=":app,:abhaya-sensor-android:app"
     val variantProp = findProperty("apkVariant") as String?
     val apkVariant = variantProp ?: "fullpermDebug"
-
-    // Map a simple variant name to the assemble task path for :app
-    val assembleTaskPath = ":app:assemble${apkVariant.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }}"
-    dependsOn(assembleTaskPath)
+    val modulesProp = findProperty("apkModules") as String?
+    val modules = modulesProp?.split(",")?.map { it.trim() } ?: listOf(":app", ":abhaya-sensor-android:app")
 
     doLast {
-        // Convert a camelCase variant name like `fullpermDebug` into the output subpath `fullperm/debug`
-        fun variantToOutputDir(variant: String): String {
-            val parts = variant.split(Regex("(?=[A-Z])")).map { it.lowercase() }
-            return parts.joinToString("/")
-        }
+        runApkReport(apkVariant, modules)
+    }
+}
 
-        val outDir = project(":app").layout.buildDirectory.dir("outputs/apk/${variantToOutputDir(apkVariant)}").get().asFile
-        val reportFile = layout.buildDirectory.file("artifacts/apks.txt").get().asFile
-        reportFile.parentFile.mkdirs()
-
-        if (!outDir.exists() || !outDir.isDirectory) {
-            logger.lifecycle("No APK output directory found at: ${outDir.absolutePath}")
-            reportFile.writeText("No APK output directory found at: ${outDir.absolutePath}\n")
-            return@doLast
-        }
-
-        val files = outDir.listFiles()?.filter { it.isFile && (it.extension == "apk" || it.extension == "aab") }?.sortedBy { it.name } ?: emptyList()
-        if (files.isEmpty()) {
-            logger.lifecycle("No APK/AAB files found in ${outDir.absolutePath}")
-            reportFile.writeText("No APK/AAB files found in ${outDir.absolutePath}\n")
-            return@doLast
-        }
-
-        fun humanReadable(bytes: Long): String {
-            if (bytes <= 0) return "0 B"
-            val units = arrayOf("B","K","M","G","T")
-            var size = bytes.toDouble()
-            var idx = 0
-            while (size >= 1024 && idx < units.size - 1) {
-                size /= 1024
-                idx++
-            }
-            return String.format("%.1f%s", size, units[idx])
-        }
-
-        val sb = StringBuilder()
-        sb.append("APK files in ${outDir.absolutePath}:\n")
-        files.forEach { f ->
-            sb.append("  ${humanReadable(f.length())}\t${f.name}\n")
-        }
-
-        logger.lifecycle(sb.toString())
-        reportFile.writeText(sb.toString())
+// Ensure the report runs at the very end of the build. Using buildFinished guarantees
+// this action is executed once after all tasks complete (success or failure).
+gradle.buildFinished {
+    val variantProp = findProperty("apkVariant") as String?
+    val apkVariant = variantProp ?: "fullpermDebug"
+    val modulesProp = findProperty("apkModules") as String?
+    val modules = modulesProp?.split(",")?.map { it.trim() } ?: listOf(":app", ":abhaya-sensor-android:app")
+    try {
+        runApkReport(apkVariant, modules)
+    } catch (t: Throwable) {
+        logger.warn("APK report failed: ${t.message}")
     }
 }
