@@ -28,13 +28,28 @@ subprojects {
         }
     }
     
-    // Skip test tasks for modules without test files
+    // Skip test tasks for modules without test files, and ensure a session timeout
+    // system property is provided to all Test tasks so the test runtime can honor
+    // a per-session timeout when executing integration-like tests. The timeout
+    // value can be overridden via Gradle project property `-Psession.timeout=<secs>`.
     tasks.withType<Test> {
         onlyIf { 
             // Only run if there are actual test source files
             project.fileTree("src/test").files.isNotEmpty() || 
             project.fileTree("src/androidTest").files.isNotEmpty()
         }
+
+        // Resolve session timeout from project properties (allow two common names)
+        val sessionTimeoutProp = (project.findProperty("session.timeout") as String?)
+            ?: (project.findProperty("sessionTimeout") as String?)
+            ?: "60" // default to 60 seconds
+
+        // Expose to the test JVM(s)
+        systemProperty("session.timeout", sessionTimeoutProp)
+        // Also mark Meshrabiya test-mode so DefaultSocketTimeoutsProvider uses short (test) timeouts
+        // and expose a convenience property in case code reads a session-specific timeout
+        systemProperty("meshrabiya.hardware.testMode", "true")
+        systemProperty("meshrabiya.session.timeout", sessionTimeoutProp)
     }
 }
 

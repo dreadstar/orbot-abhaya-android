@@ -98,6 +98,9 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
     
     // Storage participation components
     private var distributedStorageManager: com.ustadmobile.meshrabiya.storage.DistributedStorageManager? = null
+    // App-level DistributedStorageAgent used to scan/replicate drop-folder files. This may be
+    // null until initializeStorageParticipation() runs and creates an instance.
+    private var storageAgent: org.torproject.android.service.compute.DistributedStorageAgent? = null
     // Hold a reference to the mesh adapter provided to DistributedStorageManager so
     // other app components can obtain the MeshNetworkInterface instance.
     private var currentMeshAdapter: com.ustadmobile.meshrabiya.storage.MeshNetworkInterface? = null
@@ -812,7 +815,47 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
 
                     // Instantiate storageAgent with networkProxy to avoid recursive calls
                     val networkProxy = NetworkProxy()
-                    storageAgent = DistributedStorageAgent(meshNetwork = networkProxy)
+                    // Save the agent on the coordinator so other service components (for
+                    // example the Meshrabiya AIDL service) can notify the app that a new
+                    // blob has been stored and request immediate replication.
+                    this@MeshServiceCoordinator.storageAgent = org.torproject.android.service.compute.DistributedStorageAgent(meshNetwork = networkProxy)
+
+                    // Schedule a one-shot scan of the Drop Folder to pick up any existing files
+                    // and schedule periodic scans to pick up newly added files. The scan runs on
+                    // the storageScope (IO) so it won't block main thread operations.
+                    storageScope.launch {
+                        try {
+                            val results = this@MeshServiceCoordinator.storageAgent?.scanDropFolderAndReplicate() ?: emptyList()
+                            if (results.isNotEmpty()) {
+                                Log.i(TAG, "DropFolder scan discovered ${results.size} items to replicate")
+                            } else {
+                                Log.d(TAG, "DropFolder scan found no items to replicate")
+                            }
+                        } catch (e: Exception) {
+                            Log.w(TAG, "DropFolder initial scan failed", e)
+                        }
+                    }
+
+                    // Periodic scan every 5 minutes to replicate newly added files. If the
+                    // app wants to make this configurable, expose an API to change interval.
+                    try {
+                        val scanRunnable = Runnable {
+                            storageScope.launch {
+                                try {
+                                    val results = this@MeshServiceCoordinator.storageAgent?.scanDropFolderAndReplicate() ?: emptyList()
+                                    if (results.isNotEmpty()) {
+                                        Log.i(TAG, "Periodic DropFolder scan found ${results.size} files to replicate")
+                                    }
+                                } catch (e: Exception) {
+                                    Log.w(TAG, "Periodic DropFolder scan failed", e)
+                                }
+                            }
+                        }
+                        // scheduleWithFixedDelay requires a ScheduledExecutorService; reuse coordinator executor
+                        executorService.scheduleWithFixedDelay(scanRunnable, 5, 5, java.util.concurrent.TimeUnit.MINUTES)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to schedule periodic DropFolder scans", e)
+                    }
 
                     // Make meshAdapter available to other components
                     val meshAdapter = MeshAdapter()
@@ -840,6 +883,44 @@ class MeshServiceCoordinator private constructor(private val context: Context) {
      * and handle the null case (adapter not yet initialized).
      */
     fun provideMeshNetworkInterface(): com.ustadmobile.meshrabiya.storage.MeshNetworkInterface? = currentMeshAdapter
+
+    /**
+     * Request an immediate replication attempt for a single blob stored under the
+     * Meshrabiya blobs directory. This delegates to the storageAgent to perform a
+     * targeted scan/replication for the given blob id. This is fire-and-forget and
+     * runs on the storageScope.
+     */
+    fun requestReplicationForBlob(blobId: String) {
+        try {
+            // Check user preference for auto replication on store; default true
+            val prefs = context.getSharedPreferences("mesh_storage_prefs", android.content.Context.MODE_PRIVATE)
+            val auto = prefs.getBoolean("mesh_storage_auto_replicate_on_store", true)
+            if (!auto) return
+
+            val agent = storageAgent ?: return
+            storageScope.launch {
+                try {
+                    val res = try {
+                        agent.replicateReplJobForBlob(blobId)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "replicateReplJobForBlob exception for $blobId", e)
+                        null
+                    }
+                    if (res is org.torproject.android.service.compute.DistributedStorageAgent.ReplicationResult.Success) {
+                        Log.i(TAG, "Requested replication for blob $blobId succeeded: replicated=${res.replicatedNodes.size}")
+                    } else if (res is org.torproject.android.service.compute.DistributedStorageAgent.ReplicationResult.Error) {
+                        Log.w(TAG, "Requested replication for blob $blobId failed: ${res.error?.message}")
+                    } else {
+                        Log.d(TAG, "Requested replication for blob $blobId returned null or no-op")
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "requestReplicationForBlob failed for $blobId", e)
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "requestReplicationForBlob top-level failure for $blobId", e)
+        }
+    }
     
     /**
      * Get storage participation status - follows getMeshServiceStatus() pattern

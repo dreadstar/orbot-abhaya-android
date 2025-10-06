@@ -186,6 +186,9 @@ dependencies {
 
     testImplementation(libs.junit.jupiter)
     testImplementation("junit:junit:4.13.2") // JUnit 4 support
+    // Provide a JVM implementation of org.json for unit tests so Android's JSONObject calls don't trigger
+    // the 'not-mocked' runtime error when running plain JVM unit tests.
+    testImplementation("org.json:json:20230227")
     testImplementation("org.mockito:mockito-core:5.5.0")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0") // Kotlin extensions
     testImplementation("org.mockito:mockito-inline:5.2.0")

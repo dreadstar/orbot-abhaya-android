@@ -32,7 +32,7 @@ interface MoatApi {
             ignoreUnknownKeys = true
         }
 
-        fun getInstance(context: Context, proxyPort: Int): MoatApi {
+    fun getInstance(context: Context, proxyPort: Int, socketTimeoutsProvider: com.ustadmobile.meshrabiya.net.SocketTimeoutsProvider = com.ustadmobile.meshrabiya.net.DefaultSocketTimeoutsProvider()): MoatApi {
             val proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", proxyPort))
 
             val filename = "ISRG Root X1.cer"
@@ -67,6 +67,17 @@ interface MoatApi {
             }
 
             val clientBuilder = OkHttpClient.Builder().proxy(proxy)
+
+            // Apply connect/read/write timeouts from provider when specified (>0)
+            try {
+                val connect = socketTimeoutsProvider.connectTimeoutMillis
+                val read = socketTimeoutsProvider.readTimeoutMillis
+                val write = socketTimeoutsProvider.writeTimeoutMillis
+                val tu = java.util.concurrent.TimeUnit.MILLISECONDS
+                if (connect > 0) clientBuilder.connectTimeout(connect.toLong(), tu)
+                if (read > 0) clientBuilder.readTimeout(read.toLong(), tu)
+                if (write > 0) clientBuilder.writeTimeout(write.toLong(), tu)
+            } catch (_: Exception) {}
 
             // Fix for API 24, 25: Moat uses Let's Encrypt for TLS certs, but old Androids
             // don't have the ISRG Root X1 certificate in their keystore, which Let's Encrypt

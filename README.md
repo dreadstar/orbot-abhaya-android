@@ -732,6 +732,115 @@ git commit -m "Remove generated meshrabiya AIDL from consumer; use generated cop
 
 The repository contains a task (`meshrabiya-api:distributeAidlToConsumers`) which is wired to run before consumer assemble tasks so the generated files are available during compilation.
 
+## Meshrabiya: test-mode flags, socket timeouts, and running tests
+
+This project includes the Meshrabiya mesh networking library and a set of test helpers and runtime flags to make unit/integration tests deterministic and visible. When working on Meshrabiya features or tests, the notes below will help you run reliable tests and avoid hangs caused by blocking socket calls and background schedulers.
+
+### Java version
+
+Meshrabiya modules target Java 21. Make sure your shell and Gradle use a Java 21 JDK when running builds and tests. Example (macOS):
+
+```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+echo "JAVA_HOME=$JAVA_HOME"
+./gradlew :Meshrabiya:lib-meshrabiya:testDebugUnitTest --no-daemon -Dtest.single=YourTestClass -Dmeshrabiya.hardware.testMode=true -i
+```
+
+Replace `YourTestClass` with the test you want to run.
+
+### Runtime flags / system properties
+
+Two system properties are used by the Meshrabiya library to alter behavior for tests:
+
+- `-Dmeshrabiya.hardware.testMode=true`
+   - When enabled, a number of long-running or blocking operations use short timeouts and "quick-paths" to avoid hanging tests. Examples: socket accept/read timeouts are reduced, device capability collection returns a minimal snapshot, and periodic background tasks can be skipped.
+- `-Dmeshrabiya.enableOriginatingPeriodicTasks=false`
+   - Disable periodic originating background tasks that would normally run in production. Useful to make unit tests deterministic.
+
+Prefer passing these system properties to Gradle when running tests locally or in CI. Example:
+
+```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+./gradlew :Meshrabiya:lib-meshrabiya:testDebugUnitTest --no-daemon -Dmeshrabiya.hardware.testMode=true -Dmeshrabiya.enableOriginatingPeriodicTasks=false
+```
+
+### Socket timeouts (SocketTimeoutsProvider)
+
+To avoid test hangs caused by blocking `ServerSocket.accept()` and socket read calls, Meshrabiya introduces a small provider abstraction named `SocketTimeoutsProvider` (implemented in the Meshrabiya library). The defaults are:
+
+- Test mode (when `meshrabiya.hardware.testMode=true`):
+   - accept timeout: 2000 ms
+   - socket SO_TIMEOUT (read timeout): 2000 ms
+- Production (default, when testMode is not set):
+   - accept timeout: 0 ms (no timeout)
+   - socket SO_TIMEOUT: 0 ms (no timeout)
+
+Code that accepts sockets (`ChainSocketServer`) and code that receives datagrams (`VirtualNodeDatagramSocket`) read these values from the provider and only set timeouts when the configured value is > 0. This keeps production behavior unchanged while preventing unit tests from blocking indefinitely.
+
+If you write or update unit tests that instantiate `ChainSocketServer` or `VirtualNodeDatagramSocket` directly, prefer injecting a `TestSocketTimeoutsProvider` instance with explicit, deterministic values rather than relying on global system properties. This avoids flakiness when tests run in different environments.
+
+### Example: run a single test with verbose logs
+
+```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+./gradlew :Meshrabiya:lib-meshrabiya:testDebugUnitTest --no-daemon -Dtest.single=MeshrabiyaAidlServiceEndToEndStreamTest -Dmeshrabiya.hardware.testMode=true -Dmeshrabiya.enableOriginatingPeriodicTasks=false -i
+```
+
+### Notes and best practices
+
+- Prefer injecting `TestSocketTimeoutsProvider` into unit tests where possible. The provider lives under `Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/net/SocketTimeoutsProvider.kt`.
+- Avoid long-running background schedulers in unit tests; use `-Dmeshrabiya.enableOriginatingPeriodicTasks=false` or construct the managers with a test-mode flag when supported.
+- Ensure CI runners use Java 21 for Meshrabiya tests to match `kotlinOptions.jvmTarget = "21"`.
+- If you need production-like socket behavior in integration tests, pass a provider that sets longer timeouts (or leave `testMode=false`) and make sure tests are resilient to longer waits.
+
+If you'd like, I can add an explicit CI job example that runs the Meshrabiya module tests with Java 21 and the test-mode system properties set.
+
+### Changing production settings
+
+If you need to change Meshrabiya's behavior in production (for example to enable socket timeouts, metric collection, or to flip feature flags), prefer a controlled approach rather than relying on system properties alone. Recommended options:
+
+- Build-time flags (BuildConfig)
+   - Add a `buildConfigField` in the module `build.gradle.kts` (or a gradle flavor) to expose the flag at runtime in a typesafe way. Example:
+
+   ```kotlin
+   android {
+      defaultConfig {
+         buildConfigField("boolean", "MESHRABIYA_ENABLE_SOCKET_TIMEOUTS", "false")
+      }
+   }
+   ```
+
+   In code use `BuildConfig.MESHRABIYA_ENABLE_SOCKET_TIMEOUTS` to branch behavior.
+
+- Runtime configuration (SharedPreferences or remote config)
+   - If you want the ability to flip behavior at runtime without a new build, read a setting from `SharedPreferences` or a remote config service (Firebase Remote Config, your own server). Document the preference key and defaults and add a secure admin path for toggling in production.
+
+- Inject a custom `SocketTimeoutsProvider`
+   - For production rollout you can instantiate and inject a provider that returns non-zero timeouts. Prefer dependency-injection (Dagger/Hilt or a constructor parameter) for the provider so tests can override it with `TestSocketTimeoutsProvider`.
+
+   Example (Kotlin):
+
+   ```kotlin
+   val provider: SocketTimeoutsProvider = if (BuildConfig.MESHRABIYA_ENABLE_SOCKET_TIMEOUTS) {
+      // production provider with sensible timeouts
+      object : SocketTimeoutsProvider {
+         override val acceptTimeoutMillis: Int = 30000 // 30s
+         override val socketSoTimeoutMillis: Int = 30000 // 30s
+      }
+   } else DefaultSocketTimeoutsProvider()
+
+   ChainSocketServer(socketTimeoutsProvider = provider)
+   ```
+
+- Metrics and monitoring
+   - If you enable socket timeouts in production, add logging and metrics around accept/read timeouts and socket errors so you can observe the impact. Emit counts and histograms for timeout occurrences and failed connections.
+
+- Rollout strategy
+   - Start with a small percentage rollout (via remote config or staged build) and monitor metrics for connection errors and user-facing issues.
+   - Provide a fast rollback path (remote config flip or a quick patch) in case timeouts cause regressions.
+
+Following these patterns keeps the production behavior explicit and testable, while allowing safe experimentation and quick rollbacks if needed.
+
 
 ***********************************************
 **Copyright &#169; 2009-2025, Nathan Freitas, The Guardian Project**

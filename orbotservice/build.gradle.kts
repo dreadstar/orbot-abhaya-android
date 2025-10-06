@@ -31,6 +31,8 @@ android {
         unitTests {
             isIncludeAndroidResources = true
             all {
+                // Disable periodic originating-message tasks during unit tests to reduce noisy logs
+                it.systemProperty("meshrabiya.enableOriginatingPeriodicTasks", "false")
                 it.testLogging {
                     events("passed", "skipped", "failed")
                     showStandardStreams = true
@@ -128,6 +130,10 @@ dependencies {
     implementation("org.bouncycastle:bcprov-jdk18on:1.75")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.75")
     implementation("org.bouncycastle:bcutil-jdk18on:1.75")
+    // Lightweight embedded HTTP server for local loopback sensor handoff
+    implementation("org.nanohttpd:nanohttpd:2.3.1")
+    // Meshrabiya shared library (provides BetaTestLogger and storage helpers)
+    implementation(project(":Meshrabiya:lib-meshrabiya"))
     // Meshrabiya AIDL API module (provides AIDL interfaces under com.ustadmobile.meshrabiya.api)
     api(project(":meshrabiya-api"))
     
@@ -135,6 +141,13 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-core:5.6.0")
     testImplementation("androidx.test:core:1.5.0")
+    // Provide a JVM implementation of org.json for unit tests (avoids Robolectric's 'not mocked' error)
+    testImplementation("org.json:json:20210307")
+    // WorkManager testing helpers for unit tests
+    testImplementation("androidx.work:work-testing:2.8.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    // Robolectric to provide ApplicationProvider/Instrumentation in JVM unit tests
+    testImplementation("org.robolectric:robolectric:4.10.3")
 }
 
 // Ensure AIDL generation runs before Kotlin compilation so generated stubs

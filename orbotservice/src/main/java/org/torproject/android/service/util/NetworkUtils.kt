@@ -39,7 +39,9 @@ object NetworkUtils {
     fun isPortOpen(ip: String?, port: Int, timeout: Int): Boolean {
         try {
             val socket = Socket()
-            socket.connect(InetSocketAddress(ip, port), timeout)
+            // If caller provided a negative timeout, fallback to provider value
+            val connectTimeout = if (timeout > 0) timeout else com.ustadmobile.meshrabiya.net.DefaultSocketTimeoutsProvider().connectTimeoutMillis
+            socket.connect(InetSocketAddress(ip, port), connectTimeout)
             socket.close()
             return true
         } catch (ex: Exception) {

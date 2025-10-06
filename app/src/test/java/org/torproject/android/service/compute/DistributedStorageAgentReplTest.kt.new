@@ -1,0 +1,67 @@
+package org.torproject.android.service.compute
+
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
+import org.junit.Test
+import java.nio.file.Files
+import java.nio.file.Paths
+
+class FakeMeshNetwork : com.ustadmobile.meshrabiya.storage.MeshNetworkInterface {
+    val sent = mutableListOf<com.ustadmobile.meshrabiya.storage.DistributedFileInfo>()
+
+    override suspend fun sendStorageRequest(targetNodeId: String, fileInfo: com.ustadmobile.meshrabiya.storage.DistributedFileInfo, operation: com.ustadmobile.meshrabiya.storage.StorageOperation) {
+        sent.add(fileInfo)
+    }
+
+    override suspend fun queryFileAvailability(path: String): List<String> = emptyList()
+    override suspend fun requestFileFromNode(nodeId: String, path: String): ByteArray? = null
+    override suspend fun getAvailableStorageNodes(): List<String> = listOf("nodeA", "nodeB", "nodeC")
+    override suspend fun broadcastStorageAdvertisement(capabilities: com.ustadmobile.meshrabiya.mmcp.StorageCapabilities) {}
+}
+
+class DistributedStorageAgentReplTest {
+
+    @Test
+    fun testReplicateReplJobForBlob() = runBlocking {
+        val tmpDir = Files.createTempDirectory("dropfolder_test")
+        try {
+            val blobId = "testblob123"
+            val blobFile = tmpDir.resolve("${blobId}.blob")
+            val content = "hello world".toByteArray()
+            Files.write(blobFile, content)
+
+            val metaFile = tmpDir.resolve("${blobId}.json")
+            val metaJson = org.json.JSONObject().apply {
+                put("id", blobId)
+                put("size", content.size)
+            }
+            Files.write(metaFile, metaJson.toString().toByteArray())
+
+            val replFile = tmpDir.resolve("${blobId}.repl.json")
+            val replJson = org.json.JSONObject().apply {
+                put("id", blobId)
+                put("blob_path", blobFile.toAbsolutePath().toString())
+                put("meta_path", metaFile.toAbsolutePath().toString())
+                put("target_replicas", 1)
+            }
+            Files.write(replFile, replJson.toString().toByteArray())
+
+            val fakeMesh = FakeMeshNetwork()
+            val agent = DistributedStorageAgent(meshNetwork = fakeMesh,
+                ioDispatcher = kotlinx.coroutines.Dispatchers.IO,
+                localStoragePath = Paths.get("build", "test_local_storage"),
+                dropFolderPath = tmpDir,
+                maxStorageGB = 0.1f)
+
+            val result = agent.replicateReplJobForBlob(blobId, replicationFactor = 1)
+
+            when (result) {
+                is DistributedStorageAgent.ReplicationResult.Success -> assertEquals(blobId, result.fileId)
+                is DistributedStorageAgent.ReplicationResult.Error -> fail("Replication returned error: ${result.error?.message}")
+            }
+        } finally {
+            try { tmpDir.toFile().deleteRecursively() } catch (_: Exception) {}
+        }
+    }
+}

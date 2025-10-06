@@ -16,6 +16,8 @@ public interface IMeshrabiyaService {
     MeshStatus ensureMeshActive();
     int publishToMesh(ParcelFileDescriptor data, String topic);
     String storeBlob(ParcelFileDescriptor blob);
+    ParcelFileDescriptor openBlob(String blobId);
+    byte[] readBlobRange(String blobId, long offset, int length);
     int requestCompute(byte[] taskSpec, IOperationCallback cb);
 
     abstract class Stub extends Binder implements IMeshrabiyaService {
@@ -31,6 +33,8 @@ public interface IMeshrabiyaService {
         @Override public abstract MeshStatus ensureMeshActive();
         @Override public abstract int publishToMesh(ParcelFileDescriptor data, String topic);
         @Override public abstract String storeBlob(ParcelFileDescriptor blob);
+    @Override public abstract ParcelFileDescriptor openBlob(String blobId);
+    @Override public abstract byte[] readBlobRange(String blobId, long offset, int length);
         @Override public abstract int requestCompute(byte[] taskSpec, IOperationCallback cb);
     }
 }

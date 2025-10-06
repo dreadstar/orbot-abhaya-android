@@ -46,8 +46,31 @@ interface IMeshrabiyaService {
     String storeBlob(in ParcelFileDescriptor blob);
 
     /**
+     * Open a stored blob for reading. Returns a read-only ParcelFileDescriptor
+     * that the caller must close. Throws SecurityException if unauthorized.
+     */
+    ParcelFileDescriptor openBlob(in String blobId);
+
+    /**
+     * Convenience helper to read a small range from a blob. Intended for
+     * clients that cannot accept a ParcelFileDescriptor. Enforce small max length.
+     */
+    byte[] readBlobRange(in String blobId, long offset, int length);
+
+    /**
      * Request a compute task on the mesh. The request is asynchronous; results are
      * delivered via the provided IOperationCallback. Returns 0 on accepted, or error code.
      */
     int requestCompute(in byte[] taskSpec, in IOperationCallback cb);
+
+    /**
+     * Return a base URL for the local loopback HTTP server when available (e.g. http://127.0.0.1:12345)
+     * or empty string when not available.
+     */
+    String getLocalHttpBaseUrl();
+
+    /**
+     * Return the per-device local auth token used by the loopback HTTP server, or empty string.
+     */
+    String getLocalAuthToken();
 }

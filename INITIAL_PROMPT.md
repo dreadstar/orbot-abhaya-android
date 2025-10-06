@@ -9,4 +9,4 @@ please onboard yourself as an expert developer in mobile apps, the tor project, 
 
 my system is slow so you should use output logging on your statements
 
-Re-run FOcused app compile and iterate on fixing errors
+Re-run Focused app compile and iterate on fixing errors
