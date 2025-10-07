@@ -140,7 +140,60 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 21) && \
 
 ---
 
-## 📋 TODO: Next Development Priorities
+## � UPDATE: Sensor App Multi-Flavor Build Configuration Added
+
+### ✅ ACHIEVEMENT: Complete Flavor Parity Between Main and Sensor Apps
+**Date**: October 5, 2025 (Evening Update)
+Successfully modified the abhaya-sensor-android build configuration to generate multiple APK flavors matching the main orbot app structure.
+
+**New Sensor App APK Generation:**
+```
+Fullperm Debug Flavor:
+- app-fullperm-universal-debug.apk     (11MB) - All architectures
+- app-fullperm-arm64-v8a-debug.apk     (10MB) - ARM 64-bit
+- app-fullperm-armeabi-v7a-debug.apk   (10MB) - ARM 32-bit  
+- app-fullperm-x86_64-debug.apk        (10MB) - Intel 64-bit
+- app-fullperm-x86-debug.apk           (10MB) - Intel 32-bit
+
+Nightly Debug Flavor:
+- app-nightly-universal-debug.apk      (11MB) - All architectures
+- app-nightly-arm64-v8a-debug.apk      (10MB) - ARM 64-bit
+- app-nightly-armeabi-v7a-debug.apk    (10MB) - ARM 32-bit
+- app-nightly-x86_64-debug.apk         (10MB) - Intel 64-bit  
+- app-nightly-x86-debug.apk            (10MB) - Intel 32-bit
+```
+
+### Implemented Configuration Changes
+**Added to `abhaya-sensor-android/app/build.gradle.kts`:**
+- **ABI Splits**: x86, armeabi-v7a, x86_64, arm64-v8a with universal APK
+- **Product Flavors**: fullperm and nightly (matching main app)
+- **Version Code Management**: Incremental version codes per ABI (2000+ base)
+- **APK Naming**: Consistent with main app pattern
+- **Build Type Configuration**: Debug builds with proper signing
+
+### APK Reporting Integration
+**Existing System Enhanced:**
+- ✅ **Automatic APK listing** after builds via `gradle.buildFinished`
+- ✅ **Manual APK reporting** via `./gradlew reportApks` task
+- ✅ **Variant-specific reporting** via `-PapkVariant=nightlyDebug` parameter
+- ✅ **Module-specific reporting** via `-PapkModules=":abhaya-sensor-android:app"`
+- ✅ **File size reporting** with human-readable format (10.5M format)
+
+**Validated Commands:**
+```bash
+# Report both main and sensor APKs (default fullpermDebug)
+./gradlew reportApks
+
+# Report specific variant
+./gradlew reportApks -PapkVariant=nightlyDebug
+
+# Report specific modules  
+./gradlew reportApks -PapkModules=":abhaya-sensor-android:app"
+```
+
+---
+
+## �📋 TODO: Next Development Priorities
 
 ### Immediate Code Quality
 - [ ] **Fix nullable receiver warnings** in MeshrabiyaAidlService.kt

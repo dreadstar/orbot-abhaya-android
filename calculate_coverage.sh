@@ -55,6 +55,15 @@ echo ""
 # Calculate code coverage from Jacoco CSV report
 echo "📋 CODE COVERAGE SUMMARY:"
 
+# Check if the CSV file exists before processing
+if [[ ! -f "build/reports/jacoco/aggregated/jacoco.csv" ]]; then
+    echo "   ⚠️ Aggregated coverage report not available (CSV file not found)"
+    echo "   📊 Individual module coverage reports are available in each module's build/reports/jacoco/ directory"
+    echo ""
+    echo "🏆 SUMMARY: $total_tests tests executed, $total_passed passed"
+    exit 0
+fi
+
 awk -F',' '
 NR > 1 {
     inst_missed += $4

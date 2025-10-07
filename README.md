@@ -156,23 +156,57 @@ export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 
 ### Step 6: Build the Project
 
-#### Using Visual Studio Code (Recommended for development):
+This project contains **two main applications** that can be built independently or together:
+- **Main Orbot App** (`app/`) - Core Tor proxy with mesh networking integration
+- **Abhaya Sensor App** (`abhaya-sensor-android/app/`) - Sensor data capture and streaming
 
-1. **Install VS Code** (if not already installed):
-   - Download from [https://code.visualstudio.com/](https://code.visualstudio.com/)
+Both apps support **multiple build flavors and architectures**:
+- **Flavors**: `fullperm` (full permissions) and `nightly` (experimental features)
+- **Architectures**: x86, armeabi-v7a, x86_64, arm64-v8a + universal APK
 
-2. **Open Project in VS Code**:
-   ```bash
-   code /path/to/orbot-abhaya-android
-   ```
+#### Standard APK Generation Commands
 
-3. **Build Debug APKs**:
-   ```bash
-   # Set Java environment and build
-   clear && truncate -s 0 build_output.log && \
-   export JAVA_HOME=$(/usr/libexec/java_home -v 21) && \
-   ./gradlew assembleDebug --console=plain 2>&1 | tee build_output.log
-   ```
+**Build All APKs (Both Projects, All Variants) - Recommended:**
+```bash
+# Complete build: Main + Sensor apps, all flavors and architectures (20 total APKs)
+clear && : > build_output.log && \
+export JAVA_HOME=$(/usr/libexec/java_home -v 21) && \
+./gradlew assembleDebug :abhaya-sensor-android:app:assembleDebug --console=plain 2>&1 | tee build_output.log
+```
+
+**Build Main Orbot App Only:**
+```bash
+# Main app only: 10 APKs (fullperm + nightly, all architectures)
+clear && : > build_output.log && \
+export JAVA_HOME=$(/usr/libexec/java_home -v 21) && \
+./gradlew assembleDebug --console=plain 2>&1 | tee build_output.log
+```
+
+**Build Abhaya Sensor App Only:**
+```bash
+# Sensor app only: 10 APKs (fullperm + nightly, all architectures)
+clear && : > build_output.log && \
+export JAVA_HOME=$(/usr/libexec/java_home -v 21) && \
+./gradlew :abhaya-sensor-android:app:assembleDebug --console=plain --no-daemon 2>&1 | tee build_output.log
+```
+
+#### Specific Flavor Builds
+
+**Fullperm Debug Only:**
+```bash
+# Build only fullperm debug variants for both projects (10 APKs)
+clear && : > build_output.log && \
+export JAVA_HOME=$(/usr/libexec/java_home -v 21) && \
+./gradlew assembleFullpermDebug :abhaya-sensor-android:app:assembleFullpermDebug --console=plain 2>&1 | tee build_output.log
+```
+
+**Nightly Debug Only:**
+```bash
+# Build only nightly debug variants for both projects (10 APKs)
+clear && : > build_output.log && \
+export JAVA_HOME=$(/usr/libexec/java_home -v 21) && \
+./gradlew assembleNightlyDebug :abhaya-sensor-android:app:assembleNightlyDebug --console=plain 2>&1 | tee build_output.log
+```
 
 #### Using Android Studio:
 
@@ -189,28 +223,118 @@ export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
    - Go to `Build` → `Make Project` or press `Ctrl+F9` (Windows/Linux) / `Cmd+F9` (macOS)
    - Or go to `Build` → `Generate Signed Bundle / APK` for release builds
 
-### Step 7: Verify Build Success
+### Step 7: APK Reporting and Verification
 
-After a successful build, check for generated APK files:
+The build system automatically generates a comprehensive APK report after each build:
 
+#### Automatic APK Listing
+After any build completes, you'll see output like:
+```
+Module: :app -> /path/to/orbot-android/app/build/outputs/apk/fullperm/debug
+  68.8M  app-fullperm-arm64-v8a-debug.apk
+  57.5M  app-fullperm-armeabi-v7a-debug.apk
+  170.5M app-fullperm-universal-debug.apk
+  60.9M  app-fullperm-x86-debug.apk
+  73.4M  app-fullperm-x86_64-debug.apk
+
+Module: :abhaya-sensor-android:app -> /path/to/abhaya-sensor-android/app/build/outputs/apk/fullperm/debug
+  10.5M  app-fullperm-arm64-v8a-debug.apk
+  10.5M  app-fullperm-armeabi-v7a-debug.apk
+  10.6M  app-fullperm-universal-debug.apk
+  10.5M  app-fullperm-x86-debug.apk
+  10.5M  app-fullperm-x86_64-debug.apk
+```
+
+#### Manual APK Reporting Commands
 ```bash
-# Check generated APKs
-find app/build/outputs/apk -name "*.apk" -type f
+# Generate APK size report for both projects (default: fullperm debug)
+./gradlew reportApks
 
-# Verify APK sizes and timestamps
-ls -lh app/build/outputs/apk/fullperm/debug/
+# Report specific variant APKs
+./gradlew reportApks -PapkVariant=nightlyDebug
+
+# Report only main orbot APKs
+./gradlew reportApks -PapkModules=":app"
+
+# Report only sensor app APKs
+./gradlew reportApks -PapkModules=":abhaya-sensor-android:app"
 ```
 
-**Expected output** (file sizes may vary):
+#### Quick Verification Commands
+```bash
+# Check all generated APK files
+find . -name "*.apk" -path "*/build/outputs/apk/*" -exec ls -lh {} \;
+
+# Count total APKs generated
+find . -name "*.apk" -path "*/build/outputs/apk/*" | wc -l
+
+# Verify main app APKs
+ls -lh app/build/outputs/apk/*/debug/
+
+# Verify sensor app APKs  
+ls -lh abhaya-sensor-android/app/build/outputs/apk/*/debug/
 ```
-app-fullperm-arm64-v8a-debug.apk     (48M)
-app-fullperm-armeabi-v7a-debug.apk   (46M)
-app-fullperm-universal-debug.apk     (128M)
-app-fullperm-x86-debug.apk           (46M)
-app-fullperm-x86_64-debug.apk        (51M)
+
+### Expected Build Output
+
+After running the complete build command, you'll generate **20 total APK files**:
+
+**Main Orbot App (10 APKs):**
+```
+Fullperm Debug Flavor:
+├── app-fullperm-universal-debug.apk     (~170MB) - All architectures
+├── app-fullperm-arm64-v8a-debug.apk     (~69MB)  - ARM 64-bit (most phones)
+├── app-fullperm-armeabi-v7a-debug.apk   (~58MB)  - ARM 32-bit (older phones)
+├── app-fullperm-x86_64-debug.apk        (~73MB)  - Intel 64-bit (emulators)
+└── app-fullperm-x86-debug.apk           (~61MB)  - Intel 32-bit (old emulators)
+
+Nightly Debug Flavor:
+├── app-nightly-universal-debug.apk      (~170MB) - All architectures  
+├── app-nightly-arm64-v8a-debug.apk      (~69MB)  - ARM 64-bit
+├── app-nightly-armeabi-v7a-debug.apk    (~58MB)  - ARM 32-bit
+├── app-nightly-x86_64-debug.apk         (~73MB)  - Intel 64-bit
+└── app-nightly-x86-debug.apk            (~61MB)  - Intel 32-bit
+```
+
+**Abhaya Sensor App (10 APKs):**
+```
+Fullperm Debug Flavor:
+├── app-fullperm-universal-debug.apk     (~11MB) - All architectures
+├── app-fullperm-arm64-v8a-debug.apk     (~10MB) - ARM 64-bit (most phones)
+├── app-fullperm-armeabi-v7a-debug.apk   (~10MB) - ARM 32-bit (older phones)
+├── app-fullperm-x86_64-debug.apk        (~10MB) - Intel 64-bit (emulators)
+└── app-fullperm-x86-debug.apk           (~10MB) - Intel 32-bit (old emulators)
+
+Nightly Debug Flavor:
+├── app-nightly-universal-debug.apk      (~11MB) - All architectures
+├── app-nightly-arm64-v8a-debug.apk      (~10MB) - ARM 64-bit
+├── app-nightly-armeabi-v7a-debug.apk    (~10MB) - ARM 32-bit  
+├── app-nightly-x86_64-debug.apk         (~10MB) - Intel 64-bit
+└── app-nightly-x86-debug.apk            (~10MB) - Intel 32-bit
 ```
 
 ### Troubleshooting
+
+#### Memory Issues (OutOfMemoryError):
+The sensor app requires significant memory during dex merging. If you encounter `OutOfMemoryError: Java heap space`:
+
+**Increase Gradle heap size in `gradle.properties`:**
+```properties
+# Main project: /Users/dreadstar/workspace/orbot-android/gradle.properties  
+org.gradle.jvmargs=-Xmx6144m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8
+
+# Sensor project: /Users/dreadstar/workspace/orbot-android/abhaya-sensor-android/gradle.properties
+org.gradle.jvmargs=-Xmx8192m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8
+```
+
+**Use `--no-daemon` for sensor builds:**
+```bash
+./gradlew :abhaya-sensor-android:app:assembleDebug --no-daemon
+```
+
+**System Requirements:**
+- **Minimum RAM**: 16GB (to support 8GB Gradle heap + system overhead)
+- **Free Disk Space**: 5GB for build artifacts and dependencies
 
 #### Build Fails with "SDK not found":
 - Ensure `local.properties` has the correct SDK path
@@ -235,22 +359,48 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 #### Clean Build:
 If you encounter persistent issues, try a clean build:
 ```bash
+# Stop all Gradle daemons to reset memory state
+./gradlew --stop
+
+# Clean build artifacts
 ./gradlew clean
-./gradlew assembleDebug
+
+# Rebuild with memory optimizations
+clear && : > build_output.log && \
+export JAVA_HOME=$(/usr/libexec/java_home -v 21) && \
+./gradlew assembleDebug --console=plain 2>&1 | tee build_output.log
 ```
+
+#### Kotlin Compilation Warnings:
+You may see deprecation warnings during builds. These are expected and documented in `KNOWLEDGE-10052025.md`. They don't prevent successful builds but should be addressed in future code cleanup.
 
 ### Project Structure
 
 ```
 orbot-android/
 ├── app/                          # Main Orbot application with Meshrabiya integration
-├── orbotservice/                 # Orbot service module
+│   ├── build.gradle.kts         # Main app build configuration (flavors: fullperm, nightly)
+│   └── src/main/                # Main app source code
+├── abhaya-sensor-android/        # Sensor data capture and streaming application
+│   └── app/
+│       ├── build.gradle.kts     # Sensor app build configuration (flavors: fullperm, nightly)  
+│       └── src/main/            # Sensor app source code (Compose UI + CameraX)
+├── orbotservice/                 # Orbot service module (shared between apps)
 ├── Meshrabiya/                   # Mesh networking library
 │   └── lib-meshrabiya/          # Core mesh networking components
+├── meshrabiya-api/              # AIDL interface definitions
 ├── OrbotLib/                    # Orbot library components
-├── gradle/                      # Gradle wrapper and version catalogs
-└── build.gradle.kts            # Root build configuration
+├── gradle/                      # Gradle wrapper and version catalogs  
+├── build.gradle.kts            # Root build configuration + APK reporting
+└── KNOWLEDGE-*.md              # Project documentation and build history
 ```
+
+**Key Architecture Notes:**
+- **Dual Application Design**: Two separate Android apps that work together
+- **Shared Dependencies**: Both apps use the same `orbotservice` and `meshrabiya-api` modules
+- **Flavor Consistency**: Both apps support identical `fullperm` and `nightly` build flavors
+- **Architecture Splits**: Both apps generate APKs for all major Android architectures
+- **AIDL Integration**: Cross-app communication via generated AIDL interfaces
 
 ### Environment Variables Summary
 
@@ -682,6 +832,86 @@ java -version
 # Clean and retry
 ./gradlew clean
 ```
+
+### Android Emulator and Instrumentation Testing
+
+Some tests, particularly AIDL service tests, require a real Android environment to run properly. The project includes instrumentation tests that run on actual Android devices or emulators.
+
+#### Starting Android Emulator
+
+**Option 1: Using Android Studio**
+1. Open Android Studio
+2. Go to `Tools` → `AVD Manager`
+3. Create/Start an emulator (API 24+ recommended)
+
+**Option 2: Command Line**
+```bash
+# List available emulators
+$ANDROID_HOME/emulator/emulator -list-avds
+
+# Start an emulator (replace with your AVD name)
+$ANDROID_HOME/emulator/emulator -avd Pixel_7_API_34 &
+```
+
+#### Verify Emulator Connection
+
+Before running instrumentation tests, verify the emulator is connected:
+
+```bash
+# Check connected devices
+adb devices
+
+# Should show something like:
+# List of devices attached  
+# emulator-5554	device
+```
+
+#### Running Instrumentation Tests
+
+**Run All Instrumentation Tests:**
+```bash
+# Run all instrumentation tests for sensor app
+rm -f connectedAndroidTest_output.log && \
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home && \
+echo "Using JAVA_HOME=$JAVA_HOME" && \
+./gradlew :abhaya-sensor-android:app:connectedAndroidTest --console=plain -Psession.timeout=300 2>&1 | tee connectedAndroidTest_output.log
+```
+
+**Run Specific Flavor Tests:**
+```bash
+# Fullperm debug instrumentation tests
+rm -f connectedFullpermDebugAndroidTest_output.log && \
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home && \
+echo "Using JAVA_HOME=$JAVA_HOME" && \
+./gradlew :abhaya-sensor-android:app:connectedFullpermDebugAndroidTest --console=plain -Psession.timeout=300 2>&1 | tee connectedFullpermDebugAndroidTest_output.log
+```
+
+**Run Specific Test Class:**
+```bash
+# Run only AIDL tests
+rm -f aidlTest_output.log && \
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home && \
+echo "Using JAVA_HOME=$JAVA_HOME" && \
+./gradlew :abhaya-sensor-android:app:connectedAndroidTest \
+-Pandroid.testInstrumentationRunnerArguments.class=org.abhaya.sensor.meshrabiya.AidlMeshrabiyaServiceApiTest \
+--console=plain -Psession.timeout=300 2>&1 | tee aidlTest_output.log
+```
+
+#### Prerequisites for Instrumentation Tests
+
+Make sure:
+1. **Android emulator is running** and connected (see `adb devices`)
+2. **Orbot service is running** on the emulator (AIDL tests may depend on it)  
+3. **Both APKs are installed** (main orbot + sensor app)
+4. **Emulator has sufficient resources** (4GB+ RAM recommended)
+5. **API level 24+** for compatibility with the sensor app's minSdk
+
+#### Instrumentation Test vs Unit Test
+
+- **Unit Tests (JVM)**: Run on local JVM, some Android-specific features are mocked or skipped
+- **Instrumentation Tests (Android)**: Run on actual Android devices/emulators with full Android framework access
+
+The instrumentation tests provide **real Android environment testing** of AIDL mesh networking functionality that gets skipped in JVM unit tests.
 
 ---
 

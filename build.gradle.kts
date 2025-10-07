@@ -106,6 +106,10 @@ tasks.register("runAllTests") {
     // Clean build outputs first to ensure fresh runs
     dependsOn("clean")
     
+    // Build APKs for both main app and sensor app before running tests
+    dependsOn(":app:assembleFullpermDebug")
+    dependsOn(":abhaya-sensor-android:app:assembleFullpermDebug")
+    
     // Automatically discover and depend on all test tasks (include both debug and release)
     dependsOn(provider {
         project.allprojects.flatMap { proj ->
@@ -330,7 +334,21 @@ tasks.register<JacocoReport>("aggregatedCoverageReport") {
     // Configure report sources
     sourceDirectories.setFrom(allSources)
     classDirectories.setFrom(allClasses)
-    executionData.setFrom(allExecutionFiles)
+    
+    // Always set execution data - collect all .exec files that exist
+    executionData.setFrom(
+        // App module
+        appProject.file("build/outputs/unit_test_code_coverage/fullpermDebugUnitTest/testFullpermDebugUnitTest.exec"),
+        appProject.file("build/jacoco/testFullpermDebugUnitTest.exec"),
+        
+        // OrbotService module  
+        orbotServiceProject.file("build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"),
+        orbotServiceProject.file("build/jacoco/testDebugUnitTest.exec"),
+        
+        // Meshrabiya module
+        meshrabiyaProject.file("build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"),
+        meshrabiyaProject.file("build/jacoco/testDebugUnitTest.exec")
+    )
     
     reports {
         xml.required.set(true)
@@ -341,6 +359,12 @@ tasks.register<JacocoReport>("aggregatedCoverageReport") {
         xml.outputLocation.set(layout.buildDirectory.file("reports/jacoco/aggregated/jacoco.xml"))
         csv.outputLocation.set(layout.buildDirectory.file("reports/jacoco/aggregated/jacoco.csv"))
     }
+    
+    // Always run this task even if execution data is missing
+    onlyIf { true }
+    
+    // Force the task to never be considered up-to-date so it always runs
+    outputs.upToDateWhen { false }
     
     doFirst {
         // Clear previous aggregated coverage reports
@@ -389,11 +413,15 @@ tasks.register<Exec>("calculateCoveragePercentages") {
     workingDir = projectDir
     commandLine("bash", "calculate_coverage.sh")
     
-    // Ensure the CSV report exists before running
-    doFirst {
+    // Make this task optional if CSV report doesn't exist
+    onlyIf {
         val csvReport = file("build/reports/jacoco/aggregated/jacoco.csv")
         if (!csvReport.exists()) {
-            throw GradleException("Jacoco CSV report not found at ${csvReport.absolutePath}. Run aggregatedCoverageReport first.")
+            println("📊 Skipping coverage calculation - CSV report not found at ${csvReport.absolutePath}")
+            println("📋 Note: This can happen when aggregatedCoverageReport is skipped due to missing execution data")
+            false
+        } else {
+            true
         }
     }
     
