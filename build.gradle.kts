@@ -98,13 +98,30 @@ tasks.register("clean", Delete::class) {
     delete(layout.buildDirectory)
 }
 
+// Task to build test APKs without cleaning main APKs
+tasks.register("assembleTestsOnly") {
+    description = "Build all test APKs without cleaning main APKs"
+    group = "build"
+    
+    dependsOn(":abhaya-sensor-android:app:assembleFullpermDebugAndroidTest")
+    dependsOn(":app:assembleFullpermDebugAndroidTest")
+}
+
+// Task to build main APKs without cleaning
+tasks.register("assembleMainOnly") {
+    description = "Build all main APKs without cleaning"
+    group = "build"
+    
+    dependsOn(":app:assembleFullpermDebug") 
+    dependsOn(":abhaya-sensor-android:app:assembleFullpermDebug")
+}
+
 // Auto-discovering runAllTests task that finds and runs all tests dynamically
 tasks.register("runAllTests") {
     description = "Automatically discovers and runs all tests across all submodules and generates code coverage reports"
     group = "verification"
     
-    // Clean build outputs first to ensure fresh runs
-    dependsOn("clean")
+    // Note: Removed clean dependency to preserve existing APK builds
     
     // Build APKs for both main app and sensor app before running tests
     dependsOn(":app:assembleFullpermDebug")

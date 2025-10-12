@@ -431,6 +431,417 @@ Once the build is successful:
 
 ---
 
+## Gradle Tasks Reference
+
+This section provides a comprehensive breakdown of available Gradle tasks across the entire project, organized by purpose. All commands should be run from the project root directory.
+
+### Standard Command Format
+
+For consistency and proper logging, use this format for all Gradle commands:
+
+```bash
+: > logfile.log && \
+export JAVA_HOME=$(/usr/libexec/java_home -v 21) && \
+./gradlew [task1] [task2] [...] --console=plain 2>&1 | tee logfile.log
+```
+
+### Build Tasks
+
+#### Compile Tasks (Fast Validation)
+
+Compile Kotlin/Java source code without building full APKs. Useful for quick syntax validation.
+
+```bash
+# Compile main Orbot app Kotlin sources
+./gradlew :app:compileFullpermDebugKotlin
+
+# Compile Abhaya Sensor app Kotlin sources
+./gradlew :abhaya-sensor-android:app:compileFullpermDebugKotlin
+
+# Compile both apps in one command
+./gradlew :app:compileFullpermDebugKotlin :abhaya-sensor-android:app:compileFullpermDebugKotlin
+```
+
+**Time**: ~30-60 seconds  
+**Output**: Compilation errors/warnings only (no APK files)
+
+#### Assembly Tasks (Build APKs)
+
+Generate complete APK files for installation and distribution.
+
+```bash
+# Build main Orbot app (all variants, 10 APKs)
+./gradlew :app:assembleDebug
+
+# Build Abhaya Sensor app (all variants, 10 APKs)
+./gradlew :abhaya-sensor-android:app:assembleDebug
+
+# Build both apps in one command (20 APKs total)
+./gradlew :app:assembleDebug :abhaya-sensor-android:app:assembleDebug
+
+# Build specific variant only
+./gradlew :app:assembleFullpermDebug                          # Main app fullperm only (5 APKs)
+./gradlew :abhaya-sensor-android:app:assembleFullpermDebug    # Sensor app fullperm only (5 APKs)
+
+# Build specific architecture
+./gradlew :app:assembleFullpermDebugArm64-v8a                 # ARM 64-bit only
+./gradlew :app:assembleFullpermDebugArmeabi-v7a               # ARM 32-bit only
+./gradlew :app:assembleFullpermDebugUniversal                 # Universal (all architectures)
+```
+
+**Time**: 2-4 minutes (first build), 1-2 minutes (incremental)  
+**Output**: APK files in `app/build/outputs/apk/[variant]/debug/`
+
+#### Build + Assemble Combined
+
+```bash
+# Build both main APKs and test APKs in one command
+./gradlew :app:assembleFullpermDebug :app:assembleFullpermDebugAndroidTest
+
+# Build sensor app + test APK
+./gradlew :abhaya-sensor-android:app:assembleFullpermDebug :abhaya-sensor-android:app:assembleFullpermDebugAndroidTest
+
+# Build everything: main apps + test APKs (4 APKs)
+./gradlew :app:assembleFullpermDebug :app:assembleFullpermDebugAndroidTest \
+          :abhaya-sensor-android:app:assembleFullpermDebug :abhaya-sensor-android:app:assembleFullpermDebugAndroidTest
+```
+
+**Time**: 3-5 minutes  
+**Output**: Main APKs + Test APKs for instrumented testing
+
+### Clean Tasks
+
+Remove all build artifacts and caches. Use when builds are failing inexplicably.
+
+```bash
+# Clean entire project
+./gradlew clean
+
+# Clean specific module
+./gradlew :app:clean
+./gradlew :abhaya-sensor-android:app:clean
+
+# Clean and rebuild
+./gradlew clean :app:assembleFullpermDebug
+```
+
+**Time**: 10-30 seconds (clean), 3-5 minutes (clean + rebuild)  
+**Output**: Deletes `build/` directories
+
+### Test Tasks
+
+#### Build Test APKs
+
+```bash
+# Build main app test APK
+./gradlew :app:assembleFullpermDebugAndroidTest
+
+# Build sensor app test APK
+./gradlew :abhaya-sensor-android:app:assembleFullpermDebugAndroidTest
+
+# Build both test APKs
+./gradlew :app:assembleFullpermDebugAndroidTest :abhaya-sensor-android:app:assembleFullpermDebugAndroidTest
+```
+
+**Time**: 1-3 minutes  
+**Output**: Test APK in `app/build/outputs/apk/androidTest/[variant]/debug/`
+
+#### Run Tests on Connected Device
+
+```bash
+# Run all tests for main app
+./gradlew :app:connectedFullpermDebugAndroidTest
+
+# Run all tests for sensor app
+./gradlew :abhaya-sensor-android:app:connectedFullpermDebugAndroidTest
+
+# Run specific test class
+./gradlew :abhaya-sensor-android:app:connectedFullpermDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=com.ustadmobile.meshrabiya.sensor.SensorAppComposeTest
+
+# Run tests matching pattern
+./gradlew :abhaya-sensor-android:app:connectedFullpermDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.package=com.ustadmobile.meshrabiya.sensor
+```
+
+**Time**: 5-30 minutes (depending on test count)  
+**Output**: Test results in `app/build/reports/androidTests/connected/`  
+**Requires**: Device or emulator connected via ADB
+
+#### Unit Tests (JVM)
+
+```bash
+# Run JVM unit tests (no device required)
+./gradlew :app:testFullpermDebugUnitTest
+./gradlew :abhaya-sensor-android:app:testFullpermDebugUnitTest
+
+# Run all unit tests across all modules
+./gradlew test
+```
+
+**Time**: 30 seconds - 2 minutes  
+**Output**: Test results in `app/build/reports/tests/`
+
+### Verification Tasks
+
+#### Lint
+
+Static code analysis to find potential bugs and code quality issues.
+
+```bash
+# Run lint on main app
+./gradlew :app:lintFullpermDebug
+
+# Run lint on sensor app
+./gradlew :abhaya-sensor-android:app:lintFullpermDebug
+
+# Run lint on entire project
+./gradlew lint
+```
+
+**Time**: 1-3 minutes  
+**Output**: HTML report in `app/build/reports/lint-results-fullpermDebug.html`
+
+#### Dependency Checks
+
+```bash
+# List all dependencies
+./gradlew :app:dependencies
+
+# Check for dependency updates
+./gradlew dependencyUpdates
+
+# Verify dependency resolution
+./gradlew :app:checkFullpermDebugDuplicateClasses
+```
+
+### Install Tasks
+
+Install APKs directly to connected device via Gradle.
+
+```bash
+# Install main app
+./gradlew :app:installFullpermDebug
+
+# Install sensor app
+./gradlew :abhaya-sensor-android:app:installFullpermDebug
+
+# Install and launch app
+./gradlew :abhaya-sensor-android:app:installFullpermDebug && \
+adb shell am start -n com.ustadmobile.meshrabiya.sensor/.MainActivity
+
+# Build, install, and run tests in one command
+./gradlew :abhaya-sensor-android:app:installFullpermDebug \
+          :abhaya-sensor-android:app:installFullpermDebugAndroidTest \
+          :abhaya-sensor-android:app:connectedFullpermDebugAndroidTest
+```
+
+**Time**: 10-60 seconds (depends on APK size and device)  
+**Requires**: Device connected via ADB
+
+### Uninstall Tasks
+
+```bash
+# Uninstall main app
+./gradlew :app:uninstallFullpermDebug
+
+# Uninstall sensor app
+./gradlew :abhaya-sensor-android:app:uninstallFullpermDebug
+
+# Uninstall all variants
+./gradlew :app:uninstallAll
+```
+
+### APK Reporting Tasks
+
+Custom tasks for listing and verifying generated APKs.
+
+```bash
+# Generate APK size report (default: fullperm debug)
+./gradlew reportApks
+
+# Report specific variant
+./gradlew reportApks -PapkVariant=nightlyDebug
+
+# Report only main app APKs
+./gradlew reportApks -PapkModules=":app"
+
+# Report only sensor app APKs
+./gradlew reportApks -PapkModules=":abhaya-sensor-android:app"
+```
+
+**Output**: Console output with APK paths and sizes
+
+### Bundle Tasks (For Google Play)
+
+Generate Android App Bundles (AAB) for Play Store distribution.
+
+```bash
+# Build main app bundle
+./gradlew :app:bundleFullpermRelease
+
+# Build sensor app bundle
+./gradlew :abhaya-sensor-android:app:bundleFullpermRelease
+```
+
+**Time**: 3-5 minutes  
+**Output**: AAB file in `app/build/outputs/bundle/[variant]Release/`  
+**Note**: Requires release signing configuration
+
+### Signing Tasks
+
+```bash
+# Build signed release APK (requires keystore configuration)
+./gradlew :app:assembleFullpermRelease
+
+# Build signed bundle
+./gradlew :app:bundleFullpermRelease
+```
+
+**Requires**: Signing configuration in `local.properties` or environment variables
+
+### Gradle Wrapper Tasks
+
+Update or verify Gradle wrapper version.
+
+```bash
+# Check current Gradle version
+./gradlew --version
+
+# Upgrade Gradle wrapper
+./gradlew wrapper --gradle-version=9.0
+
+# Validate wrapper checksums
+./gradlew wrapper --validate
+```
+
+### Debugging and Analysis Tasks
+
+```bash
+# Show project properties
+./gradlew properties
+
+# Show task dependencies
+./gradlew :app:assembleFullpermDebug --dry-run
+
+# Profile build performance
+./gradlew :app:assembleFullpermDebug --profile --offline --build-cache
+
+# Build with stacktraces for debugging
+./gradlew :app:assembleFullpermDebug --stacktrace
+
+# Build with detailed info logging
+./gradlew :app:assembleFullpermDebug --info
+
+# Build with debug logging
+./gradlew :app:assembleFullpermDebug --debug
+```
+
+**Time**: Varies  
+**Output**: Performance report in `build/reports/profile/`
+
+### Task Discovery
+
+```bash
+# List all available tasks
+./gradlew tasks
+
+# List all tasks including internal ones
+./gradlew tasks --all
+
+# List tasks for specific group
+./gradlew tasks --group=build
+./gradlew tasks --group=verification
+./gradlew tasks --group=install
+```
+
+### Common Task Combinations
+
+#### Development Workflow
+
+```bash
+# 1. Quick syntax check
+./gradlew :abhaya-sensor-android:app:compileFullpermDebugKotlin
+
+# 2. Build and install for testing
+./gradlew :abhaya-sensor-android:app:assembleFullpermDebug installFullpermDebug
+
+# 3. Build, install, and run tests
+./gradlew :abhaya-sensor-android:app:assembleFullpermDebug \
+          :abhaya-sensor-android:app:assembleFullpermDebugAndroidTest \
+          installFullpermDebug \
+          installFullpermDebugAndroidTest \
+          connectedFullpermDebugAndroidTest
+```
+
+#### CI/CD Pipeline
+
+```bash
+# Full verification pipeline
+./gradlew clean \
+          :app:assembleFullpermDebug \
+          :abhaya-sensor-android:app:assembleFullpermDebug \
+          :app:lintFullpermDebug \
+          :abhaya-sensor-android:app:lintFullpermDebug \
+          :app:testFullpermDebugUnitTest \
+          :abhaya-sensor-android:app:testFullpermDebugUnitTest
+```
+
+#### Release Build
+
+```bash
+# Build signed release APKs and bundles
+./gradlew clean \
+          :app:assembleFullpermRelease \
+          :app:bundleFullpermRelease \
+          :abhaya-sensor-android:app:assembleFullpermRelease \
+          :abhaya-sensor-android:app:bundleFullpermRelease
+```
+
+### Task Execution Times (Approximate)
+
+| Task Category | First Run | Incremental | With Clean |
+|--------------|-----------|-------------|------------|
+| Compile Only | 30-60s | 10-30s | 1-2min |
+| Assemble Debug | 2-4min | 30-90s | 3-5min |
+| Assemble Release | 3-5min | 1-2min | 4-6min |
+| Unit Tests | 1-2min | 30-60s | 2-3min |
+| Instrumented Tests | 10-30min | 5-15min | 15-40min |
+| Lint | 1-3min | 30-90s | 2-4min |
+| Clean | 10-30s | N/A | N/A |
+
+**Note**: Times vary based on hardware, project size, and build cache state.
+
+### Important Notes
+
+1. **Always build from project root** (`/Users/dreadstar/workspace/orbot-android/`), never from submodules
+2. **Use Java 21** - Set `JAVA_HOME` before running Gradle commands
+3. **Gradle daemon** - First builds are slower; daemon speeds up subsequent builds
+4. **Build cache** - Use `--build-cache` flag for faster incremental builds
+5. **Parallel execution** - Multiple modules build in parallel automatically
+6. **Clean builds** - Use when strange errors occur or after major dependency changes
+
+### Troubleshooting Gradle Issues
+
+```bash
+# Stop Gradle daemon
+./gradlew --stop
+
+# Clear Gradle caches (nuclear option)
+rm -rf ~/.gradle/caches/
+rm -rf .gradle/
+
+# Refresh dependencies
+./gradlew --refresh-dependencies
+
+# Build with full diagnostics
+./gradlew :app:assembleFullpermDebug --stacktrace --info --scan
+```
+
+For more detailed build information and troubleshooting, see [KNOWLEDGE-10102025.md](./KNOWLEDGE-10102025.md).
+
+---
+
 ## Emulating
 
 This section provides comprehensive instructions for setting up and using Android emulators to test Orbot with mesh networking functionality.
@@ -1071,9 +1482,94 @@ If you need to change Meshrabiya's behavior in production (for example to enable
 
 Following these patterns keeps the production behavior explicit and testable, while allowing safe experimentation and quick rollbacks if needed.
 
+---
+
+## License
+
+**orbot-abhaya-android** is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
+
+### What This Means
+
+- ✅ You can use, modify, and distribute this software
+- ✅ You must disclose your source code when distributing
+- ✅ **Network use is distribution** - if you run a modified version as a service, you must provide source to users
+- ✅ Modifications must also be AGPLv3
+- ✅ Strong copyleft ensures this remains free and open source
+
+### Why AGPL-3.0?
+
+We chose AGPL-3.0 because:
+1. **Network Copyleft**: Ensures SaaS providers can't use our code without contributing back
+2. **Privacy & Security**: Aligns with Tor/Orbot's mission of transparency
+3. **Community Protection**: Prevents proprietary forks from fragmenting the ecosystem
+
+### Third-Party Licenses
+
+This project uses several open-source components with different licenses:
+
+#### ⚠️ Meshrabiya (LGPL-3.0)
+
+This project uses **[Meshrabiya](https://github.com/UstadMobile/Meshrabiya)**, 
+a virtual mesh networking library, licensed under **LGPL-3.0**.
+
+**LGPL Compliance:**
+- Meshrabiya is used as a library dependency (not merged into our code)
+- Users can replace Meshrabiya with modified versions
+- Our Fork: https://github.com/dreadstar/Meshrabiya
+- Upstream: https://github.com/UstadMobile/Meshrabiya
+- Our modifications are also LGPL-3.0 licensed
+
+#### Orbot (BSD-3-Clause)
+
+Based on **[Orbot](https://github.com/guardianproject/orbot-android)** 
+by The Guardian Project. This project extends Orbot with mesh networking capabilities.
+
+#### Tor (BSD-3-Clause)
+
+Incorporates **[Tor](https://www.torproject.org/)** for anonymous networking.
+
+#### Android & Other Libraries (Apache-2.0, MIT, etc.)
+
+Uses various Android libraries and open-source components including:
+- AndroidX libraries (Apache-2.0)
+- Jetpack Compose (Apache-2.0)
+- CameraX (Apache-2.0)
+- Kotlin (Apache-2.0)
+
+**Complete license information:**
+- [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) - Full license texts
+- [NOTICE](NOTICE) - Copyright attributions
+- In-app: Settings → About → Open Source Licenses
+
+### Contributing
+
+Contributions are welcome! By contributing, you agree that your contributions 
+will be licensed under AGPLv3.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Commercial Use
+
+AGPLv3 allows commercial use, but with important requirements:
+- You must provide source code to users
+- You cannot make the software proprietary
+- Network service = distribution (source code must be available)
+
+For commercial licensing questions or alternative licensing arrangements, 
+please open an issue to discuss.
+
+### Questions?
+
+- AGPL-3.0 FAQ: https://www.gnu.org/licenses/gpl-faq.html#AGPLv3
+- LGPL-3.0 Info: https://www.gnu.org/licenses/lgpl-3.0.html
+- Open an issue: https://github.com/dreadstar/orbot-abhaya-android/issues
+
+---
 
 ***********************************************
-**Copyright &#169; 2009-2025, Nathan Freitas, The Guardian Project**
+**Original Orbot Copyright &#169; 2009-2025, Nathan Freitas, The Guardian Project**
+
+**orbot-abhaya-android Extensions and Modifications Copyright &#169; 2025, Tyrone Thomas/BreakThrough Technologies**
 
 ---
 

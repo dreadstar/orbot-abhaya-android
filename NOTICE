@@ -1,0 +1,79 @@
+orbot-abhaya-android - VPN and Mesh Networking Application
+Copyright © 2025 Tyrone Thomas/BreakThrough Technologies
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+================================================================================
+THIRD-PARTY COMPONENTS
+================================================================================
+
+This software incorporates the following third-party components:
+
+1. Meshrabiya - Virtual Mesh Networking Library
+   Copyright © UstadMobile FZ-LLC
+   Licensed under: GNU Lesser General Public License v3.0 (LGPL-3.0)
+   Source Code: https://github.com/UstadMobile/Meshrabiya
+   Our Fork: https://github.com/dreadstar/Meshrabiya
+   
+   ⚠️ LGPL NOTICE: Meshrabiya is used as a dynamically linked library.
+   Users have the right to replace this library with a modified version.
+   See THIRD_PARTY_LICENSES.md for full LGPL-3.0 license text.
+
+2. Orbot (Guardian Project)
+   Copyright © 2009-2025, Nathan Freitas, The Guardian Project
+   Licensed under: BSD-3-Clause License
+   Source Code: https://github.com/guardianproject/orbot-android
+
+3. Tor Project
+   Copyright © The Tor Project, Inc.
+   Licensed under: BSD-3-Clause License
+   Source Code: https://www.torproject.org/
+
+4. Android Open Source Project (AOSP)
+   Copyright © The Android Open Source Project
+   Licensed under: Apache License 2.0
+   Includes: AndroidX libraries, Jetpack Compose, CameraX
+   Source Code: https://source.android.com/
+
+5. Kotlin Standard Library
+   Copyright © JetBrains s.r.o. and Kotlin Programming Language contributors
+   Licensed under: Apache License 2.0
+   Source Code: https://github.com/JetBrains/kotlin
+
+6. Kotlin Coroutines
+   Copyright © JetBrains s.r.o. and Kotlin Programming Language contributors
+   Licensed under: Apache License 2.0
+   Source Code: https://github.com/Kotlin/kotlinx.coroutines
+
+For complete license texts, see:
+- THIRD_PARTY_LICENSES.md (full license texts)
+- README.md (license summary and attribution)
+
+================================================================================
+NETWORK SERVICE NOTICE (AGPL-3.0)
+================================================================================
+
+This application is licensed under AGPLv3, which means:
+
+If you run a modified version of this software as a network service,
+you MUST make the complete source code of your modified version available
+to users of that service.
+
+This ensures that users of network services have access to the source code,
+closing the "ASP loophole" of the GPL.
+
+For more information, see:
+https://www.gnu.org/licenses/why-affero-gpl.html
+
+================================================================================

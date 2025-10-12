@@ -19,8 +19,17 @@ import org.torproject.android.service.util.Prefs
  */
 open class BaseActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        resetSecureFlags()
+        android.util.Log.d("BaseActivity", "onCreate() - START for ${this::class.java.simpleName}")
+        try {
+            super.onCreate(savedInstanceState)
+            android.util.Log.d("BaseActivity", "onCreate() - super.onCreate() completed for ${this::class.java.simpleName}")
+            resetSecureFlags()
+            android.util.Log.d("BaseActivity", "onCreate() - resetSecureFlags() completed for ${this::class.java.simpleName}")
+        } catch (e: Exception) {
+            android.util.Log.e("BaseActivity", "onCreate() - Exception in ${this::class.java.simpleName}", e)
+            throw e
+        }
+        android.util.Log.d("BaseActivity", "onCreate() - END for ${this::class.java.simpleName}")
     }
 
     protected fun lockActivityOrientation() {

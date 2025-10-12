@@ -1,0 +1,80 @@
+Orbot-Abhaya-Android Application
+Copyright © 2025 Tyrone Thomas/BreakThrough Technologies
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+================================================================================
+
+THIRD-PARTY COMPONENTS
+
+This application includes the following third-party components:
+
+1. MESHRABIYA (LGPL-3.0)
+   - Mesh networking library for Android
+   - Original: Copyright © 2023 UstadMobile FZ-LLC
+   - Fork: Copyright © 2025 Tyrone Thomas/BreakThrough Technologies
+   - License: GNU Lesser General Public License v3.0
+   - Source: https://github.com/dreadstar/Meshrabiya
+
+   ⚠️  LGPL NOTICE: This application dynamically links to Meshrabiya.
+       Users have the right to replace Meshrabiya with a different
+       version or implementation that provides the same interface.
+
+2. ORBOT (BSD-3-Clause)
+   - Original Tor proxy for Android
+   - Copyright © 2009-2025 Nathan Freitas, The Guardian Project
+   - License: BSD 3-Clause License
+   - Source: https://github.com/guardianproject/orbot
+
+3. TOR (BSD-3-Clause)
+   - The Onion Router anonymity software
+   - Copyright © 2001-2025 The Tor Project
+   - License: BSD 3-Clause License
+   - Source: https://www.torproject.org/
+
+4. ANDROID LIBRARIES (Apache-2.0)
+   - AndroidX libraries (Core, AppCompat, Lifecycle, etc.)
+   - Jetpack Compose UI toolkit
+   - Kotlin standard library and coroutines
+   - Copyright © The Android Open Source Project
+   - License: Apache License 2.0
+   - Source: https://source.android.com/
+
+================================================================================
+
+NETWORK SERVICE NOTICE (AGPL-3.0 Requirement)
+
+If you interact with this software through a network, you have the right to
+receive the complete source code of this application. The source code is
+available at: https://github.com/dreadstar/orbot-abhaya-android
+
+================================================================================
+
+LICENSE FILES
+
+The complete license texts are available in this licenses/ directory:
+- AGPL-3.0.txt: GNU Affero General Public License v3.0
+- LGPL-3.0.txt: GNU Lesser General Public License v3.0  
+- BSD-3-Clause.txt: BSD 3-Clause License
+- Apache-2.0.txt: Apache License 2.0
+
+For detailed licensing information and compliance requirements, see:
+https://github.com/dreadstar/orbot-abhaya-android/blob/master/THIRD_PARTY_LICENSES.md
+
+================================================================================
+
+QUESTIONS
+
+For questions about licensing or to report license compliance issues:
+https://github.com/dreadstar/orbot-abhaya-android/issues

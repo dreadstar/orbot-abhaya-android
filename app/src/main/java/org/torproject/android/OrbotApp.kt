@@ -47,51 +47,91 @@ class OrbotApp : Application() {
     lateinit var meshJson: Json
 
     override fun onCreate() {
-        super.onCreate()
+        android.util.Log.d("OrbotApp", "onCreate() - START")
+        
+        try {
+            super.onCreate()
+            android.util.Log.d("OrbotApp", "onCreate() - super.onCreate() completed")
 
-    instance = this
+            instance = this
+            android.util.Log.d("OrbotApp", "onCreate() - instance set")
 
-        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onStop(owner: LifecycleOwner) {
-                super.onStop(owner)
-                if (!isAuthenticationPromptOpenLegacyFlag)
-                    shouldRequestAuthentication = true
+            ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+                override fun onStop(owner: LifecycleOwner) {
+                    super.onStop(owner)
+                    if (!isAuthenticationPromptOpenLegacyFlag)
+                        shouldRequestAuthentication = true
+                }
+            })
+            android.util.Log.d("OrbotApp", "onCreate() - lifecycle observer added")
+
+            Prefs.setContext(applicationContext)
+            android.util.Log.d("OrbotApp", "onCreate() - Prefs context set")
+            
+            LocaleHelper.onAttach(applicationContext)
+            android.util.Log.d("OrbotApp", "onCreate() - LocaleHelper attached")
+            
+            Languages.setup(OrbotActivity::class.java, R.string.menu_settings)
+            android.util.Log.d("OrbotApp", "onCreate() - Languages setup completed")
+
+            if (Prefs.defaultLocale != Locale.getDefault().language) {
+                android.util.Log.d("OrbotApp", "onCreate() - Setting default locale")
+                Languages.setLanguage(this, Prefs.defaultLocale, true)
+                android.util.Log.d("OrbotApp", "onCreate() - Default locale set")
             }
-        })
 
-        Prefs.setContext(applicationContext)
-        LocaleHelper.onAttach(applicationContext)
-        Languages.setup(OrbotActivity::class.java, R.string.menu_settings)
+            // Meshrabiya integration
+            try {
+                android.util.Log.d("OrbotApp", "onCreate() - Starting Meshrabiya integration")
+                
+                android.util.Log.d("OrbotApp", "onCreate() - Creating mesh logger")
+                meshLogger = MNetLoggerStdout() // Use concrete implementation
+                android.util.Log.d("OrbotApp", "onCreate() - Mesh logger created")
+                
+                android.util.Log.d("OrbotApp", "onCreate() - Creating mesh JSON")
+                meshJson = Json { encodeDefaults = true }
+                android.util.Log.d("OrbotApp", "onCreate() - Mesh JSON created")
+                
+                android.util.Log.d("OrbotApp", "onCreate() - Creating mesh DataStore")
+                // Create DataStore for mesh preferences  
+                val meshDataStore = applicationContext.meshDataStore
+                android.util.Log.d("OrbotApp", "onCreate() - Mesh DataStore created")
+                
+                android.util.Log.d("OrbotApp", "onCreate() - Creating mesh executor")
+                // Create executor service for mesh operations
+                val meshExecutor = Executors.newScheduledThreadPool(2)
+                android.util.Log.d("OrbotApp", "onCreate() - Mesh executor created")
+                
+                android.util.Log.d("OrbotApp", "onCreate() - Creating AndroidVirtualNode")
+                virtualNode = AndroidVirtualNode(
+                    context = applicationContext,
+                    logger = meshLogger,
+                    json = meshJson,
+                    dataStore = meshDataStore,
+                    scheduledExecutorService = meshExecutor
+                )
+                android.util.Log.d("OrbotApp", "onCreate() - AndroidVirtualNode created successfully")
+            } catch (e: Exception) {
+                android.util.Log.e("OrbotApp", "onCreate() - Exception in Meshrabiya integration", e)
+                // Don't let mesh setup failure crash the app
+            }
 
-        if (Prefs.defaultLocale != Locale.getDefault().language) {
-            Languages.setLanguage(this, Prefs.defaultLocale, true)
+            // this code only runs on first install and app updates
+            android.util.Log.d("OrbotApp", "onCreate() - Checking version for updates")
+            if (Prefs.currentVersionForUpdate < BuildConfig.VERSION_CODE) {
+                android.util.Log.d("OrbotApp", "onCreate() - Version update detected, setting flags")
+                Prefs.currentVersionForUpdate = BuildConfig.VERSION_CODE
+                // don't do anything resource intensive here, instead set a flag to do the task later
+                // tell OrbotService it needs to reinstall geoip
+                Prefs.isGeoIpReinstallNeeded = true
+                android.util.Log.d("OrbotApp", "onCreate() - Version update flags set")
+            }
+            
+        } catch (e: Exception) {
+            android.util.Log.e("OrbotApp", "onCreate() - Exception in onCreate", e)
         }
-
-        // Meshrabiya integration
-        meshLogger = MNetLoggerStdout() // Use concrete implementation
-        meshJson = Json { encodeDefaults = true }
         
-        // Create DataStore for mesh preferences  
-        val meshDataStore = applicationContext.meshDataStore
-        
-        // Create executor service for mesh operations
-        val meshExecutor = Executors.newScheduledThreadPool(2)
-        
-        virtualNode = AndroidVirtualNode(
-            context = applicationContext,
-            logger = meshLogger,
-            json = meshJson,
-            dataStore = meshDataStore,
-            scheduledExecutorService = meshExecutor
-        )
-
-        // this code only runs on first install and app updates
-        if (Prefs.currentVersionForUpdate < BuildConfig.VERSION_CODE) {
-            Prefs.currentVersionForUpdate = BuildConfig.VERSION_CODE
-            // don't do anything resource intensive here, instead set a flag to do the task later
-            // tell OrbotService it needs to reinstall geoip
-            Prefs.isGeoIpReinstallNeeded = true
-        }
+        android.util.Log.d("OrbotApp", "onCreate() - END")
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

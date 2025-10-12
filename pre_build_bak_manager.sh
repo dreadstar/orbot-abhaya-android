@@ -59,7 +59,8 @@ mkdir -p "$BAK_TEMP_DIR"
 # Clear the registry file
 > "$BAK_REGISTRY_FILE"
 
-# Find all .bak files under app/ directory
+# Find all .bak files in project (including all submodules)
+# Exclude build/, .gradle/, .git/, and hidden directories
 bak_count=0
 while IFS= read -r -d '' bak_file; do
     if [ -f "$bak_file" ]; then
@@ -81,7 +82,13 @@ while IFS= read -r -d '' bak_file; do
         log "  Moved: $rel_path"
         ((bak_count++))
     fi
-done < <(find app/ -name "*.bak" -type f -print0 2>/dev/null)
+done < <(find . -name "*.bak" -type f \
+    ! -path "*/build/*" \
+    ! -path "*/.gradle/*" \
+    ! -path "*/.git/*" \
+    ! -path "*/.idea/*" \
+    ! -path "*/.bak_temp_storage/*" \
+    -print0 2>/dev/null)
 
 if [ $bak_count -eq 0 ]; then
     log "No .bak files found to move"

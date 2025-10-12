@@ -35,12 +35,13 @@ abstract class BaseScreenshotTest {
     fun ViewInteraction.isInvisible() = getViewAssertion(ViewMatchers.Visibility.INVISIBLE)
 
 
-    // all tests need this for OrbotService's notification
-    @get:Rule
-    var mGrantPermissionRule: GrantPermissionRule? =
-        GrantPermissionRule.grant(
-            "android.permission.POST_NOTIFICATIONS"
-        )
+    // Notification permissions only needed for Android 13+ (API 33+)
+    // Skip permission grant to avoid errors on older devices
+    // @get:Rule
+    // var mGrantPermissionRule: GrantPermissionRule? =
+    //     GrantPermissionRule.grant(
+    //         "android.permission.POST_NOTIFICATIONS"
+    //     )
 
     private fun getViewAssertion(visibility: ViewMatchers.Visibility): ViewAssertion? {
         return ViewAssertions.matches(ViewMatchers.withEffectiveVisibility(visibility))

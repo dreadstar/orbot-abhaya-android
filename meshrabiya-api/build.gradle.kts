@@ -120,11 +120,13 @@ afterEvaluate {
         consumers.forEach { projPath ->
             val consumer = rootProject.findProject(projPath) ?: return@forEach
 
-            // Ensure consumers are cleaned before distribution runs so the generated
-            // AIDL folder is created in a clean state. Match any clean* task (clean,
-            // cleanDebug, etc.) to be robust to variant-specific clean tasks.
+            // Only clean AIDL generated folders, not entire build outputs
+            // This prevents test APK builds from clearing main APKs
             distributeAidlToConsumers.configure {
-                dependsOn(consumer.tasks.matching { it.name.startsWith("clean", ignoreCase = true) })
+                doFirst {
+                    // Only clean the specific AIDL generated directory
+                    delete(consumer.layout.buildDirectory.dir("generated/meshrabiya-aidl"))
+                }
             }
 
             // Make each consumer assemble<Variant> depend on distribution so distribution

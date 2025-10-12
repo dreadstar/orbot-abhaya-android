@@ -52,40 +52,66 @@ class OrbotActivity : BaseActivity() {
 
     // used to hide UI while password isn't obtained
     private var rootLayout: View? = null
+    
+    // Track if broadcast receiver is registered to prevent unregistration errors
+    private var isReceiverRegistered: Boolean = false
 
     private val connectViewModel: ConnectViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.insetsController?.apply {
-                setSystemBarsAppearance(0, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility =
-                window.decorView.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
-        }
-
-        lastSelectedItemId = savedInstanceState?.getInt(KEY_SELECTED_TAB) ?: lastSelectedItemId
-        previousReceivedTorStatus = savedInstanceState?.getString(KEY_TOR_STATUS)
-
-        // programmatically set title to "Orbot" since camo mode will overwrite it here from manifest
-        title = getString(R.string.app_name)
-
+        android.util.Log.d("OrbotActivity", "onCreate() - START")
+        
         try {
-            createOrbot()
+            super.onCreate(savedInstanceState)
+            android.util.Log.d("OrbotActivity", "onCreate() - super.onCreate() completed")
+            
+            enableEdgeToEdge()
+            android.util.Log.d("OrbotActivity", "onCreate() - enableEdgeToEdge() completed")
 
-        } catch (re: RuntimeException) {
-            //catch this to avoid malicious launches as document Cure53 Audit: ORB-01-009 WP1/2: Orbot DoS via exported activity (High)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window.insetsController?.apply {
+                    setSystemBarsAppearance(0, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
+                }
+                android.util.Log.d("OrbotActivity", "onCreate() - Window insets controller setup completed")
+            } else {
+                @Suppress("DEPRECATION")
+                window.decorView.systemUiVisibility =
+                    window.decorView.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+                android.util.Log.d("OrbotActivity", "onCreate() - Legacy window setup completed")
+            }
 
-            //clear malicious intent
-            intent = null
+            lastSelectedItemId = savedInstanceState?.getInt(KEY_SELECTED_TAB) ?: lastSelectedItemId
+            previousReceivedTorStatus = savedInstanceState?.getString(KEY_TOR_STATUS)
+            android.util.Log.d("OrbotActivity", "onCreate() - State restoration completed")
+
+            // programmatically set title to "Orbot" since camo mode will overwrite it here from manifest
+            title = getString(R.string.app_name)
+            android.util.Log.d("OrbotActivity", "onCreate() - Title set completed")
+
+            try {
+                android.util.Log.d("OrbotActivity", "onCreate() - About to call createOrbot()")
+                createOrbot()
+                android.util.Log.d("OrbotActivity", "onCreate() - createOrbot() completed successfully")
+
+            } catch (re: RuntimeException) {
+                android.util.Log.e("OrbotActivity", "onCreate() - RuntimeException in createOrbot()", re)
+                //catch this to avoid malicious launches as document Cure53 Audit: ORB-01-009 WP1/2: Orbot DoS via exported activity (High)
+
+                //clear malicious intent
+                intent = null
+                finish()
+            } catch (e: Exception) {
+                android.util.Log.e("OrbotActivity", "onCreate() - Exception in createOrbot()", e)
+                // Log the error but don't crash
+                finish()
+            }
+            
+        } catch (e: Exception) {
+            android.util.Log.e("OrbotActivity", "onCreate() - Exception in onCreate()", e)
             finish()
         }
-
+        
+        android.util.Log.d("OrbotActivity", "onCreate() - END")
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -112,21 +138,43 @@ class OrbotActivity : BaseActivity() {
     }
 
     private fun createOrbot() {
-        setContentView(R.layout.activity_orbot)
-        rootLayout = findViewById(R.id.rootLayout)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.nav_fragment)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        android.util.Log.d("OrbotActivity", "createOrbot() - START")
+        
+        try {
+            android.util.Log.d("OrbotActivity", "createOrbot() - Setting content view")
+            setContentView(R.layout.activity_orbot)
+            android.util.Log.d("OrbotActivity", "createOrbot() - Content view set successfully")
+            
+            android.util.Log.d("OrbotActivity", "createOrbot() - Finding rootLayout")
+            rootLayout = findViewById(R.id.rootLayout)
+            android.util.Log.d("OrbotActivity", "createOrbot() - rootLayout found: ${rootLayout != null}")
+            
+            android.util.Log.d("OrbotActivity", "createOrbot() - Setting up window insets listener")
+            ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.nav_fragment)) { v, insets ->
+                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+                insets
+            }
+            android.util.Log.d("OrbotActivity", "createOrbot() - Window insets listener set")
 
-        logBottomSheet = LogBottomSheet()
+            android.util.Log.d("OrbotActivity", "createOrbot() - Creating LogBottomSheet")
+            logBottomSheet = LogBottomSheet()
+            android.util.Log.d("OrbotActivity", "createOrbot() - LogBottomSheet created")
 
-        val navController: NavController = findNavController(R.id.nav_fragment)
-        val bottomNavigationView: BottomNavigationView = findViewById(R.id.bottom_navigation)
-        bottomNavigationView.setupWithNavController(navController)
+            android.util.Log.d("OrbotActivity", "createOrbot() - Finding nav controller")
+            val navController: NavController = findNavController(R.id.nav_fragment)
+            android.util.Log.d("OrbotActivity", "createOrbot() - Nav controller found: ${navController != null}")
+            
+            android.util.Log.d("OrbotActivity", "createOrbot() - Finding bottom navigation view")
+            val bottomNavigationView: BottomNavigationView = findViewById(R.id.bottom_navigation)
+            android.util.Log.d("OrbotActivity", "createOrbot() - Bottom navigation found: ${bottomNavigationView != null}")
+            
+            android.util.Log.d("OrbotActivity", "createOrbot() - Setting up nav controller with bottom nav")
+            bottomNavigationView.setupWithNavController(navController)
+            android.util.Log.d("OrbotActivity", "createOrbot() - Nav controller setup completed")
 
-        bottomNavigationView.selectedItemId = lastSelectedItemId
+            bottomNavigationView.selectedItemId = lastSelectedItemId
+            android.util.Log.d("OrbotActivity", "createOrbot() - Bottom navigation item selected: $lastSelectedItemId")
 
         val navOptionsLeftToRight = NavOptions.Builder().setEnterAnim(R.anim.slide_in_right)
             .setExitAnim(R.anim.slide_out_left).setPopEnterAnim(R.anim.slide_in_right)
@@ -174,34 +222,57 @@ class OrbotActivity : BaseActivity() {
             true
         }
 
-        // Use helper to centralize LocalBroadcastManager deprecation suppression
-        org.torproject.android.util.LocalBroadcast.registerReceiver(
-            this, orbotServiceBroadcastReceiver, IntentFilter(OrbotConstants.LOCAL_ACTION_STATUS)
-        )
-        org.torproject.android.util.LocalBroadcast.registerReceiver(
-            this, orbotServiceBroadcastReceiver, IntentFilter(OrbotConstants.LOCAL_ACTION_LOG)
-        )
-        org.torproject.android.util.LocalBroadcast.registerReceiver(
-            this, orbotServiceBroadcastReceiver, IntentFilter(OrbotConstants.LOCAL_ACTION_PORTS)
-        )
-
-        requestNotificationPermission()
-
-        Prefs.initWeeklyWorker()
-
-        if (!rootDetectionShown && Prefs.detectRoot() && RootBeer(this).isRooted) {
-            //we found indication of root
-            applicationContext.showToast(getString(R.string.root_warning))
-
-            rootDetectionShown = true
-        }
-
-        onBackPressedDispatcher.addCallback(this ) {
-            if (lastSelectedItemId != R.id.connectFragment) {
-                bottomNavigationView.selectedItemId = R.id.connectFragment
+            // Use helper to centralize LocalBroadcastManager deprecation suppression
+            android.util.Log.d("OrbotActivity", "createOrbot() - Registering broadcast receivers")
+            try {
+                org.torproject.android.util.LocalBroadcast.registerReceiver(
+                    this, orbotServiceBroadcastReceiver, IntentFilter(OrbotConstants.LOCAL_ACTION_STATUS)
+                )
+                org.torproject.android.util.LocalBroadcast.registerReceiver(
+                    this, orbotServiceBroadcastReceiver, IntentFilter(OrbotConstants.LOCAL_ACTION_LOG)
+                )
+                org.torproject.android.util.LocalBroadcast.registerReceiver(
+                    this, orbotServiceBroadcastReceiver, IntentFilter(OrbotConstants.LOCAL_ACTION_PORTS)
+                )
+                isReceiverRegistered = true
+                android.util.Log.d("OrbotActivity", "createOrbot() - Broadcast receivers registered successfully")
+            } catch (e: Exception) {
+                android.util.Log.e("OrbotActivity", "createOrbot() - Exception registering broadcast receivers", e)
+                // Handle registration failure gracefully
+                isReceiverRegistered = false
             }
-            else finish()
+
+            android.util.Log.d("OrbotActivity", "createOrbot() - Requesting notification permission")
+            requestNotificationPermission()
+            android.util.Log.d("OrbotActivity", "createOrbot() - Notification permission requested")
+
+            android.util.Log.d("OrbotActivity", "createOrbot() - Initializing weekly worker")
+            Prefs.initWeeklyWorker()
+            android.util.Log.d("OrbotActivity", "createOrbot() - Weekly worker initialized")
+
+            android.util.Log.d("OrbotActivity", "createOrbot() - Checking for root detection")
+            if (!rootDetectionShown && Prefs.detectRoot() && RootBeer(this).isRooted) {
+                //we found indication of root
+                android.util.Log.d("OrbotActivity", "createOrbot() - Root detected, showing warning")
+                applicationContext.showToast(getString(R.string.root_warning))
+                rootDetectionShown = true
+            }
+
+            android.util.Log.d("OrbotActivity", "createOrbot() - Setting up back press callback")
+            onBackPressedDispatcher.addCallback(this ) {
+                if (lastSelectedItemId != R.id.connectFragment) {
+                    bottomNavigationView.selectedItemId = R.id.connectFragment
+                }
+                else finish()
+            }
+            android.util.Log.d("OrbotActivity", "createOrbot() - Back press callback set")
+            
+        } catch (e: Exception) {
+            android.util.Log.e("OrbotActivity", "createOrbot() - Exception in createOrbot method", e)
+            throw e
         }
+        
+        android.util.Log.d("OrbotActivity", "createOrbot() - END")
     }
 
     private fun requestNotificationPermission() {
@@ -253,7 +324,17 @@ class OrbotActivity : BaseActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-    org.torproject.android.util.LocalBroadcast.unregisterReceiver(this, orbotServiceBroadcastReceiver)
+        
+        // Only unregister if we successfully registered the receiver
+        if (isReceiverRegistered) {
+            try {
+                org.torproject.android.util.LocalBroadcast.unregisterReceiver(this, orbotServiceBroadcastReceiver)
+                isReceiverRegistered = false
+            } catch (e: Exception) {
+                // Handle unregistration failure gracefully
+                // This can happen if the receiver was already unregistered
+            }
+        }
     }
 
     @Deprecated("Deprecated in Java")
@@ -361,6 +442,15 @@ class OrbotActivity : BaseActivity() {
 
         // Make sure this is only shown once per app-start, not on every device rotation.
         private var rootDetectionShown = false
+    }
+
+    fun navigateToTaskManager() {
+        val navController = findNavController(R.id.nav_fragment)
+        val navOptions = NavOptions.Builder()
+            .setLaunchSingleTop(true)
+            .setPopUpTo(R.id.connectFragment, false)
+            .build()
+        navController.navigate(R.id.taskManagerFragment, null, navOptions)
     }
 
     fun showLog() {

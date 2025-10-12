@@ -1,0 +1,37 @@
+Meshrabiya API
+Copyright © 2025 Tyrone Thomas/BreakThrough Technologies
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 3 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+
+================================================================================
+
+This module contains AIDL interface definitions and supporting classes for the
+Meshrabiya mesh networking service. The AIDL interfaces are used for inter-process
+communication between Meshrabiya service providers and client applications.
+
+AIDL Interface Files:
+- IMeshrabiyaService.aidl: Main service interface for mesh networking operations
+- Supporting Parcelable classes for data exchange
+
+The LGPL-3.0 license for this API module allows:
+- Applications to use this API under any license (including proprietary)
+- Dynamic linking without license restrictions on the consuming application
+- Static linking requires the consuming application to also be LGPL-3.0 compatible
+
+For more information about license compliance and third-party components,
+see the THIRD_PARTY_LICENSES.md file in the parent repository:
+https://github.com/dreadstar/orbot-abhaya-android/blob/master/THIRD_PARTY_LICENSES.md
+
+Questions about licensing: https://github.com/dreadstar/orbot-abhaya-android/issues
