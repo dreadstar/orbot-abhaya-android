@@ -74,11 +74,9 @@ class OrbotActivityUITest {
             assertThat(activity, notNullValue())
         }
         
-        // Simulate configuration change from instrumentation thread
-        InstrumentationRegistry.getInstrumentation().runOnMainSync {
-            activityRule.scenario.onActivity { activity ->
-                activity.recreate()
-            }
+        // Simulate configuration change using scenario (runs on main thread)
+        activityRule.scenario.onActivity { activity ->
+            activity.recreate()
         }
         
         Thread.sleep(1000)
@@ -182,11 +180,9 @@ class OrbotActivityUITest {
     fun testMemoryUsageDuringLifecycle() {
         Thread.sleep(1000)
         
-        // Simulate configuration changes from instrumentation thread
-        InstrumentationRegistry.getInstrumentation().runOnMainSync {
-            activityRule.scenario.onActivity { activity ->
-                activity.recreate()
-            }
+        // Simulate configuration change using scenario (runs on main thread)
+        activityRule.scenario.onActivity { activity ->
+            activity.recreate()
         }
         Thread.sleep(1000)
         

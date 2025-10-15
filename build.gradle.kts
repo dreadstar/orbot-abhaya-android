@@ -98,6 +98,80 @@ tasks.register("clean", Delete::class) {
     delete(layout.buildDirectory)
 }
 
+// --- Project-wide .bak file management tasks ---
+// These ensure that .bak files are moved out of the source tree before any
+// compile/assemble tasks run, and restored afterward. This complements the
+// module-level hooks and makes the behavior project-wide.
+tasks.register<Exec>("moveAllBakFiles") {
+    group = "build setup"
+    description = "Move .bak files across the repo to temporary storage before builds"
+    // run the root-level pre-build script
+    commandLine("./pre_build_bak_manager.sh")
+    workingDir = rootDir
+    doFirst {
+        println("🔧 moveAllBakFiles: Running pre_build_bak_manager.sh")
+    }
+}
+
+tasks.register<Exec>("restoreAllBakFiles") {
+    group = "build cleanup"
+    description = "Restore .bak files across the repo after builds"
+    commandLine("./post_build_bak_manager.sh")
+    workingDir = rootDir
+    doFirst {
+        println("🔧 restoreAllBakFiles: Running post_build_bak_manager.sh")
+    }
+    // Ensure it runs after moveAllBakFiles if both are scheduled
+    mustRunAfter("moveAllBakFiles")
+}
+
+// Ensure moveAllBakFiles runs before any major build lifecycle task and
+// ensure restoreAllBakFiles is finalized after them. This uses a broad
+// matching approach so new tasks are covered as well.
+gradle.taskGraph.whenReady {
+    // No-op here; keeping the hook allows configuration-time checks if needed
+}
+
+// Wire the tasks to existing lifecycle tasks
+tasks.matching {
+    it.name.startsWith("compile") || it.name.startsWith("merge") || it.name.startsWith("assemble") || it.name.startsWith("bundle")
+}.configureEach {
+    dependsOn("moveAllBakFiles")
+    finalizedBy("restoreAllBakFiles")
+}
+
+// ALSO: ensure subprojects' lifecycle tasks depend on the root move/restore tasks.
+// The earlier matching above only affects the root project tasks; add an explicit
+// hook so every subproject's compile/assemble tasks will trigger the moveAllBakFiles
+// before they run and restoreAllBakFiles after.
+subprojects {
+    afterEvaluate {
+        tasks.matching {
+            it.name.startsWith("compile") || it.name.startsWith("merge") || it.name.startsWith("assemble") || it.name.startsWith("bundle")
+        }.configureEach {
+            dependsOn(rootProject.tasks.named("moveAllBakFiles"))
+            finalizedBy(rootProject.tasks.named("restoreAllBakFiles"))
+        }
+    }
+}
+
+// Gradle can configure projects in ways that make per-subproject afterEvaluate hooks
+// unreliable for some tasks. Use projectsEvaluated to ensure all projects' tasks are
+// fully realized and then wire the root move/restore tasks into every project's
+// relevant lifecycle tasks. This guarantees the pre/post operations run before any
+// compile/assemble phases across the entire repo.
+gradle.projectsEvaluated {
+    allprojects.forEach { proj ->
+        proj.tasks.matching {
+            it.name.startsWith("compile") || it.name.startsWith("merge") || it.name.startsWith("assemble") || it.name.startsWith("bundle")
+        }.configureEach {
+            dependsOn(rootProject.tasks.named("moveAllBakFiles"))
+            finalizedBy(rootProject.tasks.named("restoreAllBakFiles"))
+        }
+    }
+}
+
+
 // Task to build test APKs without cleaning main APKs
 tasks.register("assembleTestsOnly") {
     description = "Build all test APKs without cleaning main APKs"

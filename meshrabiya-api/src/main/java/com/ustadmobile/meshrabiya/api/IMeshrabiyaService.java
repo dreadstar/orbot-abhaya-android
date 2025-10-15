@@ -36,5 +36,13 @@ public interface IMeshrabiyaService {
     @Override public abstract ParcelFileDescriptor openBlob(String blobId);
     @Override public abstract byte[] readBlobRange(String blobId, long offset, int length);
         @Override public abstract int requestCompute(byte[] taskSpec, IOperationCallback cb);
+        
+        // Minimal helper so Kotlin/Java callers can use Stub.asInterface(binder)
+        public static IMeshrabiyaService asInterface(android.os.IBinder binder) {
+            if (binder == null) return null;
+            if (binder instanceof IMeshrabiyaService) return (IMeshrabiyaService) binder;
+            // No real proxy implementation provided in this shim; return null to indicate unavailable
+            return null;
+        }
     }
 }

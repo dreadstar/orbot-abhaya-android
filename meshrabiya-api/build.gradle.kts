@@ -78,7 +78,12 @@ afterEvaluate {
         }
     }
 
-    val distributeAidlToConsumers = tasks.register("distributeAidlToConsumers") {
+    // Distribute canonical AIDL files to consumer modules in this repository.
+    // This variant-aware task copies the AIDL files into each consumer's
+    // build-generated directory (e.g. build/generated/meshrabiya-aidl/<variant>)
+    // so consumers can add that dir to their `aidl.srcDirs` without polluting
+    // VCS-tracked source trees.
+    tasks.register("distributeAidlToConsumers") {
         val consumers = listOf(":orbotservice", ":abhaya-sensor-android:app")
         val variants = listOf("debug", "release")
         dependsOn("bundleAarWithAidl")
@@ -105,36 +110,6 @@ afterEvaluate {
                         into(dest)
                     }
                     logger.lifecycle("Copied AIDL to consumer $projPath -> ${dest.absolutePath}")
-                }
-            }
-        }
-    }
-
-    // Wire the distribution task to consumer assemble tasks and ensure consumer
-    // clean tasks run after distribution completes. Use afterEvaluate so consumer
-    // tasks are available.
-    afterEvaluate {
-        val consumers = listOf(":orbotservice", ":abhaya-sensor-android:app")
-        val variants = listOf("debug", "release")
-
-        consumers.forEach { projPath ->
-            val consumer = rootProject.findProject(projPath) ?: return@forEach
-
-            // Only clean AIDL generated folders, not entire build outputs
-            // This prevents test APK builds from clearing main APKs
-            distributeAidlToConsumers.configure {
-                doFirst {
-                    // Only clean the specific AIDL generated directory
-                    delete(consumer.layout.buildDirectory.dir("generated/meshrabiya-aidl"))
-                }
-            }
-
-            // Make each consumer assemble<Variant> depend on distribution so distribution
-            // runs once before any assemble task that needs it.
-            variants.forEach { variant ->
-                val assembleName = "assemble${variant.replaceFirstChar { it.uppercase() }}"
-                consumer.tasks.matching { it.name == assembleName }.configureEach {
-                    dependsOn(distributeAidlToConsumers)
                 }
             }
         }

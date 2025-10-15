@@ -2,6 +2,7 @@ package com.ustadmobile.meshrabiya.api;
 
 import com.ustadmobile.meshrabiya.api.IOperationCallback;
 import com.ustadmobile.meshrabiya.api.MeshStatus;
+import android.os.ParcelFileDescriptor;
 
 interface IMeshrabiyaService {
     /**
@@ -46,31 +47,84 @@ interface IMeshrabiyaService {
     String storeBlob(in ParcelFileDescriptor blob);
 
     /**
-     * Open a stored blob for reading. Returns a read-only ParcelFileDescriptor
-     * that the caller must close. Throws SecurityException if unauthorized.
+     * Open a previously stored blob and return a ParcelFileDescriptor for reading.
+     * Returns null if the blob does not exist or access is denied.
      */
-    ParcelFileDescriptor openBlob(in String blobId);
+    ParcelFileDescriptor openBlob(String blobId);
 
     /**
-     * Convenience helper to read a small range from a blob. Intended for
-     * clients that cannot accept a ParcelFileDescriptor. Enforce small max length.
+     * Read a range from a stored blob. Returns the requested bytes or null on error.
      */
-    byte[] readBlobRange(in String blobId, long offset, int length);
+    byte[] readBlobRange(String blobId, long offset, int length);
 
     /**
      * Request a compute task on the mesh. The request is asynchronous; results are
      * delivered via the provided IOperationCallback. Returns 0 on accepted, or error code.
      */
     int requestCompute(in byte[] taskSpec, in IOperationCallback cb);
+}
+package com.ustadmobile.meshrabiya.api;
+
+import com.ustadmobile.meshrabiya.api.IOperationCallback;
+import com.ustadmobile.meshrabiya.api.MeshStatus;
+import android.os.ParcelFileDescriptor;
+
+interface IMeshrabiyaService {
+    /**
+     * Returns the onion public key (PEM/base64) used for tagging data from this node.
+     */
+    String getOnionPubKey();
 
     /**
-     * Return a base URL for the local loopback HTTP server when available (e.g. http://127.0.0.1:12345)
-     * or empty string when not available.
+     * Returns the key algorithm, e.g. "Ed25519" or "RSA".
      */
-    String getLocalHttpBaseUrl();
+    String getKeyAlgorithm();
 
     /**
-     * Return the per-device local auth token used by the loopback HTTP server, or empty string.
+     * API version for client compatibility checks.
      */
-    String getLocalAuthToken();
+    int getApiVersion();
+
+    /**
+     * Sign provided data using the node's private key. Returns signature bytes, or
+     * null on error/permission denied.
+     */
+    byte[] signData(in byte[] data);
+
+    /**
+     * Ensure mesh services are active. Returns a MeshStatus describing local and
+     * mesh-wide availability (storage/compute reachable on the mesh) so clients
+     * can decide if they may use remote nodes when local resources are absent.
+     */
+    MeshStatus ensureMeshActive();
+
+    /**
+     * Publish a stream or blob to the mesh under the given topic. Large payloads
+     * should be provided via the ParcelFileDescriptor pattern on the client side.
+     * Returns 0 on success or a non-zero error code.
+     */
+    int publishToMesh(in ParcelFileDescriptor data, String topic);
+
+    /**
+     * Store a blob in distributed storage. Returns a stable blob id or empty string
+     * on error.
+     */
+    String storeBlob(in ParcelFileDescriptor blob);
+
+    /**
+     * Open a previously stored blob and return a ParcelFileDescriptor for reading.
+     * Returns null if the blob does not exist or access is denied.
+     */
+    ParcelFileDescriptor openBlob(String blobId);
+
+    /**
+     * Read a range from a stored blob. Returns the requested bytes or null on error.
+     */
+    byte[] readBlobRange(String blobId, long offset, int length);
+
+    /**
+     * Request a compute task on the mesh. The request is asynchronous; results are
+     * delivered via the provided IOperationCallback. Returns 0 on accepted, or error code.
+     */
+    int requestCompute(in byte[] taskSpec, in IOperationCallback cb);
 }
