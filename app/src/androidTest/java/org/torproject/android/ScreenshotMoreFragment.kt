@@ -17,16 +17,14 @@ class ScreenshotMoreFragment {
     @Test
     fun openMoreFragment() {
         ActivityScenario.launch(OrbotActivity::class.java).use { scenario ->
-            Thread.sleep(3000) // Wait for activity to fully initialize
-            
             try {
-                // Try to click on the More tab in bottom navigation
-                onView(withId(R.id.moreFragment)).perform(click())
-                Thread.sleep(2000) // Wait for navigation to complete
-                Screengrab.screenshot("D-more_screen")
+                    waitForView(withId(R.id.rootLayout), timeoutMs = 7000)
+                    onView(withId(R.id.moreFragment)).perform(click())
+                    waitForView(withId(R.id.rvMoreActions))
+                if (!safeScreengrab("D-more_screen")) {
+                    Screengrab.screenshot("D-more_screen-fallback")
+                }
             } catch (e: Exception) {
-                // If navigation fails, just take screenshot of current state
-                Thread.sleep(1000)
                 Screengrab.screenshot("D-more_screen-fallback")
             }
         }

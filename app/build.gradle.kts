@@ -195,6 +195,8 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso)
     androidTestImplementation(libs.androidx.rules)
     androidTestImplementation(libs.androidx.runner)
+    // Provide UiAutomator for low-level device screenshots as a fallback
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.2.0")
     androidTestImplementation(libs.screengrab)
     androidTestUtil(libs.androidx.orchestrator)
 }

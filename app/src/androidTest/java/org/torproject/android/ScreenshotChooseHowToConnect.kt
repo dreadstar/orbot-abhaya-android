@@ -17,14 +17,14 @@ class ScreenshotChooseHowToConnect {
     @Test
     fun screenshotChooseHowToConnect() {
         ActivityScenario.launch(OrbotActivity::class.java).use { scenario ->
-            Thread.sleep(3000) // Wait for activity to fully initialize
-            
+            // Wait for the main content to be visible
             try {
-                // Navigate to connect fragment first (it's the default)
-                Thread.sleep(2000) // Wait for UI to settle
-                Screengrab.screenshot("B-choose-how")
+                // wait for activity root to be ready
+                waitForView(withId(R.id.rootLayout), timeoutMs = 7000)
+                if (!safeScreengrab("B-choose-how")) {
+                    Screengrab.screenshot("B-choose-how-fallback")
+                }
             } catch (e: Exception) {
-                // If specific UI elements don't exist, just take screenshot
                 Screengrab.screenshot("B-choose-how-fallback")
             }
         }

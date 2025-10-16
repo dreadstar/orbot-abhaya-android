@@ -19,6 +19,8 @@ import org.junit.Rule
 import org.junit.runner.RunWith
 import org.torproject.android.service.util.Prefs
 import tools.fastlane.screengrab.locale.LocaleTestRule
+import tools.fastlane.screengrab.Screengrab
+import android.util.Log
 
 
 @LargeTest
@@ -69,6 +71,47 @@ abstract class BaseScreenshotTest {
     fun setPrefs(){
         Prefs.setContext(getContext())
         Prefs.isSecureWindow = false
+    }
+
+    @Before
+    fun ensureScreengrabUsesUiAutomator() {
+        // Try to explicitly configure Screengrab to use UiAutomatorScreenshotStrategy.
+        // Use reflection so this is safe across library versions.
+        try {
+            val screengrabClass = Screengrab::class.java
+            val strategyClass = Class.forName("tools.fastlane.screengrab.ScreenshotStrategy")
+            val uiAutoClass = Class.forName("tools.fastlane.screengrab.UiAutomatorScreenshotStrategy")
+
+            // look for a public static setter method: setScreenshotStrategy(ScreenshotStrategy)
+            try {
+                val setter = screengrabClass.getMethod("setScreenshotStrategy", strategyClass)
+                val strategyInstance = uiAutoClass.getDeclaredConstructor().newInstance()
+                setter.invoke(null, strategyInstance)
+                Log.i("BaseScreenshotTest", "Screengrab: set UiAutomatorScreenshotStrategy via setter")
+                return
+            } catch (_: NoSuchMethodException) {
+                // fallback: try to set a private/static field if present
+            }
+
+            // try to find a static field of type ScreenshotStrategy and replace it
+            try {
+                val fields = screengrabClass.declaredFields
+                for (f in fields) {
+                    if (f.type == strategyClass) {
+                        f.isAccessible = true
+                        val strategyInstance = uiAutoClass.getDeclaredConstructor().newInstance()
+                        f.set(null, strategyInstance)
+                        Log.i("BaseScreenshotTest", "Screengrab: set UiAutomatorScreenshotStrategy via field ${f.name}")
+                        return
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.w("BaseScreenshotTest", "Could not set Screengrab strategy via field: ${t.message}")
+            }
+        } catch (t: Throwable) {
+            // If reflection fails, don't block tests — we'll fall back to whatever Screengrab picks.
+            Log.w("BaseScreenshotTest", "Screengrab UiAutomator config unavailable: ${t.message}")
+        }
     }
 
     open fun getContext(): Context? {

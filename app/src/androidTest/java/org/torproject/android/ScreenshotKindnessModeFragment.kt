@@ -17,14 +17,15 @@ class ScreenshotKindnessModeFragment {
     @Test
     fun openKindnessModeFragment() {
         ActivityScenario.launch(OrbotActivity::class.java).use { scenario ->
-            Thread.sleep(3000) // Wait for activity to fully initialize
-            
             try {
+                waitForView(withId(R.id.rootLayout), timeoutMs = 7000)
                 onView(withId(R.id.kindnessFragment)).perform(click())
-                Thread.sleep(1000) // Wait for navigation
-                Screengrab.screenshot("C-kindness_mode_screen")
+                // wait until target fragment content is visible (panel id in fragment_kindness.xml)
+                waitForView(withId(R.id.panel_kindness_activate))
+                if (!safeScreengrab("C-kindness_mode_screen")) {
+                    Screengrab.screenshot("C-kindness_mode_screen-fallback")
+                }
             } catch (e: Exception) {
-                // If specific UI elements don't exist, just take screenshot
                 Screengrab.screenshot("C-kindness_mode_screen-fallback")
             }
         }

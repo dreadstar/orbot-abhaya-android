@@ -7,6 +7,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.torproject.android.ui.more.SettingsActivity
 import tools.fastlane.screengrab.Screengrab
+import androidx.test.espresso.matcher.ViewMatchers.withId
 
 @RunWith(AndroidJUnit4::class)
 @LargeTest
@@ -15,13 +16,13 @@ class ScreenshotSettings {
     @Test
     fun screenshotSettings() {
         ActivityScenario.launch(SettingsActivity::class.java).use { scenario ->
-            Thread.sleep(3000) // Wait for activity to fully initialize
-            
             try {
-                Thread.sleep(1000) // Wait for UI to settle
-                Screengrab.screenshot("E-settings_screen")
+                // root container id in settings_fragment.xml is 'settings_container'
+                waitForView(withId(R.id.settings_container), timeoutMs = 7000)
+                if (!safeScreengrab("E-settings_screen")) {
+                    Screengrab.screenshot("E-settings_screen-fallback")
+                }
             } catch (e: Exception) {
-                // If specific UI elements don't exist, just take screenshot
                 Screengrab.screenshot("E-settings_screen-fallback")
             }
         }
