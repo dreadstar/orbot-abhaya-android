@@ -11,6 +11,8 @@ import com.ustadmobile.meshrabiya.vnet.AndroidVirtualNode
 import org.torproject.android.service.OrbotService
 import org.torproject.android.service.OrbotConstants
 import org.torproject.android.service.util.Prefs
+import com.ustadmobile.meshrabiya.vnet.EmergentRoleManager
+import com.ustadmobile.meshrabiya.vnet.MeshRole
 
 /**
  * Manages gateway capabilities for sharing Internet and Tor connections
@@ -35,6 +37,8 @@ class GatewayCapabilitiesManager private constructor(private val context: Contex
         }
     }
     
+    private var emergentRoleManager: EmergentRoleManager? = null
+
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     
@@ -78,6 +82,48 @@ class GatewayCapabilitiesManager private constructor(private val context: Contex
         val canShareTor: Boolean
     )
     
+     /**
+     * Initializes the EmergentRoleManager for the current node.
+     * Call this after node creation or app startup.
+     */
+    fun initializeRoleManager(node: Any) {
+        emergentRoleManager = EmergentRoleManager(node, context)
+    }
+
+    /**
+     * Returns true if storage participation is enabled in user settings.
+     */
+    fun isStorageParticipationEnabled(): Boolean {
+        return prefs.getBoolean("storage_participation", false)
+    }
+
+    /**
+     * Enables or disables storage participation and updates EmergentRoleManager.
+     * --- NEW CODE ---
+     */
+    fun setStorageParticipation(enabled: Boolean) {
+        prefs.edit().putBoolean("storage_participation", enabled).apply()
+        emergentRoleManager?.let { manager ->
+            val preferredRoles = if (enabled) setOf(MeshRole.STORAGE_NODE) else emptySet()
+            manager.setPreferredRoles(preferredRoles)
+        }
+    }
+
+    /**
+     * Returns the current preferred mesh roles.
+     * --- NEW CODE ---
+     */
+    fun getPreferredRoles(): Set<MeshRole> {
+        return emergentRoleManager?.getPreferredRoles() ?: emptySet()
+    }
+
+    /**
+     * Returns the current EmergentRoleManager instance.
+     * --- NEW CODE ---
+     */
+    fun getRoleManager(): EmergentRoleManager? = emergentRoleManager
+
+
     /**
      * Interface for listening to gateway capability changes
      */
