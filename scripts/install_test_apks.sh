@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Install app + androidTest APKs for Orbot and Sensor modules.
 # Usage: ./scripts/install_test_apks.sh <ANDROID_SERIAL>
+# to find apk locations: find .  -type f -name "*.apk" -print
 
 set -euo pipefail
 
