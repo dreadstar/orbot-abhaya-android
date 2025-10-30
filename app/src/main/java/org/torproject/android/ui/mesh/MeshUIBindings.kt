@@ -1,0 +1,83 @@
+package org.torproject.android.ui.mesh
+
+import android.view.View
+import android.widget.TextView
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.android.material.slider.Slider
+import androidx.recyclerview.widget.RecyclerView
+import org.torproject.android.ui.mesh.adapter.FolderContentsAdapter
+
+object MeshUIBindings {
+    lateinit var meshStatusText: TextView
+    lateinit var nodeInfoText: TextView
+    lateinit var networkStatsText: TextView
+    lateinit var lastUpdateText: TextView
+    lateinit var gatewayToggle: SwitchMaterial
+    lateinit var internetGatewayToggle: SwitchMaterial
+    lateinit var refreshButton: MaterialButton
+    lateinit var meshToggleButton: MaterialButton
+    lateinit var torGatewayCard: MaterialCardView
+    lateinit var internetGatewayCard: MaterialCardView
+    lateinit var networkOverviewCard: MaterialCardView
+    lateinit var storageParticipationCard: MaterialCardView
+    lateinit var storageParticipationToggle: SwitchMaterial
+    lateinit var storageAllocationSlider: Slider
+    lateinit var storageStatusText: TextView
+    lateinit var storageAllocationText: TextView
+    lateinit var storageDropFolderCard: MaterialCardView
+    lateinit var selectFolderButton: MaterialButton
+    lateinit var createFolderButton: MaterialButton
+    lateinit var selectedFolderText: TextView
+    lateinit var folderContentsRecyclerView: RecyclerView
+    lateinit var folderContentsAdapter: FolderContentsAdapter
+    lateinit var distributedServiceLayerCard: MaterialCardView
+    lateinit var serviceLayerParticipationSwitch: SwitchMaterial
+    lateinit var serviceLayerStatusText: TextView
+    lateinit var pythonServiceStatus: TextView
+    lateinit var mlInferenceServiceStatus: TextView
+    lateinit var distributedStorageServiceStatus: TextView
+    lateinit var taskSchedulerServiceStatus: TextView
+    lateinit var torGatewayStatus: TextView
+    lateinit var internetGatewayStatus: TextView
+    lateinit var activeNodesText: TextView
+    lateinit var networkLoadText: TextView
+    lateinit var stabilityText: TextView
+
+    fun bindViews(view: View) {
+        meshStatusText = view.findViewById(R.id.meshStatusText)
+        nodeInfoText = view.findViewById(R.id.nodeInfoText)
+        networkStatsText = view.findViewById(R.id.networkStatsText)
+        lastUpdateText = view.findViewById(R.id.lastUpdateText)
+        gatewayToggle = view.findViewById(R.id.gatewayToggle)
+        internetGatewayToggle = view.findViewById(R.id.internetGatewayToggle)
+        refreshButton = view.findViewById(R.id.refreshButton)
+        meshToggleButton = view.findViewById(R.id.meshToggleButton)
+        torGatewayCard = view.findViewById(R.id.torGatewayCard)
+        internetGatewayCard = view.findViewById(R.id.internetGatewayCard)
+        networkOverviewCard = view.findViewById(R.id.networkOverviewCard)
+        storageParticipationCard = view.findViewById(R.id.storageParticipationCard)
+        storageParticipationToggle = view.findViewById(R.id.storageParticipationToggle)
+        storageAllocationSlider = view.findViewById(R.id.storageAllocationSlider)
+        storageStatusText = view.findViewById(R.id.storageStatusText)
+        storageAllocationText = view.findViewById(R.id.storageAllocationText)
+        storageDropFolderCard = view.findViewById(R.id.storageDropFolderCard)
+        selectFolderButton = view.findViewById(R.id.selectFolderButton)
+        createFolderButton = view.findViewById(R.id.createFolderButton)
+        selectedFolderText = view.findViewById(R.id.selectedFolderText)
+        folderContentsRecyclerView = view.findViewById(R.id.folderContentsRecyclerView)
+        distributedServiceLayerCard = view.findViewById(R.id.distributedServiceLayerCard)
+        serviceLayerParticipationSwitch = view.findViewById(R.id.serviceLayerParticipationSwitch)
+        serviceLayerStatusText = view.findViewById(R.id.serviceLayerStatusText)
+        pythonServiceStatus = view.findViewById(R.id.pythonServiceStatus)
+        mlInferenceServiceStatus = view.findViewById(R.id.mlInferenceServiceStatus)
+        distributedStorageServiceStatus = view.findViewById(R.id.distributedStorageServiceStatus)
+        taskSchedulerServiceStatus = view.findViewById(R.id.taskSchedulerServiceStatus)
+        torGatewayStatus = view.findViewById(R.id.torGatewayStatus)
+        internetGatewayStatus = view.findViewById(R.id.internetGatewayStatus)
+        activeNodesText = view.findViewById(R.id.activeNodesText)
+        networkLoadText = view.findViewById(R.id.networkLoadText)
+        stabilityText = view.findViewById(R.id.stabilityText)
+    }
+}

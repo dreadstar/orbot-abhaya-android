@@ -1,0 +1,22 @@
+class IntelligentDistributedComputeService(
+    fun registerWithEcosystemListener(listener: com.ustadmobile.meshrabiya.service.MeshEcosystemListener) {
+    fun handleTaskDataAccessUpdate(updateMsg: com.ustadmobile.meshrabiya.service.MeshGossipService.TaskDataAccessUpdateMessage) {
+    fun showFolderPickerDialog(
+    fun pickDestinationFolder(
+    fun toSearchResult(entry: LibraryEntry, nodeId: String): ServiceSearchResult {
+    class DependencyGraph(private val dependencies: Map<String, List<String>>) {
+        fun getDependencyDepth(taskId: String): Int {
+        fun getExecutionLevels(): List<List<String>> {
+    fun getLatency(node1: String, node2: String): Int {
+    interface MeshNetworkInterface {
+    interface EnhancedGossipProtocol {
+        fun getCurrentNodeStates(): Map<String, NodeCapabilitySnapshot>
+    interface QuorumManager {
+        fun getActiveQuorums(): List<ActiveQuorum>
+    interface ResourceManager {
+        fun getClusterResourceState(): ClusterResourceState
+    interface PythonExecutor {
+    interface LiteRTEngine {
+    class NetworkTopologyTracker {
+        fun getCurrentMetrics(): NetworkMetrics {
+    object Timeout : TaskExecutionResponse()

@@ -1,0 +1,100 @@
+# Function/Class/Interface Mapping for Modularization
+# Source: IntelligentDistributedComputeService.md
+# Target: Modularized Kotlin codebase (compute/ and subfolders)
+# Format: [Name] | [Type] | [Recommended Target File] | [Rationale/Notes]
+
+## Top-Level Data Classes, Enums, and Functions
+ServiceSearchResult | data class | compute/model/ServiceSearchResult.kt | Core model, used across compute modules
+ServiceManifest | data class | compute/model/ServiceManifest.kt | Core model, used across compute modules
+ServiceType | enum class | compute/model/ServiceType.kt | Enum for service types
+ExecutionProfile | data class | compute/model/ExecutionProfile.kt | Model for execution profile
+ServiceMeta | data class | compute/model/ServiceMeta.kt | Metadata for services
+ServiceInput | data class | compute/model/ServiceInput.kt | Model for service input
+ServiceOutput | data class | compute/model/ServiceOutput.kt | Model for service output
+ServiceCapability | enum class | compute/model/ServiceCapability.kt | Enum for capabilities
+LibraryEntry | sealed class (+subclasses) | compute/model/LibraryEntry.kt | Sealed class for service entries
+
+## Main Service Class
+IntelligentDistributedComputeService | class | compute/IntelligentDistributedComputeService.kt | Main service logic
+
+## Functional Methods (Missing in Modularized Codebase)
+registerWithEcosystemListener | function | compute/IntelligentDistributedComputeService.kt | Service registration logic
+handleTaskDataAccessUpdate | function | compute/IntelligentDistributedComputeService.kt | Handles data access updates
+showFolderPickerDialog | function | compute/ui/DropFolderPicker.kt | UI logic for folder picker
+getDropFolderSubfolders | function | compute/storage/DropFolderManager.kt | Storage logic, subfolder listing
+pickDestinationFolder | function | compute/ui/DropFolderPicker.kt | UI logic for folder picker
+
+## Inner Classes, Enums, and Data Classes
+ComputeTask | sealed class (+subclasses) | compute/model/ComputeTask.kt | Core compute task model
+StorageOperation | enum class | compute/model/StorageOperation.kt | Enum for storage operations
+OutputSchema | data class | compute/model/OutputSchema.kt | Output schema model
+OutputFormat | enum class | compute/model/OutputFormat.kt | Enum for output formats
+IntelligentTaskScheduler | inner class | compute/scheduler/IntelligentTaskScheduler.kt | Task scheduling logic
+
+## Methods in IntelligentTaskScheduler
+- distributeJob | function | compute/scheduler/IntelligentTaskScheduler.kt | Main job distribution logic
+- gatherMeshIntelligence | function | compute/scheduler/IntelligentTaskScheduler.kt | Mesh intelligence gathering
+- decomposeJobIntelligently | function | compute/scheduler/IntelligentTaskScheduler.kt | Job decomposition
+- decomposeDistributedStorage | function | compute/scheduler/IntelligentTaskScheduler.kt | Storage job decomposition
+- decomposeImageProcessing | function | compute/scheduler/IntelligentTaskScheduler.kt | Image processing decomposition
+- decomposeDataAnalysis | function | compute/scheduler/IntelligentTaskScheduler.kt | Data analysis decomposition
+- decomposeMLPipeline | function | compute/scheduler/IntelligentTaskScheduler.kt | ML pipeline decomposition
+- decomposeSensorFusion | function | compute/scheduler/IntelligentTaskScheduler.kt | Sensor fusion decomposition
+- decomposeCollaborativeFiltering | function | compute/scheduler/IntelligentTaskScheduler.kt | Collaborative filtering decomposition
+- createFallbackTask | function | compute/scheduler/IntelligentTaskScheduler.kt | Fallback task creation
+- buildDependencyGraph | function | compute/scheduler/IntelligentTaskScheduler.kt | Dependency graph builder
+- assignTasksIntelligently | function | compute/scheduler/IntelligentTaskScheduler.kt | Task assignment logic
+- findSuitableNodes | function | compute/scheduler/IntelligentTaskScheduler.kt | Node selection logic
+- selectOptimalNode | function | compute/scheduler/IntelligentTaskScheduler.kt | Node selection logic
+- calculateResourceScore | function | compute/scheduler/IntelligentTaskScheduler.kt | Resource scoring
+- calculateNetworkScore | function | compute/scheduler/IntelligentTaskScheduler.kt | Network scoring
+- calculateSpecializationScore | function | compute/scheduler/IntelligentTaskScheduler.kt | Specialization scoring
+- getCPURequirement | function | compute/scheduler/IntelligentTaskScheduler.kt | CPU requirement logic
+- isNodeCompatibleWithTask | function | compute/scheduler/IntelligentTaskScheduler.kt | Node compatibility check
+- optimizeExecutionPlan | function | compute/scheduler/IntelligentTaskScheduler.kt | Plan optimization
+
+## Utility/Data Classes
+MeshIntelligence | data class | compute/model/MeshIntelligence.kt | Mesh intelligence model
+NodeCapabilitySnapshot | data class | compute/model/NodeCapabilitySnapshot.kt | Node capability snapshot
+ResourceCapabilities | data class | compute/model/ResourceCapabilities.kt | Resource capabilities
+NodeSpecialization | data class | compute/model/NodeSpecialization.kt | Node specialization
+SpecializedCapability | enum class | compute/model/SpecializedCapability.kt | Enum for specialized capabilities
+NetworkProximityMatrix | data class | compute/model/NetworkProximityMatrix.kt | Network proximity matrix
+ClusterResourceState | data class | compute/model/ClusterResourceState.kt | Cluster resource state
+ActiveQuorum | data class | compute/model/ActiveQuorum.kt | Active quorum model
+ResourceAllocation | data class | compute/model/ResourceAllocation.kt | Resource allocation
+ExecutionPlan | data class | compute/model/ExecutionPlan.kt | Execution plan
+DependencyGraph | class | compute/model/DependencyGraph.kt | Dependency graph
+JobType | enum class | compute/model/JobType.kt | Enum for job types
+AggregationStrategy | enum class | compute/model/AggregationStrategy.kt | Enum for aggregation strategies
+
+## Interfaces
+MeshNetworkInterface | interface | compute/network/MeshNetworkInterface.kt | Mesh network interface
+EnhancedGossipProtocol | interface | compute/network/EnhancedGossipProtocol.kt | Gossip protocol interface
+QuorumManager | interface | compute/network/QuorumManager.kt | Quorum manager interface
+ResourceManager | interface | compute/network/ResourceManager.kt | Resource manager interface
+PythonExecutor | interface | compute/execution/PythonExecutor.kt | Python executor interface
+LiteRTEngine | interface | compute/execution/LiteRTEngine.kt | LiteRT engine interface
+
+## Miscellaneous
+NetworkMetrics | data class | compute/model/NetworkMetrics.kt | Network metrics
+NetworkLatencyInfo | data class | compute/model/NetworkLatencyInfo.kt | Network latency info
+BatteryInfo | data class | compute/model/BatteryInfo.kt | Battery info
+QuorumType | enum class | compute/model/QuorumType.kt | Enum for quorum types
+DistributedJob | data class | compute/model/DistributedJob.kt | Distributed job model
+JobPriority | enum class | compute/model/JobPriority.kt | Enum for job priorities
+NetworkTopologyTracker | class | compute/network/NetworkTopologyTracker.kt | Network topology tracker
+TaskExecutionRequest | data class | compute/model/TaskExecutionRequest.kt | Task execution request
+TaskExecutionResponse | sealed class (+subclasses) | compute/model/TaskExecutionResponse.kt | Task execution response
+TaskExecutionResult | sealed class (+subclasses) | compute/model/TaskExecutionResult.kt | Task execution result
+
+# Notes:
+- UI-related functions (folder picker) should be moved to a dedicated UI module.
+- Storage-related functions should be moved to storage manager modules.
+- Scheduler logic and all job decomposition/assignment methods should be in a dedicated scheduler module/class.
+- All model/data classes and enums should be split into logically grouped files in compute/model/.
+- Interfaces should be placed in compute/network/ or compute/execution/ as appropriate.
+- Any cross-module dependencies should be documented and handled via imports.
+- All original functionality must be preserved; no methods omitted.
+
+# END OF MAPPING

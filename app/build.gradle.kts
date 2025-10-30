@@ -199,6 +199,7 @@ dependencies {
     androidTestImplementation("androidx.test.uiautomator:uiautomator:2.2.0")
     androidTestImplementation(libs.screengrab)
     androidTestUtil(libs.androidx.orchestrator)
+    implementation("org.msgpack:msgpack-core:0.8.22")
 }
 
 // Configure JaCoCo test coverage for app module

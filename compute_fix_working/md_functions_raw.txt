@@ -1,0 +1,2 @@
+fun toSearchResult(entry: LibraryEntry, nodeId: String): ServiceSearchResult {
+class IntelligentDistributedComputeService(

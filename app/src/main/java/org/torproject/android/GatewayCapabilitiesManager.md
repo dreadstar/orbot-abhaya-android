@@ -8,7 +8,7 @@ import android.util.Log
 import kotlinx.coroutines.*
 import java.util.concurrent.CopyOnWriteArrayList
 import com.ustadmobile.meshrabiya.vnet.AndroidVirtualNode
-import org.torproject.android.service.OrbotService
+import org.torproject.android.service.OrbotMeshService
 import org.torproject.android.service.OrbotConstants
 import org.torproject.android.service.util.Prefs
 import com.ustadmobile.meshrabiya.vnet.EmergentRoleManager
@@ -180,7 +180,7 @@ class GatewayCapabilitiesManager private constructor(private val context: Contex
      */
     private fun isTorServiceAvailable(): Boolean {
         return try {
-            // For now, assume Tor is available if OrbotService is accessible
+            // For now, assume Tor is available if OrbotMeshService is accessible
             // In a real implementation, this would check the actual service status
             // via a broadcast receiver or service binding
             true // Placeholder - will be enhanced when service integration is complete

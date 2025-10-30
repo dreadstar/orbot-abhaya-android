@@ -5,25 +5,35 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.switchmaterial.SwitchMaterial
+import com.ustadmobile.meshrabiya.vnet.AndroidVirtualNode
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import org.torproject.android.GatewayCapabilitiesManager
 import org.torproject.android.R
-import org.torproject.android.ui.mesh.adapter.FolderContentsAdapter
-import org.torproject.android.ui.mesh.model.StorageItem
+import org.torproject.android.service.MeshServiceCoordinator
+import org.torproject.android.service.routing.MeshTrafficRouter
+import org.torproject.android.service.routing.MeshTrafficRouterImpl
 import com.ustadmobile.meshrabiya.api.MeshrabiyaApi
 import com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl
-import org.torproject.android.ui.mesh.MeshManagers
-import org.torproject.android.ui.mesh.MeshUIBindings
-import org.torproject.android.ui.mesh.MeshListeners
-import org.torproject.android.ui.mesh.MeshStorageUI
-import org.torproject.android.ui.mesh.MeshServiceLayerUI
-import org.torproject.android.ui.mesh.MeshUtils
+import org.torproject.android.service.storage.StorageDropFolderManager
+import org.torproject.android.service.compute.ServiceLayerCoordinator
+import org.torproject.android.service.compute.IntelligentDistributedComputeService
+import org.torproject.android.ui.mesh.adapter.FolderContentsAdapter
+import org.torproject.android.ui.mesh.model.StorageItem
+import java.text.SimpleDateFormat
+import java.util.*
 
 /**
  * Enhanced mesh networking fragment based on integration guidance.
@@ -33,11 +43,68 @@ import org.torproject.android.ui.mesh.MeshUtils
  * - Node information display
  * - Real-time status updates
  */
-class EnhancedMeshFragment : Fragment(), org.torproject.android.GatewayCapabilitiesManager.GatewayCapabilityListener {
-    private var serviceLayerCoordinator: org.torproject.android.service.compute.ServiceLayerCoordinator? = null
+class EnhancedMeshFragment : Fragment(), GatewayCapabilitiesManager.GatewayCapabilityListener {
+    
+    // Core managers
+    private lateinit var gatewayManager: GatewayCapabilitiesManager
+    private lateinit var meshCoordinator: MeshServiceCoordinator
+    private lateinit var trafficRouter: MeshTrafficRouter
+    private lateinit var storageDropFolderManager: StorageDropFolderManager
+    private var virtualNode: AndroidVirtualNode? = null
+    private var serviceLayerCoordinator: ServiceLayerCoordinator? = null
+    
+    // Status display elements
+    private lateinit var meshStatusText: TextView
+    private lateinit var nodeInfoText: TextView
+    private lateinit var networkStatsText: TextView
+    private lateinit var lastUpdateText: TextView
+    private lateinit var meshrabiyaApi: MeshrabiyaApi
+    
+    // Control elements
+    private lateinit var gatewayToggle: SwitchMaterial
+    private lateinit var internetGatewayToggle: SwitchMaterial
+    private lateinit var refreshButton: MaterialButton
+    private lateinit var meshToggleButton: MaterialButton
+    
+    // Service cards
+    private lateinit var torGatewayCard: MaterialCardView
+    private lateinit var internetGatewayCard: MaterialCardView
+    private lateinit var networkOverviewCard: MaterialCardView
+    
+    // Storage participation elements  
+    private lateinit var storageParticipationCard: MaterialCardView
+    private lateinit var storageParticipationToggle: SwitchMaterial
+    private lateinit var storageAllocationSlider: com.google.android.material.slider.Slider
+    private lateinit var storageStatusText: TextView
+    private lateinit var storageAllocationText: TextView
+    
+    // Storage drop folder elements
+    private lateinit var storageDropFolderCard: MaterialCardView
+    private lateinit var selectFolderButton: MaterialButton
+    private lateinit var createFolderButton: MaterialButton
+    private lateinit var selectedFolderText: TextView
+    private lateinit var folderContentsRecyclerView: RecyclerView
+    private lateinit var folderContentsAdapter: FolderContentsAdapter
+    
+    // Distributed service layer elements
+    private lateinit var distributedServiceLayerCard: MaterialCardView
+    private lateinit var serviceLayerParticipationSwitch: SwitchMaterial
+    private lateinit var serviceLayerStatusText: TextView
+    private lateinit var pythonServiceStatus: TextView
+    private lateinit var mlInferenceServiceStatus: TextView
+    private lateinit var distributedStorageServiceStatus: TextView
+    private lateinit var taskSchedulerServiceStatus: TextView
+    
+    // Service status texts
+    private lateinit var torGatewayStatus: TextView
+    private lateinit var internetGatewayStatus: TextView
+    private lateinit var activeNodesText: TextView
+    private lateinit var networkLoadText: TextView
+    private lateinit var stabilityText: TextView
+    
     private var isNetworkActive = false
     private var isUpdatingSliderProgrammatically = false
-    private val timeFormatter = MeshUtils.timeFormatter
+    private val timeFormatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
     // Activity result launcher for folder selection
     private val folderPickerLauncher = registerForActivityResult(
@@ -60,28 +127,225 @@ class EnhancedMeshFragment : Fragment(), org.torproject.android.GatewayCapabilit
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        MeshUIBindings.bindViews(view)
-        MeshManagers.setup(requireContext(), MeshUIBindings.folderContentsAdapter, MeshUIBindings.folderContentsRecyclerView)
-        val meshrabiyaApi = MeshrabiyaApiImpl.getInstance(requireContext().applicationContext)
-        MeshStorageUI.initializeStorageUI()
-        initializeStorageDropFolderUI()
-        MeshServiceLayerUI.initializeDistributedServiceLayerUI()
-        MeshListeners.setupListeners(view, lifecycleScope)
+        
+        initializeViews(view)
+         // Setup MeshrabiyaApi singleton
+        meshrabiyaApi = MeshrabiyaApiImpl.getInstance(requireContext().applicationContext)
+        setupManagers()
+        initializeStorageUI()  // Initialize storage UI with saved preferences
+        initializeStorageDropFolderUI()  // Initialize storage drop folder UI
+        initializeDistributedServiceLayerUI()  // Initialize distributed service layer UI
+        setupListeners()
         startPeriodicUpdates()
         updateUI()
     }
     
-    // ...existing code...
+    private fun initializeViews(view: View) {
+        // Status displays
+        meshStatusText = view.findViewById(R.id.meshStatusText)
+        nodeInfoText = view.findViewById(R.id.nodeInfoText)
+        networkStatsText = view.findViewById(R.id.networkStatsText)
+        lastUpdateText = view.findViewById(R.id.lastUpdateText)
+        
+        // Controls
+        gatewayToggle = view.findViewById(R.id.gatewayToggle)
+        internetGatewayToggle = view.findViewById(R.id.internetGatewayToggle)
+        refreshButton = view.findViewById(R.id.refreshButton)
+        meshToggleButton = view.findViewById(R.id.meshToggleButton)
+        
+        // Service cards
+        torGatewayCard = view.findViewById(R.id.torGatewayCard)
+        internetGatewayCard = view.findViewById(R.id.internetGatewayCard)
+        networkOverviewCard = view.findViewById(R.id.networkOverviewCard)
+        
+        // Storage participation views
+        storageParticipationCard = view.findViewById(R.id.storageParticipationCard)
+        storageParticipationToggle = view.findViewById(R.id.storageParticipationToggle)
+        storageAllocationSlider = view.findViewById(R.id.storageAllocationSlider)
+        storageStatusText = view.findViewById(R.id.storageStatusText)
+        storageAllocationText = view.findViewById(R.id.storageAllocationText)
+        
+        // Storage drop folder views
+        storageDropFolderCard = view.findViewById(R.id.storageDropFolderCard)
+        selectFolderButton = view.findViewById(R.id.selectFolderButton)
+        createFolderButton = view.findViewById(R.id.createFolderButton)
+        selectedFolderText = view.findViewById(R.id.selectedFolderText)
+        folderContentsRecyclerView = view.findViewById(R.id.folderContentsRecyclerView)
+        
+        // Distributed service layer views
+        distributedServiceLayerCard = view.findViewById(R.id.distributedServiceLayerCard)
+        serviceLayerParticipationSwitch = view.findViewById(R.id.serviceLayerParticipationSwitch)
+        serviceLayerStatusText = view.findViewById(R.id.serviceLayerStatusText)
+        pythonServiceStatus = view.findViewById(R.id.pythonServiceStatus)
+        mlInferenceServiceStatus = view.findViewById(R.id.mlInferenceServiceStatus)
+        distributedStorageServiceStatus = view.findViewById(R.id.distributedStorageServiceStatus)
+        taskSchedulerServiceStatus = view.findViewById(R.id.taskSchedulerServiceStatus)
+        
+        // Service status
+        torGatewayStatus = view.findViewById(R.id.torGatewayStatus)
+        internetGatewayStatus = view.findViewById(R.id.internetGatewayStatus)
+        activeNodesText = view.findViewById(R.id.activeNodesText)
+        networkLoadText = view.findViewById(R.id.networkLoadText)
+        stabilityText = view.findViewById(R.id.stabilityText)
+    }
     
-    // ...existing code...
+    private fun setupManagers() {
+        gatewayManager = GatewayCapabilitiesManager.getInstance(requireContext())
+        gatewayManager.addListener(this)
+        
+        // Initialize mesh services
+        meshCoordinator = MeshServiceCoordinator.getInstance(requireContext())
+        meshCoordinator.initializeMeshService()
+
+        
+        // Initialize traffic router
+        trafficRouter = MeshTrafficRouterImpl(requireContext())
+        
+        // Initialize storage drop folder manager
+        storageDropFolderManager = StorageDropFolderManager.getInstance(requireContext())
+        
+        // Setup folder contents adapter
+        folderContentsAdapter = FolderContentsAdapter { item ->
+            onShareItemClicked(item)
+        }
+        folderContentsRecyclerView.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = folderContentsAdapter
+        }
+        
+        // TODO: Get virtual node from application
+        // virtualNode = (requireActivity().application as OrbotApp).virtualNode
+    }
     
-    // ...existing code...
+    private fun setupListeners() {
+        gatewayToggle.setOnCheckedChangeListener { _, isChecked ->
+            gatewayManager.shareTor = isChecked
+            
+            // Update mesh service preferences when Tor gateway changes
+            val currentPrefs = meshCoordinator.getUserSharingPreferences()
+            meshCoordinator.setUserSharingPreferences(
+                allowTorGateway = isChecked,
+                allowInternetGateway = currentPrefs["allowInternetGateway"] as? Boolean ?: false,
+                allowStorageSharing = currentPrefs["allowStorageSharing"] as? Boolean ?: true,
+                storageAllocationGB = 5  // Default allocation
+            )
+            
+            updateGatewayStatus()
+        }
+        
+        internetGatewayToggle.setOnCheckedChangeListener { _, isChecked ->
+            gatewayManager.shareInternet = isChecked
+            
+            // Update mesh service preferences when Internet gateway changes
+            val currentPrefs = meshCoordinator.getUserSharingPreferences()
+            meshCoordinator.setUserSharingPreferences(
+                allowTorGateway = currentPrefs["allowTorGateway"] as? Boolean ?: false,
+                allowInternetGateway = isChecked,
+                allowStorageSharing = currentPrefs["allowStorageSharing"] as? Boolean ?: true,
+                storageAllocationGB = 5  // Default allocation
+            )
+            
+            updateGatewayStatus()
+        }
+        
+        refreshButton.setOnClickListener {
+            updateUI()
+        }
+        
+        meshToggleButton.setOnClickListener {
+            if (isNetworkActive) {
+                stopMeshNetwork()
+            } else {
+                startMeshNetwork()
+            }
+        }
+        
+        // Storage participation listeners
+        storageParticipationToggle.setOnCheckedChangeListener { _, isChecked ->
+            val currentPrefs = meshCoordinator.getUserSharingPreferences()
+            val currentAllocation = storageAllocationSlider.value.toInt()
+            
+            meshCoordinator.setUserSharingPreferences(
+                allowTorGateway = currentPrefs["allowTorGateway"] as? Boolean ?: false,
+                allowInternetGateway = currentPrefs["allowInternetGateway"] as? Boolean ?: false,
+                allowStorageSharing = isChecked,
+                storageAllocationGB = currentAllocation
+            )
+            
+            updateStorageStatus()
+        }
+
+        storageAllocationSlider.addOnChangeListener { _, value, fromUser ->
+            // Skip processing if we're updating programmatically
+            if (isUpdatingSliderProgrammatically) {
+                return@addOnChangeListener
+            }
+            
+            val newAllocationGB = value.toInt()
+            
+            // If user is actively participating in storage, validate against current usage
+            if (storageParticipationToggle.isChecked && fromUser) {
+                val storageStatus = meshCoordinator.getStorageParticipationStatus()
+                val currentUsedGB = storageStatus.usedGB
+                
+                // Prevent allocation below current usage
+                if (newAllocationGB < currentUsedGB && currentUsedGB > 0) {
+                    // Show user feedback and reset to minimum safe value
+                    val minSafeAllocation = maxOf(currentUsedGB, 1)
+                    isUpdatingSliderProgrammatically = true
+                    storageAllocationSlider.value = minSafeAllocation.toFloat()
+                    storageAllocationText.text = "${minSafeAllocation} GB"
+                    isUpdatingSliderProgrammatically = false
+                    
+                    // Show brief feedback to user
+                    view?.let { v ->
+                        val snackbar = com.google.android.material.snackbar.Snackbar.make(
+                            v,
+                            "Cannot allocate less than current usage (${currentUsedGB} GB)",
+                            com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+                        )
+                        snackbar.show()
+                    }
+                    return@addOnChangeListener
+                }
+            }
+            
+            // Update the text display
+            storageAllocationText.text = "${newAllocationGB} GB"
+            
+            // Always update preferences - allocation setting is independent of participation toggle
+            val currentPrefs = meshCoordinator.getUserSharingPreferences()
+            meshCoordinator.setUserSharingPreferences(
+                allowTorGateway = currentPrefs["allowTorGateway"] as? Boolean ?: false,
+                allowInternetGateway = currentPrefs["allowInternetGateway"] as? Boolean ?: false,
+                allowStorageSharing = storageParticipationToggle.isChecked,
+                storageAllocationGB = newAllocationGB
+            )
+            
+            // Update storage status to reflect new allocation
+            updateStorageStatus()
+        }
+        
+        // Storage drop folder listeners
+        selectFolderButton.setOnClickListener {
+            selectFolder()
+        }
+        
+        createFolderButton.setOnClickListener {
+            showCreateFolderDialog()
+        }
+        
+        // Distributed service layer listeners
+        serviceLayerParticipationSwitch.setOnCheckedChangeListener { _, isChecked ->
+            updateServiceLayerParticipation(isChecked)
+        }
+    }
     
     private fun startPeriodicUpdates() {
         lifecycleScope.launch {
             while (true) {
                 updateNetworkStats()
-                delay(5000)
+                delay(5000) // Update every 5 seconds
             }
         }
     }
@@ -91,27 +355,33 @@ class EnhancedMeshFragment : Fragment(), org.torproject.android.GatewayCapabilit
         updateNetworkStats()
         updateNodeInformation()
         updateServiceCards()
-        MeshStorageUI.updateStorageStatus()
+        updateStorageStatus()
         updateStorageDropFolderUI()
         updateDistributedServiceLayerUI()
-        MeshUIBindings.lastUpdateText.text = "Last updated: ${timeFormatter.format(java.util.Date())}"
+        
+        lastUpdateText.text = "Last updated: ${timeFormatter.format(Date())}"
     }
     
     private fun updateDistributedServiceLayerUI() {
         // Always update service statuses to reflect current participation state
-        // Delegate to MeshServiceLayerUI if needed
+        updateServiceStatuses()
     }
     
     private fun updateGatewayStatus() {
-        val status = MeshManagers.gatewayManager.getCurrentStatus()
-        MeshUIBindings.gatewayToggle.isChecked = status.shareTor
-        MeshUIBindings.internetGatewayToggle.isChecked = status.shareInternet
-        MeshUIBindings.torGatewayStatus.text = when {
+        val status = gatewayManager.getCurrentStatus()
+        
+        gatewayToggle.isChecked = status.shareTor
+        internetGatewayToggle.isChecked = status.shareInternet
+        
+        // Update Tor gateway status
+        torGatewayStatus.text = when {
             status.shareTor && status.isTorAvailable -> "Active"
             status.shareTor && !status.isTorAvailable -> "Enabled (Tor Not Available)"
             else -> "Disabled"
         }
-        MeshUIBindings.internetGatewayStatus.text = when {
+        
+        // Update Internet gateway status
+        internetGatewayStatus.text = when {
             status.shareInternet && status.hasInternetConnection -> "Active"
             status.shareInternet && !status.hasInternetConnection -> "Enabled (No Internet)"
             else -> "Disabled"
@@ -119,34 +389,49 @@ class EnhancedMeshFragment : Fragment(), org.torproject.android.GatewayCapabilit
     }
     
     private fun updateNetworkStats() {
-        val meshStatus = MeshManagers.meshCoordinator.getMeshServiceStatus()
-        val healthCheck = MeshManagers.meshCoordinator.performHealthCheck()
-        MeshUIBindings.activeNodesText.text = "${meshStatus.nodeCount} nodes"
-        MeshUIBindings.networkLoadText.text = "${if (meshStatus.trafficBytes > 0) "Active" else "Idle"} traffic"
-        MeshUIBindings.stabilityText.text = "${if (healthCheck.success) "Stable" else "Unstable"}"
-        MeshUIBindings.meshStatusText.text = when {
-            meshStatus.isRunning && meshStatus.nodeCount > 0 -> "Mesh network active with ${meshStatus.nodeCount} connected nodes"
-            meshStatus.isRunning && meshStatus.nodeCount == 0 -> "Mesh network running, discovering peers..."
-            !meshStatus.isRunning -> "Mesh network stopped"
-            else -> "Mesh network status unknown"
+        // Get real mesh service status instead of mock data
+        val meshStatus = meshCoordinator.getMeshServiceStatus()
+        val healthCheck = meshCoordinator.performHealthCheck()
+        
+        // Update with real data from MeshServiceCoordinator
+        activeNodesText.text = "${meshStatus.nodeCount} nodes"
+        networkLoadText.text = "${if (meshStatus.trafficBytes > 0) "Active" else "Idle"} traffic"
+        stabilityText.text = "${if (healthCheck.success) "Stable" else "Unstable"}"
+        
+        // Update mesh status with real information
+        meshStatusText.text = when {
+            meshStatus.isRunning && meshStatus.nodeCount > 0 -> 
+                "Mesh network active with ${meshStatus.nodeCount} connected nodes"
+            meshStatus.isRunning && meshStatus.nodeCount == 0 -> 
+                "Mesh network running, discovering peers..."
+            !meshStatus.isRunning -> 
+                "Mesh network stopped"
+            else -> 
+                "Mesh network status unknown"
         }
+        
+        // Update network active state based on real status
         isNetworkActive = meshStatus.isRunning
     }
     
     private fun updateNodeInformation() {
-        val meshStatus = MeshManagers.meshCoordinator.getMeshServiceStatus()
-        val currentRoles = MeshManagers.meshCoordinator.getCurrentlyAssignedRoles()
-        val userPrefs = MeshManagers.meshCoordinator.getUserSharingPreferences()
-        val virtualNode = MeshManagers.meshCoordinator.getVirtualNode()
+        // Get real mesh service information
+        val meshStatus = meshCoordinator.getMeshServiceStatus()
+        val currentRoles = meshCoordinator.getCurrentlyAssignedRoles()
+        val userPrefs = meshCoordinator.getUserSharingPreferences()
+        val virtualNode = meshCoordinator.getVirtualNode()
+        
         val nodeInfo = buildString {
             appendLine("Local Node Status:")
             if (virtualNode != null) {
                 appendLine("• Node ID: ${virtualNode.addressAsInt}")
                 appendLine("• Status: ${if (meshStatus.isRunning) "Connected" else "Disconnected"}")
                 appendLine("• Gateway: ${if (meshStatus.isGateway) "Yes" else "No"}")
+                
                 if (currentRoles.isNotEmpty()) {
                     appendLine("• Current Roles: ${currentRoles.joinToString(", ")}")
                 }
+                
                 appendLine("\nUser Preferences:")
                 appendLine("• Tor Gateway: ${if (userPrefs["allowTorGateway"] == true) "Enabled" else "Disabled"}")
                 appendLine("• Internet Gateway: ${if (userPrefs["allowInternetGateway"] == true) "Enabled" else "Disabled"}")  
@@ -154,11 +439,15 @@ class EnhancedMeshFragment : Fragment(), org.torproject.android.GatewayCapabilit
             } else {
                 appendLine("• Node: Not initialized")
             }
+            
             if (meshStatus.isRunning && meshStatus.nodeCount > 0) {
                 appendLine("\nNetwork Information:")
                 appendLine("• Connected Nodes: ${meshStatus.nodeCount}")
                 appendLine("• Traffic: ${meshStatus.trafficBytes} bytes")
+                
                 Log.d("EnhancedMeshFragment", "Network info display: nodeCount=${meshStatus.nodeCount}, trafficBytes=${meshStatus.trafficBytes}")
+                
+                // Get neighbors from virtual node if available
                 virtualNode?.let { node ->
                     val neighbors = node.neighbors()
                     if (neighbors.isNotEmpty()) {
@@ -170,43 +459,98 @@ class EnhancedMeshFragment : Fragment(), org.torproject.android.GatewayCapabilit
                 }
             }
         }
-        MeshUIBindings.nodeInfoText.text = nodeInfo
+        
+        nodeInfoText.text = nodeInfo
     }
     
     private fun updateServiceCards() {
+        // Update card backgrounds based on service status
         val activeColor = requireContext().getColor(R.color.bright_green)
         val inactiveColor = requireContext().getColor(R.color.panel_background_main)
-        MeshUIBindings.torGatewayCard.setCardBackgroundColor(
-            if (MeshManagers.gatewayManager.shareTor) activeColor else inactiveColor
+        
+        torGatewayCard.setCardBackgroundColor(
+            if (gatewayManager.shareTor) activeColor else inactiveColor
         )
-        MeshUIBindings.internetGatewayCard.setCardBackgroundColor(
-            if (MeshManagers.gatewayManager.shareInternet) activeColor else inactiveColor
+        
+        internetGatewayCard.setCardBackgroundColor(
+            if (gatewayManager.shareInternet) activeColor else inactiveColor
         )
-        MeshUIBindings.networkOverviewCard.setCardBackgroundColor(
+        
+        networkOverviewCard.setCardBackgroundColor(
             if (isNetworkActive) activeColor else inactiveColor
         )
+        
+        // Update button states and colors
         updateButtonStates()
     }
     
     private fun updateButtonStates() {
+        // Update button text, color and style based on network status
         val enabledColor = requireContext().getColor(R.color.orbot_btn_enabled_purple)
+        val disabledColor = requireContext().getColor(R.color.orbot_btn_disable_grey)
         val whiteText = requireContext().getColor(android.R.color.white)
+        
         if (isNetworkActive) {
-            MeshUIBindings.meshToggleButton.text = "Stop Mesh"
-            MeshUIBindings.meshToggleButton.setBackgroundColor(enabledColor)
-            MeshUIBindings.meshToggleButton.setTextColor(whiteText)
-            MeshUIBindings.meshToggleButton.isEnabled = true
+            // Network is active - show as "Stop Mesh" 
+            meshToggleButton.text = "Stop Mesh"
+            meshToggleButton.setBackgroundColor(enabledColor)
+            meshToggleButton.setTextColor(whiteText)
+            meshToggleButton.isEnabled = true
         } else {
-            MeshUIBindings.meshToggleButton.text = "Start Mesh"
-            MeshUIBindings.meshToggleButton.setBackgroundColor(enabledColor)
-            MeshUIBindings.meshToggleButton.setTextColor(whiteText)
-            MeshUIBindings.meshToggleButton.isEnabled = true
+            // Network is inactive - show as "Start Mesh"
+            meshToggleButton.text = "Start Mesh"
+            meshToggleButton.setBackgroundColor(enabledColor)
+            meshToggleButton.setTextColor(whiteText)
+            meshToggleButton.isEnabled = true
         }
     }
     
-    // Storage status now handled by MeshStorageUI
+    private fun updateStorageStatus() {
+        // Get user preferences first (this is immediate)
+        val userPrefs = meshCoordinator.getUserSharingPreferences()
+        val userEnabledStorage = userPrefs["allowStorageSharing"] as? Boolean ?: false
+        val userAllocation = userPrefs["storageAllocationGB"] as? Int ?: 5
+        
+        // Get REAL storage status from MeshServiceCoordinator
+        val storageStatus = meshCoordinator.getStorageParticipationStatus()
+        
+        // Only update toggle state - slider value should not be changed here
+        storageParticipationToggle.isChecked = userEnabledStorage
+        
+        // Update status text based on user preference FIRST, then actual status
+        storageStatusText.text = when {
+            !userEnabledStorage -> "Storage participation disabled"
+            userEnabledStorage && storageStatus.isEnabled && storageStatus.participationHealth == "Active" ->
+                "Participating in distributed storage (${storageStatus.usedGB}/${userAllocation} GB used)"
+            userEnabledStorage && storageStatus.isEnabled ->
+                "Storage configured - ${userAllocation} GB allocated"
+            userEnabledStorage -> "Initializing storage participation - ${userAllocation} GB allocated"
+            else -> "Storage participation disabled"
+        }
+        
+        // Update card background following existing pattern - use user preference
+        val activeColor = requireContext().getColor(R.color.bright_green)
+        val inactiveColor = requireContext().getColor(R.color.panel_background_main)
+        
+        storageParticipationCard.setCardBackgroundColor(
+            if (userEnabledStorage) activeColor else inactiveColor
+        )
+    }
     
-    // Storage UI initialization now handled by MeshStorageUI
+    private fun initializeStorageUI() {
+        // Get user preferences for initial UI setup
+        val userPrefs = meshCoordinator.getUserSharingPreferences()
+        val userAllocation = userPrefs["storageAllocationGB"] as? Int ?: 5
+        
+        // Set initial slider value and text without triggering listener
+        isUpdatingSliderProgrammatically = true
+        storageAllocationSlider.value = userAllocation.toFloat()
+        storageAllocationText.text = "${userAllocation} GB"
+        isUpdatingSliderProgrammatically = false
+        
+        // Update status after UI is initialized
+        updateStorageStatus()
+    }
     
     private fun startMeshNetwork() {
         lifecycleScope.launch {
@@ -519,18 +863,15 @@ class EnhancedMeshFragment : Fragment(), org.torproject.android.GatewayCapabilit
             Log.d("EnhancedMeshFragment", "Auto-starting distributed services on app launch")
             lifecycleScope.launch {
                 updateServiceStatuses(starting = true)
-                // Add API call here to set participation state on startup
-                meshrabiyaApi.setStorageParticipationEnabled(isParticipating) { result ->
-                    val success = result
-                    if (!success) {
-                        // If services fail to start, disable participation
-                        serviceLayerParticipationSwitch.isChecked = false
-                        prefs.edit().putBoolean("service_layer_participation", false).apply()
-                        updateServiceStatuses()
-                    }
+                val success = startDistributedServices()
+                if (!success) {
+                    // If services fail to start, disable participation
+                    serviceLayerParticipationSwitch.isChecked = false
+                    prefs.edit().putBoolean("service_layer_participation", false).apply()
                 }
+                updateServiceStatuses()
             }
-        }else {
+        } else {
             updateServiceStatuses()
         }
     }
@@ -553,34 +894,29 @@ class EnhancedMeshFragment : Fragment(), org.torproject.android.GatewayCapabilit
             if (isParticipating) {
                 // Start distributed service layer
                 updateServiceStatuses(starting = true)
-                // Add API call here to set participation state on startup
-                meshrabiyaApi.setStorageParticipationEnabled(isParticipating) { result ->
-                    
-                     val success = result
                 
-                    if (success) {
-                        updateServiceStatuses()
-                        view?.let { v ->
-                            com.google.android.material.snackbar.Snackbar.make(
-                                v,
-                                "✅ Distributed Service Layer activated - Contributing compute resources",
-                                com.google.android.material.snackbar.Snackbar.LENGTH_LONG
-                            ).show()
-                        }
-                    } else {
-                        serviceLayerParticipationSwitch.isChecked = false
-                        updateServiceStatuses(stopped = true)
-                        view?.let { v ->
-                            com.google.android.material.snackbar.Snackbar.make(
-                                v,
-                                "❌ Failed to start Distributed Service Layer",
-                                com.google.android.material.snackbar.Snackbar.LENGTH_LONG
-                            ).show()
-                        }
+                val success = startDistributedServices()
+                
+                if (success) {
+                    updateServiceStatuses()
+                    view?.let { v ->
+                        com.google.android.material.snackbar.Snackbar.make(
+                            v,
+                            "✅ Distributed Service Layer activated - Contributing compute resources",
+                            com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                        ).show()
+                    }
+                } else {
+                    serviceLayerParticipationSwitch.isChecked = false
+                    updateServiceStatuses(stopped = true)
+                    view?.let { v ->
+                        com.google.android.material.snackbar.Snackbar.make(
+                            v,
+                            "❌ Failed to start Distributed Service Layer",
+                            com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                        ).show()
                     }
                 }
-                
-               
                 
             } else {
                 // Stop distributed service layer
@@ -840,7 +1176,9 @@ class EnhancedMeshFragment : Fragment(), org.torproject.android.GatewayCapabilit
     
     override fun onDestroyView() {
         super.onDestroyView()
-        MeshManagers.gatewayManager.removeListener(this)
+        gatewayManager.removeListener(this)
+        
+        // Cleanup service layer resources
         stopServiceStatisticsUpdates()
         lifecycleScope.launch {
             serviceLayerCoordinator?.stopServices()

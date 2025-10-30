@@ -1,0 +1,27 @@
+# Restoration Plan: Missing Functions/Groups
+# Date: 2025-10-27
+# Only functions/classes not found in compute Kotlin files
+
+# Scheduler/Task Logic (compute/scheduler/IntelligentTaskScheduler.kt)
+calculateResourceScore
+calculateSpecializationScore
+calculateNetworkScore
+assignTasksIntelligently
+gatherMeshIntelligence
+decomposeJobIntelligently
+decomposeDistributedStorage
+decomposeImageProcessing
+decomposeDataAnalysis
+decomposeMLPipeline
+decomposeSensorFusion
+decomposeCollaborativeFiltering
+createFallbackTask
+buildDependencyGraph
+findSuitableNodes
+selectOptimalNode
+isNodeCompatibleWithTask
+getCPURequirement
+optimizeExecutionPlan
+distributeJob
+
+# Each function should be restored in compute/scheduler/IntelligentTaskScheduler.kt unless otherwise specified by mapping or code context.

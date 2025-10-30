@@ -2,9 +2,9 @@ package org.torproject.android
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import org.torproject.android.GatewayCapabilitiesManager
-import org.torproject.android.mesh.MeshStorageManager
-import org.torproject.android.ui.mesh.MeshFragment
+import org.torproject.android.ui.mesh.EnhancedMeshFragment
+import com.ustadmobile.meshrabiya.api.MeshrabiyaApi
+import com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl
 import android.widget.Toast
 import android.content.Intent
 import android.net.Uri
@@ -12,25 +12,24 @@ import android.net.Uri
  * Main activity for mesh integration demo. Handles UI and gateway capability toggling.
  */
 class MainActivity : AppCompatActivity() {
-    private lateinit var gatewayManager: GatewayCapabilitiesManager
-    private lateinit var meshStorageManager: MeshStorageManager
+    private lateinit var meshrabiyaApi: MeshrabiyaApi
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        gatewayManager = GatewayCapabilitiesManager.getInstance(this)
-        // TODO: Setup UI listeners and bind to gatewayManager
+        // --- Use MeshrabiyaApi singleton ---
+    meshrabiyaApi = MeshrabiyaApiImpl.getInstance(applicationContext)
 
-        // --- NEW CODE: Initialize MeshStorageManager ---
-        meshStorageManager = MeshStorageManager.getInstance(this)
-
-        // --- NEW CODE: Setup MeshFragment UI callback integration ---
-        val meshFragment = supportFragmentManager.findFragmentById(R.id.meshFragment) as? MeshFragment
+        // --- Setup EnhancedMeshFragment UI callback integration ---
+        val meshFragment = supportFragmentManager.findFragmentById(R.id.meshFragment) as? EnhancedMeshFragment
         meshFragment?.let {
-            meshStorageManager.setUiCallback(it)
+            // Example: Register file retrieved callback to update UI
+            meshrabiyaApi.setOnFileRetrieved { fileId, file ->
+                // it.onFileRetrieved(fileId, file) // Implement this method in EnhancedMeshFragment if needed
+            }
         }
 
-        // --- NEW CODE: Handle drop folder selection intent ---
+        // --- Handle drop folder selection intent ---
         handleDropFolderIntent(intent)
     }
 
@@ -39,8 +38,13 @@ class MainActivity : AppCompatActivity() {
         intent?.data?.let { uri ->
             val folderPath = getFolderPathFromUri(uri)
             if (folderPath != null) {
-                meshStorageManager.setDropFolder(folderPath)
-                Toast.makeText(this, "Drop folder set: $folderPath", Toast.LENGTH_SHORT).show()
+                meshrabiyaApi.selectDropFolder(folderPath) { result ->
+                    if (result.isSuccess) {
+                        Toast.makeText(this, "Drop folder set: $folderPath", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, "Failed to set drop folder: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
     }

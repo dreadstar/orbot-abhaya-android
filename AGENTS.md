@@ -1,3 +1,4 @@
+- Agents must NEVER use likely locations (guesses) for code references, imports, or types when the exact answer can be determined by reviewing the codebase or researching online. Always verify and use the true, precise location. Laziness or shortcuts in this regard are strictly prohibited.
 
 # AGENTS.md - Operational Protocols for AI Agents
 

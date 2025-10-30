@@ -1,0 +1,4 @@
+Missing in .kt files:
+\nPresent in .kt files:
+fun toSearchResult(entry: LibraryEntry, nodeId: String): ServiceSearchResult {
+class IntelligentDistributedComputeService(

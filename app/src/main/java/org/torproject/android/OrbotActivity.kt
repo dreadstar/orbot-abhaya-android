@@ -209,7 +209,7 @@ class OrbotActivity : BaseActivity() {
                 )
 
                 R.id.meshFragment -> navController.navigate(
-                    R.id.meshFragment, null, navOptions
+                    R.id.meshFragment, null, navOptions // nav_graph.xml already points to EnhancedMeshFragment
                 )
 
                     R.id.taskManagerFragment -> navController.navigate(
