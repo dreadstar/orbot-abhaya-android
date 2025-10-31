@@ -67,15 +67,104 @@ class EnhancedMeshFragment : Fragment(), org.torproject.android.GatewayCapabilit
         initializeStorageDropFolderUI()
         MeshServiceLayerUI.initializeDistributedServiceLayerUI()
         MeshListeners.setupListeners(view, lifecycleScope)
+
+        // --- BEGIN: Service Layer Participation Toggle Listener Integration ---
+        val prefs = requireContext().getSharedPreferences("mesh_service_layer", Context.MODE_PRIVATE)
+        val isComputeParticipating = prefs.getBoolean("compute_node_participation", false)
+        MeshUIBindings.serviceLayerParticipationSwitch.isChecked = isComputeParticipating
+
+        // Ensure API and event routing match persisted state
+        meshrabiyaApi.setServiceParticipationEnabled("compute_node", isComputeParticipating) { /* handle result */ }
+
+        // Add toggle listener for service layer participation
+        MeshUIBindings.serviceLayerParticipationSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("compute_node_participation", isChecked).apply()
+            meshrabiyaApi.setServiceParticipationEnabled("compute_node", isChecked) { /* handle result */ }
+            updateServiceLayerStatus(isChecked)
+        }
+        // --- END: Service Layer Participation Toggle Listener Integration ---
+
         startPeriodicUpdates()
         updateUI()
     }
     
-    // ...existing code...
+    private fun initializeViews(view: View) {
+        // Status displays
+        meshStatusText = view.findViewById(R.id.meshStatusText)
+        nodeInfoText = view.findViewById(R.id.nodeInfoText)
+        networkStatsText = view.findViewById(R.id.networkStatsText)
+        lastUpdateText = view.findViewById(R.id.lastUpdateText)
+        
+        // Controls
+        gatewayToggle = view.findViewById(R.id.gatewayToggle)
+        internetGatewayToggle = view.findViewById(R.id.internetGatewayToggle)
+        refreshButton = view.findViewById(R.id.refreshButton)
+        meshToggleButton = view.findViewById(R.id.meshToggleButton)
+        
+        // Service cards
+        torGatewayCard = view.findViewById(R.id.torGatewayCard)
+        internetGatewayCard = view.findViewById(R.id.internetGatewayCard)
+        networkOverviewCard = view.findViewById(R.id.networkOverviewCard)
+        
+        // Storage participation views
+        storageParticipationCard = view.findViewById(R.id.storageParticipationCard)
+        storageParticipationToggle = view.findViewById(R.id.storageParticipationToggle)
+        storageAllocationSlider = view.findViewById(R.id.storageAllocationSlider)
+        storageStatusText = view.findViewById(R.id.storageStatusText)
+        storageAllocationText = view.findViewById(R.id.storageAllocationText)
+        
+        // Storage drop folder views
+        storageDropFolderCard = view.findViewById(R.id.storageDropFolderCard)
+        selectFolderButton = view.findViewById(R.id.selectFolderButton)
+        createFolderButton = view.findViewById(R.id.createFolderButton)
+        selectedFolderText = view.findViewById(R.id.selectedFolderText)
+        folderContentsRecyclerView = view.findViewById(R.id.folderContentsRecyclerView)
+        
+        // Distributed service layer views
+        distributedServiceLayerCard = view.findViewById(R.id.distributedServiceLayerCard)
+        serviceLayerParticipationSwitch = view.findViewById(R.id.serviceLayerParticipationSwitch)
+        serviceLayerStatusText = view.findViewById(R.id.serviceLayerStatusText)
+        pythonServiceStatus = view.findViewById(R.id.pythonServiceStatus)
+        mlInferenceServiceStatus = view.findViewById(R.id.mlInferenceServiceStatus)
+        distributedStorageServiceStatus = view.findViewById(R.id.distributedStorageServiceStatus)
+        taskSchedulerServiceStatus = view.findViewById(R.id.taskSchedulerServiceStatus)
+        
+        // Service status
+        torGatewayStatus = view.findViewById(R.id.torGatewayStatus)
+        internetGatewayStatus = view.findViewById(R.id.internetGatewayStatus)
+        activeNodesText = view.findViewById(R.id.activeNodesText)
+        networkLoadText = view.findViewById(R.id.networkLoadText)
+        stabilityText = view.findViewById(R.id.stabilityText)
+    }
     
-    // ...existing code...
+    private fun setupManagers() {
+        gatewayManager = GatewayCapabilitiesManager.getInstance(requireContext())
+        gatewayManager.addListener(this)
+        
+        // Initialize mesh services
+        meshCoordinator = MeshServiceCoordinator.getInstance(requireContext())
+        meshCoordinator.initializeMeshService()
+
+        
+        // Initialize traffic router
+        trafficRouter = MeshTrafficRouterImpl(requireContext())
+        
+        // Initialize storage drop folder manager
+        storageDropFolderManager = StorageDropFolderManager.getInstance(requireContext())
+        
+        // Setup folder contents adapter
+        folderContentsAdapter = FolderContentsAdapter { item ->
+            onShareItemClicked(item)
+        }
+        folderContentsRecyclerView.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = folderContentsAdapter
+        }
+        
+        // TODO: Get virtual node from application
+        // virtualNode = (requireActivity().application as OrbotApp).virtualNode
+    }
     
-    // ...existing code...
     
     private fun startPeriodicUpdates() {
         lifecycleScope.launch {
