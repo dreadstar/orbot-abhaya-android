@@ -24,6 +24,9 @@ import org.torproject.android.ui.mesh.MeshListeners
 import org.torproject.android.ui.mesh.MeshStorageUI
 import org.torproject.android.ui.mesh.MeshServiceLayerUI
 import org.torproject.android.ui.mesh.MeshUtils
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
 
 /**
  * Enhanced mesh networking fragment based on integration guidance.
@@ -38,6 +41,11 @@ class EnhancedMeshFragment : Fragment(), org.torproject.android.GatewayCapabilit
     private var isNetworkActive = false
     private var isUpdatingSliderProgrammatically = false
     private val timeFormatter = MeshUtils.timeFormatter
+    // --- Proxy connection info ---
+    private var torProxyHost: String? = null
+    private var torProxyPort: Int? = null
+    private var isTorConnected: Boolean = false
+    private lateinit var meshrabiyaApi: MeshrabiyaApi
 
     // Activity result launcher for folder selection
     private val folderPickerLauncher = registerForActivityResult(
@@ -58,11 +66,41 @@ class EnhancedMeshFragment : Fragment(), org.torproject.android.GatewayCapabilit
         return inflater.inflate(R.layout.fragment_mesh_enhanced, container, false)
     }
 
+    private val orbotStatusReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent == null) return
+            if (intent.action == "org.torproject.android.service.ACTION_STATUS") {
+                val status = intent.getStringExtra("org.torproject.android.service.EXTRA_STATUS")
+                val socksHost = intent.getStringExtra("org.torproject.android.service.EXTRA_SOCKS_PROXY_HOST") ?: "127.0.0.1"
+                val socksPort = intent.getIntExtra("org.torproject.android.service.EXTRA_SOCKS_PROXY_PORT", -1)
+                val isConnected = status == "ON"
+
+                // Store connection info
+                torProxyHost = socksHost
+                torProxyPort = if (socksPort > 0) socksPort else null
+                isTorConnected = isConnected
+
+                // Pass info to Meshrabiya API
+                if (isTorConnected && torProxyHost != null && torProxyPort != null) {
+                    meshrabiyaApi.setProxy(torProxyHost!!, torProxyPort!!)
+                    meshrabiyaApi.setProxyActive(true)
+                } else {
+                    meshrabiyaApi.setProxyActive(false)
+                }
+
+                Log.d("EnhancedMeshFragment", "Orbot status: $status, SOCKS=$torProxyHost:$torProxyPort")
+            }
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         MeshUIBindings.bindViews(view)
         MeshManagers.setup(requireContext(), MeshUIBindings.folderContentsAdapter, MeshUIBindings.folderContentsRecyclerView)
-        val meshrabiyaApi = MeshrabiyaApiImpl.getInstance(requireContext().applicationContext)
+        meshrabiyaApi = MeshrabiyaApiImpl.getInstance(requireContext().applicationContext)
+        // Register Orbot status receiver
+        val filter = IntentFilter("org.torproject.android.service.ACTION_STATUS")
+        requireContext().registerReceiver(orbotStatusReceiver, filter)
         MeshStorageUI.initializeStorageUI()
         initializeStorageDropFolderUI()
         MeshServiceLayerUI.initializeDistributedServiceLayerUI()
@@ -86,6 +124,14 @@ class EnhancedMeshFragment : Fragment(), org.torproject.android.GatewayCapabilit
 
         startPeriodicUpdates()
         updateUI()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        try {
+            requireContext().unregisterReceiver(orbotStatusReceiver)
+        } catch (_: Exception) { }
+        // ...existing code...
     }
     
     private fun initializeViews(view: View) {

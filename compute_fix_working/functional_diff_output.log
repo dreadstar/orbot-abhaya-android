@@ -1,0 +1,667 @@
+==== Functional Diff: AndroidVirtualNode_orig.kt vs ../Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/AndroidVirtualNode.kt ====
+\n--- Original Functions Summary ---
+Function: updateBluetoothState
+  No summary found.
+---
+Function: close
+  No summary found.
+---
+Function: connectAsStation
+  No summary found.
+---
+Function: disconnectWifiStation
+  No summary found.
+---
+Function: lookupStoredBssid
+  No summary found.
+---
+Function: storeBssid
+  No summary found.
+---
+\n--- Refactored Functions Summary ---
+Function: getNodeId
+  No summary found.
+---
+Function: getHopCountToNode
+  No summary found.
+---
+Function: sendToNode
+  No summary found.
+---
+Function: updateBluetoothState
+  No summary found.
+---
+Function: setMeshGossipService
+  No summary found.
+---
+Function: setMeshEcosystemListener
+  No summary found.
+---
+Function: setDistributedStorageManager
+  No summary found.
+---
+Function: setIntelligentDistributedComputeService
+  No summary found.
+---
+Function: getMeshGossipService
+  No summary found.
+---
+Function: getMeshEcosystemListener
+  No summary found.
+---
+Function: getDistributedStorageManager
+  No summary found.
+---
+Function: getIntelligentDistributedComputeService
+  No summary found.
+---
+Function: getCoreGossipBroadcastService
+  No summary found.
+---
+Function: initializeMeshEcosystemListener
+  No summary found.
+---
+Function: announceService
+  No summary found.
+---
+Function: requestServiceBundle
+  No summary found.
+---
+Function: buildServiceBundleRequest
+  No summary found.
+---
+Function: receiveServiceBundleResponse
+  No summary found.
+---
+Function: updateState
+  No summary found.
+---
+Function: close
+  No summary found.
+---
+Function: connectAsStation
+  No summary found.
+---
+Function: disconnectWifiStation
+  No summary found.
+---
+Function: lookupStoredBssid
+  No summary found.
+---
+Function: storeBssid
+  No summary found.
+---
+Function: getCurrentFitnessScore
+  No summary found.
+---
+Function: getCurrentNodeRole
+  No summary found.
+---
+Function: updateWifiState
+  No summary found.
+---
+Function: initializeMeshTrafficRouter
+  No summary found.
+---
+Function: handleGatewayTraffic
+  No summary found.
+---
+Function: isInternetDestination
+  No summary found.
+---
+Function: routeViaGateway
+  No summary found.
+---
+Function: getMeshTrafficRouter
+  No summary found.
+---
+Function: isInternetDestination
+  No summary found.
+---
+Function: isInternetDestination
+  No summary found.
+---
+Function: safeLog
+  No summary found.
+---
+Function: addGossipListener
+  No summary found.
+---
+Function: onGossipMessageReceived
+  No summary found.
+---
+Function: createMeshGossipService
+  No summary found.
+---
+\n--- Function Body Diff ---
+0a1,46
+>         fun getInstance(
+>                 instance ?: AndroidVirtualNode(
+>                     emergentRoleManagerParam,
+>                     context,
+>                     port,
+>                     json,
+>                     logger,
+>                     jetpackDataStore,
+>                     address,
+>                     config,
+>                     scheduledExecutorService,
+>                     originatingMessageManager
+>             }
+>         }
+> 
+>         fun resetInstance() {
+>             instance = null
+>         }
+>     }
+>     fun getNodeId(): Int = addressAsInt
+>     fun getHopCountToNode(nodeAddress: Int): Int? {
+>         val originatorMsg = originatingMessageManager.getOriginatorMessages()[nodeAddress]
+>         return originatorMsg?.hopCount?.toInt()
+>     }
+>     fun sendToNode(nodeAddress: Int, data: ByteArray) {
+>         val header = VirtualPacketHeader(
+>             toAddr = nodeAddress,
+>             toPort = 0,
+>             fromAddr = addressAsInt,
+>             fromPort = 0,
+>             lastHopAddr = addressAsInt,
+>             hopCount = 1,
+>             maxHops = config.maxHops.toByte(),
+>             payloadSize = data.size
+>         )
+>             header.toBytes(this, 0)
+>             System.arraycopy(data, 0, this, VirtualPacketHeader.HEADER_SIZE, data.size)
+>         }
+>         val packet = VirtualPacket.fromHeaderAndPayloadData(
+>             header = header,
+>             data = packetBuffer,
+>             payloadOffset = VirtualPacketHeader.HEADER_SIZE,
+>             headerAlreadyInData = true
+>         )
+>         route(packet, null, null)
+>     }
+3,4c49,56
+<                 MeshrabiyaBluetoothState(deviceName = deviceName)
+<             logger(Log.WARN, "Could not get device name", e)
+---
+>                 _bluetoothState.value = MeshrabiyaBluetoothState(deviceName = deviceName)
+>             }
+>             safeLog(
+>                 level = LogLevel.WARN,
+>                 tag = "AndroidVirtualNode",
+>                 message = "Could not get device name",
+>                 throwable = e
+>             )
+8d59
+< 
+11,17c62,63
+<                         updateBluetoothState()
+<                     }
+< 
+<                         _bluetoothState.value = MeshrabiyaBluetoothState(
+<                             deviceName = null
+<                         )
+<                     }
+---
+>                     BluetoothAdapter.STATE_ON -> updateBluetoothState()
+>                     BluetoothAdapter.STATE_OFF -> _bluetoothState.value = MeshrabiyaBluetoothState(deviceName = null)
+24a71,80
+>     val emergentRoleManager: EmergentRoleManager = emergentRoleManagerParam ?: EmergentRoleManager.getInstance(
+>         context = context,
+>         virtualNode = this,
+>         meshRoleManager = MeshRoleManager(this, context)
+>     )
+>     private var meshTrafficRouter: Any? = null
+> 
+>     private var currentWifiState: MeshrabiyaWifiState = MeshrabiyaWifiState()
+>     private var currentBluetoothState: MeshrabiyaBluetoothState = MeshrabiyaBluetoothState()
+>     private val _nodeState = MutableStateFlow(LocalNodeState())
+25a82,84
+>     fun setMeshGossipService(service: MeshGossipService) {
+>         meshGossipService = service
+>     }
+27,28c86,121
+<         appContext.registerReceiver(
+<             bluetoothStateBroadcastReceiver, IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
+---
+>     fun setMeshEcosystemListener(listener: MeshEcosystemListener) {
+>         meshEcosystemListener = listener
+>     }
+> 
+>     fun setDistributedStorageManager(manager: DistributedStorageManager) {
+>         distributedStorageManager = manager
+>     }
+> 
+>     fun setIntelligentDistributedComputeService(service: IntelligentDistributedComputeService) {
+>         intelligentDistributedComputeService = service
+>     }
+> 
+>     fun getMeshGossipService(): MeshGossipService? = meshGossipService
+>     fun getMeshGossipService(): MeshGossipService? = meshGossipService
+>     fun getMeshEcosystemListener(): MeshEcosystemListener? = meshEcosystemListener
+>     fun getMeshEcosystemListener(): MeshEcosystemListener? = meshEcosystemListener
+>     fun getDistributedStorageManager(): DistributedStorageManager? = distributedStorageManager
+>     fun getDistributedStorageManager(): DistributedStorageManager? = distributedStorageManager
+>     fun getIntelligentDistributedComputeService(): IntelligentDistributedComputeService? = intelligentDistributedComputeService
+>     fun getIntelligentDistributedComputeService(): IntelligentDistributedComputeService? = intelligentDistributedComputeService
+>     fun getCoreGossipBroadcastService(): CoreGossipBroadcastService = coreGossipBroadcastService
+>     fun getCoreGossipBroadcastService(): CoreGossipBroadcastService = coreGossipBroadcastService
+> 
+>     fun initializeMeshEcosystemListener(
+>     fun initializeMeshEcosystemListener(
+>         meshNetworkInterface: MeshNetworkInterface,
+>         meshGossipService: MeshGossipService,
+>         connectionPoolSize: Int = MeshrabiyaConstants.getConnectionPoolSize(),
+>         distributedStorageManager: DistributedStorageManager,
+>         computeService: IntelligentDistributedComputeService,
+>         coreGossipBroadcastService: CoreGossipBroadcastService = this.coreGossipBroadcastService
+>         meshEcosystemListener = MeshEcosystemListener(
+>             meshNetworkInterface,
+>             meshGossipService,
+>             coreGossipBroadcastService,
+>             connectionPoolSize
+29a123,125
+>         meshEcosystemListener?.registerStorageManager(distributedStorageManager)
+>         meshEcosystemListener?.registerComputeService(computeService)
+>     }
+31c127,136
+<         receiverRegistered.set(true)
+---
+>     fun announceService(serviceAnnouncement: ServiceAnnouncement, signedBundle: ByteArray) {
+>         val announcementBytes = Json.encodeToString(serviceAnnouncement).toByteArray()
+>         val payload = announcementBytes + signedBundle
+>             sendToNode(neighbor, payload)
+>         }
+>         safeLog(
+>             level = LogLevel.INFO,
+>             tag = "AndroidVirtualNode",
+>         )
+>     }
+32a138,191
+>     fun requestServiceBundle(serviceId: String, requesterOnionAddress: String): ByteArray? {
+>             val requestPayload = buildServiceBundleRequest(serviceId, requesterOnionAddress)
+>             sendToNode(nodeAddr, requestPayload)
+>             val response = receiveServiceBundleResponse(nodeAddr, serviceId)
+>                 safeLog(
+>                     level = LogLevel.INFO,
+>                     tag = "AndroidVirtualNode",
+>                     message = "Service bundle for $serviceId received from $nodeAddr"
+>                 )
+>                 return response
+>             }
+>         }
+>         safeLog(
+>             level = LogLevel.WARN,
+>             tag = "AndroidVirtualNode",
+>             message = "Service bundle for $serviceId not found in mesh"
+>         )
+>         return null
+>     }
+> 
+>     private fun buildServiceBundleRequest(serviceId: String, onionAddress: String): ByteArray {
+>         val requestString = "REQUEST_BUNDLE:$serviceId:$onionAddress"
+>         return requestString.toByteArray()
+>     }
+> 
+>     private fun receiveServiceBundleResponse(nodeAddr: Int, serviceId: String): ByteArray? {
+>         return null
+>     }
+> 
+>     override val originatingMessageManager = OriginatingMessageManager(
+>         localNodeInetAddr = address,
+>         logger = logger,
+>         scheduledExecutor = scheduledExecutorService,
+>     )
+> 
+>     private val roleUpdateFuture: ScheduledFuture<*> = scheduledExecutorService.scheduleAtFixedRate(
+>                 emergentRoleManager.updateRoles()
+>                 safeLog(
+>                     level = LogLevel.WARN,
+>                     tag = "AndroidVirtualNode",
+>                     message = "Failed to update roles",
+>                     throwable = e
+>                 )
+>             }
+>         },
+>         30_000L,
+>         60_000L,
+>         java.util.concurrent.TimeUnit.MILLISECONDS
+>     )
+> 
+>         context.registerReceiver(
+>             bluetoothStateBroadcastReceiver, IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
+>         )
+>         receiverRegistered.set(true)
+33a193,198
+>                 currentWifiState = wifiState
+>                 currentBluetoothState = bluetoothState
+>                 val connectUri = generateConnectLink(
+>                     hotspot = wifiState.connectConfig,
+>                     bluetoothConfig = bluetoothState
+>                 ).uri
+35,40c200,202
+<                         wifiState = it.first,
+<                         bluetoothState = it.second,
+<                         connectUri = generateConnectLink(
+<                             hotspot = it.first.connectConfig,
+<                             bluetoothConfig = it.second,
+<                         ).uri
+---
+>                         wifiState = wifiState,
+>                         bluetoothState = bluetoothState,
+>                         connectUri = connectUri
+46a209,220
+>     private fun updateState(
+>     private fun updateState(
+>         wifiState: MeshrabiyaWifiState,
+>         bluetoothState: MeshrabiyaBluetoothState,
+>         connectUri: String
+>             prev.copy(
+>                 wifiState = wifiState,
+>                 bluetoothState = bluetoothState,
+>                 connectUri = connectUri
+>             )
+>         }
+>     }
+50,51c224,225
+< 
+<             appContext.unregisterReceiver(bluetoothStateBroadcastReceiver)
+---
+>         roleUpdateFuture.cancel(false)
+>             context.unregisterReceiver(bluetoothStateBroadcastReceiver)
+55,57c229
+<     suspend fun connectAsStation(
+<     suspend fun connectAsStation(
+<         config: WifiConnectConfig,
+---
+>     suspend fun connectAsStation(config: WifiConnectConfig) {
+74c246
+<     suspend fun lookupStoredBssid(ssid: String) : String? {
+---
+>     suspend fun lookupStoredBssid(ssid: String): String? {
+78,82d249
+<     /**
+<      * Store the BSSID for the given SSID. This ensures that when we make subsequent connection
+<      * attempts we don't need to use the companiondevicemanager again. The BSSID must be provided
+<      * when reconnecting on Android 10+ if we want to avoid a confirmation dialog.
+<      */
+84c251,255
+<         logger(Log.DEBUG, "$logPrefix: storeBssid: Store BSSID for $ssid : $bssid")
+---
+>         safeLog(
+>             level = LogLevel.DEBUG,
+>             tag = "AndroidVirtualNode",
+>             message = "storeBssid: Store BSSID for $ssid : $bssid"
+>         )
+87c258,383
+<             logger(Log.WARN, "$logPrefix : storeBssid: BSSID for $ssid is NULL, can't save to avoid prompts on reconnect")
+---
+>             safeLog(
+>                 level = LogLevel.WARN,
+>                 tag = "AndroidVirtualNode",
+>                 message = "storeBssid: BSSID for $ssid is NULL, can't save to avoid prompts on reconnect"
+>             )
+>         }
+>     }
+> 
+>     override fun getCurrentFitnessScore(): Int {
+>         return (emergentRoleManager.calculateFitnessScore() * 100).toInt()
+>     }
+> 
+>     override fun getCurrentNodeRole(): Byte {
+>         val roles = emergentRoleManager.getCurrentMeshRoles()
+>         return if (roles.isNotEmpty()) roles.first().ordinal.toByte() else MeshRole.MESH_PARTICIPANT.ordinal.toByte()
+>     }
+> 
+>     fun updateWifiState(newState: MeshrabiyaWifiState) {
+>             prev.copy(wifiState = newState)
+>         }
+>     }
+> 
+>     fun initializeMeshTrafficRouter(orbotService: Any?, gatewayCapabilities: Any?) {
+>         safeLog(
+>             level = LogLevel.INFO,
+>             tag = "AndroidVirtualNode",
+>             message = "MeshTrafficRouter initialization available"
+>         )
+>     }
+> 
+>     fun handleGatewayTraffic(packet: VirtualPacket): Boolean {
+>         val currentRoles = emergentRoleManager.getCurrentMeshRoles()
+>             it == MeshRole.CLEARNET_GATEWAY || it == MeshRole.TOR_GATEWAY
+>         }
+>             safeLog(
+>                 level = LogLevel.DEBUG,
+>                 tag = "AndroidVirtualNode",
+>             )
+>             return routeViaGateway(packet)
+>         }
+>         return false
+>     }
+> 
+>     private fun isInternetDestination(packet: VirtualPacket): Boolean {
+>         return isInternetDestination(packet.header.toAddr)
+>     }
+> 
+>     private fun routeViaGateway(packet: VirtualPacket): Boolean {
+>         val startTime = System.currentTimeMillis()
+>         val packetSize = packet.data.size
+>             safeLog(
+>                 level = LogLevel.DETAILED,
+>                 tag = "AndroidVNode",
+>                 message = "Starting gateway routing",
+>                 details = mapOf(
+>                     "destination" to packet.header.toAddr.toString(),
+>                     "packetSize" to packetSize.toString(),
+>                     "isInternetDestination" to isInternetDestination(packet).toString()
+>                 )
+>             )
+>                 safeLog(
+>                     level = LogLevel.DETAILED,
+>                     tag = "AndroidVNode",
+>                     message = "Destination is not internet-bound, skipping gateway routing"
+>                 )
+>                 return false
+>             }
+>             val routerStartTime = System.currentTimeMillis()
+>             val meshTrafficRouter = getMeshTrafficRouter()
+>             val routerAcquisitionTime = System.currentTimeMillis() - routerStartTime
+>                 safeLog(
+>                     level = LogLevel.DETAILED,
+>                     tag = "AndroidVNode",
+>                     message = "MeshTrafficRouter acquired",
+>                     details = mapOf(
+>                         "acquisitionTimeMs" to routerAcquisitionTime.toString(),
+>                         "routerClass" to meshTrafficRouter.javaClass.simpleName
+>                     )
+>                 )
+>                 val routingStartTime = System.currentTimeMillis()
+>                 val routeMethod = meshTrafficRouter.javaClass.getMethod("routePacket", VirtualPacket::class.java)
+>                 routeMethod.invoke(meshTrafficRouter, packet)
+>                 val routingTime = System.currentTimeMillis() - routingStartTime
+>                 val totalTime = System.currentTimeMillis() - startTime
+>                 safeLog(
+>                     level = LogLevel.INFO,
+>                     tag = "AndroidVNode",
+>                     message = "Successfully routed packet via gateway",
+>                     details = mapOf(
+>                         "destination" to packet.header.toAddr.toString(),
+>                         "packetSize" to packetSize.toString(),
+>                         "routingTimeMs" to routingTime.toString(),
+>                         "totalTimeMs" to totalTime.toString(),
+>                         "throughputBps" to (packetSize * 1000 / maxOf(totalTime, 1)).toString()
+>                     )
+>                 )
+>                 return true
+>                 val totalTime = System.currentTimeMillis() - startTime
+>                 safeLog(
+>                     level = LogLevel.DETAILED,
+>                     tag = "AndroidVNode",
+>                     message = "MeshTrafficRouter not available, using fallback routing",
+>                     details = mapOf(
+>                         "destination" to packet.header.toAddr.toString(),
+>                         "packetSize" to packetSize.toString(),
+>                         "routerAcquisitionTimeMs" to routerAcquisitionTime.toString(),
+>                         "totalTimeMs" to totalTime.toString(),
+>                         "fallbackReason" to "RouterNotAvailable"
+>                     )
+>                 )
+>                 return false
+>             }
+>             val totalTime = System.currentTimeMillis() - startTime
+>             safeLog(
+>                 level = LogLevel.ERROR,
+>                 tag = "AndroidVNode",
+>                 details = mapOf(
+>                     "destination" to packet.header.toAddr.toString(),
+>                     "packetSize" to packetSize.toString(),
+>                     "totalTimeMs" to totalTime.toString(),
+>                     "errorType" to e.javaClass.simpleName,
+>                     "errorMessage" to (e.message ?: "Unknown error")
+>                 ),
+>                 throwable = e
+>             )
+>             return false
+90a387,527
+>     private fun getMeshTrafficRouter(): Any? {
+>         val startTime = System.currentTimeMillis()
+>             val possibleClasses = listOf(
+>                 "org.torproject.android.service.mesh.MeshTrafficRouter",
+>                 "com.ustadmobile.orbotmeshrabiyaintegration.interfaces.MeshTrafficRouter",
+>                 "com.ustadmobile.meshrabiya.routing.MeshTrafficRouter"
+>             )
+>                     Class.forName(className)
+>                     continue
+>                 }
+>                     val instanceMethod = routerClass.getMethod("getInstance")
+>                     val instance = instanceMethod.invoke(null)
+>                         val endTime = System.currentTimeMillis()
+>                         safeLog(
+>                             level = LogLevel.DETAILED,
+>                             tag = "AndroidVNode",
+>                             message = "MeshTrafficRouter acquired via reflection",
+>                             details = mapOf(
+>                                 "className" to className,
+>                                 "acquisitionTimeMs" to (endTime - startTime).toString(),
+>                                 "method" to "getInstance"
+>                             )
+>                         )
+>                         return instance
+>                     }
+>                         val instanceField = routerClass.getDeclaredField("INSTANCE")
+>                         instanceField.isAccessible = true
+>                         val instance = instanceField.get(null)
+>                             val endTime = System.currentTimeMillis()
+>                             safeLog(
+>                                 level = LogLevel.DETAILED,
+>                                 tag = "AndroidVNode",
+>                                 message = "MeshTrafficRouter acquired via field access",
+>                                 details = mapOf(
+>                                     "className" to className,
+>                                     "acquisitionTimeMs" to (endTime - startTime).toString(),
+>                                     "method" to "fieldAccess"
+>                                 )
+>                             )
+>                             return instance
+>                         }
+>                         safeLog(
+>                             level = LogLevel.DETAILED,
+>                             tag = "AndroidVNode",
+>                         )
+>                     }
+>                 }
+>             }
+>             val endTime = System.currentTimeMillis()
+>             safeLog(
+>                 level = LogLevel.DETAILED,
+>                 tag = "AndroidVNode",
+>                 message = "MeshTrafficRouter not found in any expected location",
+>                 details = mapOf(
+>                     "searchTimeMs" to (endTime - startTime).toString(),
+>                     "classesSearched" to possibleClasses.size.toString(),
+>                     "searchedClasses" to possibleClasses.joinToString(",")
+>                 )
+>             )
+>             null
+>             val endTime = System.currentTimeMillis()
+>             safeLog(
+>                 level = LogLevel.WARN,
+>                 tag = "AndroidVNode",
+>                 details = mapOf(
+>                     "searchTimeMs" to (endTime - startTime).toString(),
+>                     "errorType" to e.javaClass.simpleName
+>                 ),
+>                 throwable = e
+>             )
+>             null
+>         }
+>     }
+> 
+>     private fun isInternetDestination(address: InetAddress): Boolean {
+>                 address.isLoopbackAddress -> false
+>                 address.isLinkLocalAddress -> false
+>                 address.isSiteLocalAddress -> false
+>                 address.isMulticastAddress -> false
+>                     val addrBytes = address.address
+>                     !(addrBytes[0] == 10.toByte() && addrBytes[1] == 255.toByte())
+>                 }
+>             }
+>             isInternet
+>             false
+>         }
+>     }
+> 
+>     private fun isInternetDestination(addr: Int): Boolean {
+>         val addrBytes = ByteArray(4)
+>         addrBytes[0] = (addr shr 24).toByte()
+>         addrBytes[1] = (addr shr 16).toByte()
+>         return !(addrBytes[0] == 10.toByte() && addrBytes[1] == 255.toByte())
+>     }
+> 
+>     private fun safeLog(
+>     private fun safeLog(
+>         level: LogLevel,
+>         tag: String,
+>         message: String,
+>         details: Map<String, String>? = null,
+>         throwable: Throwable? = null
+>         val fullMsg = if (detailMsg.isNotEmpty()) "$message | $detailMsg" else message
+>             logger.log(level.ordinal, "$tag: $fullMsg", throwable)
+>     }
+> 
+>     private val gossipListeners = mutableListOf<(Int, ByteArray) -> Unit>()
+> 
+>     fun addGossipListener(listener: (senderId: Int, messageBytes: ByteArray) -> Unit) {
+>         gossipListeners.add(listener)
+>     }
+> 
+>     fun onGossipMessageReceived(senderId: Int, messageBytes: ByteArray) {
+>             listener(senderId, messageBytes)
+>         }
+> 
+>         // Attempt to deserialize and determine messageType (replace with your actual logic)
+>             deserializeMessage(messageBytes) // You must implement this method or use your existing one
+>             null to null
+>         }
+> 
+>         // List of broadcast message types to handle
+>         val broadcastTypes = setOf("ComputeTaskRequest", "StorageNodeRequest", "OriginatorAnnouncement")
+>             coreGossipBroadcastService.onReceiveBroadcast(messageBytes, messageType, messageObj)
+>         }
+>     }
+> 
+>     fun createMeshGossipService(
+>     fun createMeshGossipService(
+>         virtualNode: VirtualNode,
+>         emergentRoleManager: EmergentRoleManager,
+>         scheduledExecutorService: ScheduledExecutorService
+>         return MeshGossipService.getInstance(
+>             virtualNode = virtualNode,
+>             meshRoleManager = emergentRoleManager.meshRoleManager,
+>             context = context,
+>             scheduledExecutorService = scheduledExecutorService,
+>             originatingMessageManager = originatingMessageManager,
+>             coreGossipBroadcastService = coreGossipBroadcastService
+>         )
+>     }

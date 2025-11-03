@@ -1,0 +1,57 @@
+==== Structural Diff: AndroidVirtualNode_orig.kt vs ../Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/AndroidVirtualNode.kt ====
+\n--- Original Structure ---
+class AndroidVirtualNode(
+val appContext: Context,
+fun storeBssid(ssid: String, bssid: String?) {
+\n--- Refactored Structure ---
+class AndroidVirtualNode(
+fun getNodeId(): Int = addressAsInt
+fun getHopCountToNode(nodeAddress: Int): Int? {
+fun sendToNode(nodeAddress: Int, data: ByteArray) {
+val emergentRoleManager: EmergentRoleManager = emergentRoleManagerParam ?: EmergentRoleManager.getInstance(
+fun setMeshGossipService(service: MeshGossipService) {
+fun setMeshEcosystemListener(listener: MeshEcosystemListener) {
+fun setDistributedStorageManager(manager: DistributedStorageManager) {
+fun setIntelligentDistributedComputeService(service: IntelligentDistributedComputeService) {
+fun getMeshGossipService(): MeshGossipService? = meshGossipService
+fun getMeshEcosystemListener(): MeshEcosystemListener? = meshEcosystemListener
+fun getDistributedStorageManager(): DistributedStorageManager? = distributedStorageManager
+fun getIntelligentDistributedComputeService(): IntelligentDistributedComputeService? = intelligentDistributedComputeService
+fun getCoreGossipBroadcastService(): CoreGossipBroadcastService = coreGossipBroadcastService
+fun initializeMeshEcosystemListener(
+fun announceService(serviceAnnouncement: ServiceAnnouncement, signedBundle: ByteArray) {
+fun requestServiceBundle(serviceId: String, requesterOnionAddress: String): ByteArray? {
+fun storeBssid(ssid: String, bssid: String?) {
+fun updateWifiState(newState: MeshrabiyaWifiState) {
+fun initializeMeshTrafficRouter(orbotService: Any?, gatewayCapabilities: Any?) {
+fun handleGatewayTraffic(packet: VirtualPacket): Boolean {
+fun addGossipListener(listener: (senderId: Int, messageBytes: ByteArray) -> Unit) {
+fun onGossipMessageReceived(senderId: Int, messageBytes: ByteArray) {
+fun createMeshGossipService(
+\n--- Diff ---
+2c2,17
+< val appContext: Context,
+---
+> fun getNodeId(): Int = addressAsInt
+> fun getHopCountToNode(nodeAddress: Int): Int? {
+> fun sendToNode(nodeAddress: Int, data: ByteArray) {
+> val emergentRoleManager: EmergentRoleManager = emergentRoleManagerParam ?: EmergentRoleManager.getInstance(
+> fun setMeshGossipService(service: MeshGossipService) {
+> fun setMeshEcosystemListener(listener: MeshEcosystemListener) {
+> fun setDistributedStorageManager(manager: DistributedStorageManager) {
+> fun setIntelligentDistributedComputeService(service: IntelligentDistributedComputeService) {
+> fun getMeshGossipService(): MeshGossipService? = meshGossipService
+> fun getMeshEcosystemListener(): MeshEcosystemListener? = meshEcosystemListener
+> fun getDistributedStorageManager(): DistributedStorageManager? = distributedStorageManager
+> fun getIntelligentDistributedComputeService(): IntelligentDistributedComputeService? = intelligentDistributedComputeService
+> fun getCoreGossipBroadcastService(): CoreGossipBroadcastService = coreGossipBroadcastService
+> fun initializeMeshEcosystemListener(
+> fun announceService(serviceAnnouncement: ServiceAnnouncement, signedBundle: ByteArray) {
+> fun requestServiceBundle(serviceId: String, requesterOnionAddress: String): ByteArray? {
+3a19,24
+> fun updateWifiState(newState: MeshrabiyaWifiState) {
+> fun initializeMeshTrafficRouter(orbotService: Any?, gatewayCapabilities: Any?) {
+> fun handleGatewayTraffic(packet: VirtualPacket): Boolean {
+> fun addGossipListener(listener: (senderId: Int, messageBytes: ByteArray) -> Unit) {
+> fun onGossipMessageReceived(senderId: Int, messageBytes: ByteArray) {
+> fun createMeshGossipService(
