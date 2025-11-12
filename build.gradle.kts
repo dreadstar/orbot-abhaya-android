@@ -607,7 +607,7 @@ tasks.register("reportApks") {
     val variantProp = findProperty("apkVariant") as String?
     val apkVariant = variantProp ?: "fullpermDebug"
     val modulesProp = findProperty("apkModules") as String?
-    val modules = modulesProp?.split(",")?.map { it.trim() } ?: listOf(":app", ":abhaya-sensor-android:app")
+    val modules = modulesProp?.split(",")?.map { it.trim() } ?: listOf(":app")
 
     doLast {
         runApkReport(apkVariant, modules)
@@ -620,7 +620,7 @@ gradle.buildFinished {
     val variantProp = findProperty("apkVariant") as String?
     val apkVariant = variantProp ?: "fullpermDebug"
     val modulesProp = findProperty("apkModules") as String?
-    val modules = modulesProp?.split(",")?.map { it.trim() } ?: listOf(":app", ":abhaya-sensor-android:app")
+    val modules = modulesProp?.split(",")?.map { it.trim() } ?: listOf(":app")
     try {
         runApkReport(apkVariant, modules)
     } catch (t: Throwable) {

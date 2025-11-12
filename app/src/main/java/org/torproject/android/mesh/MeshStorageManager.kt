@@ -5,9 +5,10 @@ import android.os.Handler
 import android.os.Looper
 import kotlinx.coroutines.*
 import java.nio.file.*
-import com.ustadmobile.meshrabiya.service.MeshGossipService
+import com.ustadmobile.meshrabiya.api.MeshrabiyaApi
+import com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl
+import com.ustadmobile.meshrabiya.service.gossip.MeshGossipService
 import com.ustadmobile.meshrabiya.vnet.VirtualNode
-import com.ustadmobile.meshrabiya.vnet.MeshRoleManager
 import com.ustadmobile.meshrabiya.storage.DataStore
 import com.ustadmobile.meshrabiya.vnet.StorageNodeRequest
 import com.ustadmobile.meshrabiya.vnet.StorageNodeResponse
@@ -22,26 +23,33 @@ import java.security.MessageDigest
 /**
  * Manages drop folder monitoring, storage node discovery, chunked file transfer, retrieval, and replication.
  * Integrates with UI via MeshStorageUiCallback.
+ * 
+ * TODO: This class needs comprehensive refactoring to use MeshrabiyaApi high-level methods
+ * (storeFile, retrieveFile, deleteFile) instead of manually managing chunks and broadcasts.
+ * Currently uses internal mesh services which violates separation of concerns.
+ * NOTE: Appears to be unused in active codebase - only referenced in MeshFragment.md documentation.
+ * 
+ * TEMPORARY: Using MeshrabiyaApi for initialization, but still accessing internal MeshGossipService
+ * for backward compatibility until comprehensive refactoring is complete.
  */
 class MeshStorageManager private constructor(private val context: Context) {
 
     private var dropFolderWatcherJob: Job? = null
     private var selectedDropFolder: Path? = null
 
-    // Setup all required parameters for MeshGossipService
-    private val virtualNode: VirtualNode = VirtualNode.getInstance(context)
-    private val meshRoleManager: MeshRoleManager = MeshRoleManager.getInstance(context)
+    // Get MeshrabiyaApi for mesh operations (proper abstraction layer)
+    private val meshrabiyaApi: MeshrabiyaApi = MeshrabiyaApiImpl.getInstance().apply {
+        initMesh(context)
+    }
     private val dataStore: DataStore = DataStore.getInstance(context)
-    private val scheduledExecutorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
-
-    private val meshGossipService: MeshGossipService = MeshGossipService.getInstance(
-        
-        virtualNode,
-        meshRoleManager,
-        context,
-        dataStore,
-        scheduledExecutorService
-    )
+    
+    // TEMPORARY: Access internal MeshGossipService for backward compatibility
+    // TODO: Replace all meshGossipService usage with MeshrabiyaApi high-level methods
+    private val meshGossipService: MeshGossipService by lazy {
+        // Access VirtualNode to get initialized MeshGossipService
+        val virtualNode = VirtualNode.getInstance(context)
+        MeshGossipService.getInstance()
+    }
 
     private val uiHandler = Handler(Looper.getMainLooper())
     private var uiCallback: MeshStorageUiCallback? = null
