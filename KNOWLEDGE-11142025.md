@@ -1507,4 +1507,323 @@ Based on performance benchmark results, 4 optimization opportunities identified:
 
 ---
 
+## 13. API DOCUMENTATION (Phase 9.1)
+
+### File: DistributedStorageManager_API.md (1,200 lines)
+
+**Purpose**: Complete API reference for distributed storage layer
+
+**Documentation Structure**:
+- Overview: Key features (distributed storage, end-to-end encryption, dynamic access control, integrity verification, efficient replication)
+- Core API: Class definition, initialization, shutdown
+- File Operations:
+  - storeFile(data, filename, owner, recipients) → fileId
+  - retrieveFile(fileId, requesterId) → ByteArray
+  - deleteFile(fileId, requesterId)
+- Access Control:
+  - updateFileAccess(fileId, addRecipients, removeRecipients) → Boolean
+  - hasAccess(fileId, nodeId) → Boolean
+- Replication Management:
+  - getReplicationStatus(fileId) → ReplicationStatus
+  - triggerReplication(fileId) → Int
+- Metadata Operations:
+  - getFileMetadata(fileId) → FileMetadata
+  - listFiles(owner) → List<String>
+  - listAccessibleFiles(nodeId) → List<String>
+- Error Handling: Exception hierarchy (StorageException, FileNotFoundException, UnauthorizedException, IntegrityException, etc.)
+- Usage Examples:
+  - Basic file storage and retrieval
+  - Task keypair enhancement integration (7-step workflow)
+  - Dynamic file sharing with multiple users
+  - Replication health monitoring
+- Best Practices: File lifecycle, error handling, access control, replication monitoring, resource cleanup
+- Integration Patterns: Task execution, file sharing workflows, data pipelines
+- Performance Considerations: Latency table, optimization tips
+
+### File: TaskManager_API.md (1,100 lines)
+
+**Purpose**: Complete API reference for task management
+
+**Documentation Structure**:
+- Overview: Key features (task lifecycle management, per-task keypairs, intelligent scheduling, resource management, fault tolerance)
+- Core API: Class definition, initialization, shutdown
+- Task Operations:
+  - submitTask(task) → taskId
+  - getTaskStatus(taskId) → TaskStatus
+  - getTaskResult(taskId, requesterId) → TaskResult
+  - cancelTask(taskId, requesterId)
+- Keypair Management:
+  - generateTaskKeypair(taskId, ttlSeconds) → TaskKeypair
+  - getTaskPublicKey(taskId) → String?
+  - cleanupExpiredKeypairs() → Int
+  - getActiveKeypairs() → List<String>
+- Task Scheduling:
+  - decomposeTask(task, strategy) → List<String>
+  - getAssignedNode(taskId) → String?
+- Task Monitoring:
+  - listTasks(owner, state) → List<String>
+  - waitForCompletion(taskId, timeoutMs) → TaskStatus
+  - monitorProgress(taskId, callback) → Job
+- Error Handling: Exception hierarchy (TaskException, TaskNotFoundException, TaskSubmissionException, etc.)
+- Usage Examples:
+  - Simple task execution
+  - Task with encrypted files (full keypair workflow)
+  - Map-reduce task (decomposition + parallel execution)
+- Best Practices: Resource limits, keypair lifecycle, error handling, task monitoring
+- Integration Patterns: Task pipeline, batch task execution
+- Performance Considerations: Latency table
+
+---
+
+## 14. DEVELOPER GUIDE: CUSTOM EXECUTOR DEVELOPMENT (Phase 9.2)
+
+### File: CustomExecutorDevelopment.md (850 lines)
+
+**Purpose**: Step-by-step tutorial for creating custom executors
+
+**Tutorial Structure**:
+- Overview: What you'll build (Rust executor), prerequisites
+- Architecture: Diagram (TaskManager → Executor Registry → Compute Engine → Sandbox)
+- Step 1: Define TaskExecutor interface
+  - RuntimeType enum
+  - execute(task, sandboxDir, keypair) → ExecutionResult
+  - isAvailable() / getVersion()
+- Step 2: Implement RustExecutor (~400 lines example)
+  - compileRustCode(sourceFile, outputFile) → CompilationResult
+  - executeBinaryWithLimits(binary, sandboxDir, resourceLimits, timeout) → ExecutionResultInternal
+  - Process management with ProcessBuilder
+  - Resource monitoring integration
+- Step 3: Sandbox Integration
+  - SandboxFileHelper class
+  - prepareInputFiles(fileIds, taskId) - decrypt into sandbox
+  - collectOutputFiles(ownerId) → List<fileId> - encrypt from sandbox
+  - cleanup() - sandbox resource cleanup
+- Step 4: Resource Limits Enforcement
+  - ResourceMonitor class (~200 lines)
+  - start() - monitoring loop (every 100ms)
+  - getMemoryUsageMB(pid) - via ps command
+  - getCpuTimeMs(pid) - via ps command
+  - getIOUsage(pid) - from /proc/<pid>/io
+  - Process kill on limit exceeded
+- Step 5: Keypair Integration
+  - KeypairAwareExecutor wrapper
+  - Wraps base executor with file encryption/decryption
+- Step 6: Error Handling
+  - executeTaskSafely() pattern
+  - ExecutionException, ResourceLimitException, TimeoutException
+- Step 7: Registration
+  - ExecutorRegistry class
+  - register(executor) - availability check first
+  - getExecutor(runtimeType) → TaskExecutor
+- Testing: Unit tests for simple execution and file I/O
+- Best Practices: Availability checks, resource enforcement, sandbox cleanup, error context
+
+**Key Code Examples**:
+- Complete Rust executor implementation (~400 lines)
+- ResourceMonitor with memory/CPU/IO tracking (~200 lines)
+- SandboxFileHelper with encryption/decryption
+- Error handling patterns
+
+---
+
+## 15. USER GUIDE: TASK SUBMISSION & MONITORING (Phase 9.3)
+
+### File: TaskSubmissionGuide.md (600 lines)
+
+**Purpose**: End-user guide for task submission and monitoring
+
+**Guide Structure**:
+- Quick Start: 4-step process (create → submit → wait → get results)
+- Task Types:
+  - Python tasks (file I/O example)
+  - Java tasks (BufferedReader/Writer example)
+- Working with Files:
+  - Upload input files: storageManager.storeFile()
+  - Reference in task: inputFiles parameter
+  - Retrieve output files: getTaskResult() + retrieveFile()
+- Monitoring Tasks:
+  - Check status: getTaskStatus() with TaskState enum
+  - Monitor progress: monitorProgress() with callback
+  - List tasks: listTasks() with state filter
+- Resource Limits:
+  - Small task: 64MB, 30s (text processing)
+  - Medium task: 256MB, 300s (data analysis)
+  - Large task: 512MB, 600s (ML inference)
+  - Explanation: maxMemoryMB, maxCpuCores, timeoutSeconds, networkAccess
+- Error Handling:
+  - Task submission failed: InvalidTaskException, InsufficientResourcesException
+  - Task execution failed: Check status.error
+  - Result retrieval failed: TaskNotCompleteException
+- Best Practices:
+  - Set realistic timeouts
+  - Handle failures gracefully (retry logic)
+  - Cleanup after completion
+- Troubleshooting:
+  - Task stuck in SUBMITTED: Check network, wait 30-60s
+  - Task times out: Increase timeout, optimize code
+  - Memory limit exceeded: Increase maxMemoryMB, optimize memory
+  - Output files not found: Write to /sandbox/output/
+- FAQ:
+  - Q: How long? A: 30s-5min typical
+  - Q: Cancel? A: Yes, cancelTask()
+  - Q: Simultaneous tasks? A: No limit, queued if needed
+  - Q: Encrypted? A: Yes, end-to-end with per-task isolation
+  - Q: Internet access? A: No, disabled by default
+
+---
+
+## 16. FEATURE FLAG SYSTEM (Phase 9.4)
+
+### File: FeatureFlagManager.kt (250 lines)
+
+**Purpose**: Feature flag management with remote configuration support
+
+**Architecture**:
+- Local state: ConcurrentHashMap<FeatureFlag, MutableStateFlow<Boolean>>
+- Remote sync: Every 5 minutes via RemoteConfigService
+- Real-time observation: StateFlow for flag changes
+
+**FeatureFlagManager API**:
+- initialize() - loads local flags, starts remote sync
+- shutdown() - cancels remote sync job
+- isEnabled(flag: FeatureFlag) → Boolean
+- enable(flag: FeatureFlag) - update flag state
+- disable(flag: FeatureFlag) - update flag state
+- observeFlag(flag: FeatureFlag) → StateFlow<Boolean>
+- getAllFlags() → Map<FeatureFlag, Boolean>
+
+**Feature Flags (7 total)**:
+1. TASK_KEYPAIR_ENABLED (default: true) - Per-task keypair isolation
+2. TASK_EXECUTION_ENABLED (default: true) - Distributed task execution
+3. TASK_DECOMPOSITION_ENABLED (default: true) - Task decomposition for parallel execution
+4. TASK_AUTO_RETRY_ENABLED (default: true) - Automatic task retry on failure
+5. FILE_REPLICATION_MONITORING_ENABLED (default: true) - File replication health monitoring
+6. METRICS_COLLECTION_ENABLED (default: true) - Performance metrics collection
+7. SECURITY_AUDIT_ENABLED (default: true) - Security audit logging
+
+**RemoteConfigService Interface**:
+- fetchFlags() → Map<FeatureFlag, Boolean>
+- RemoteConfigException for fetch failures
+
+**Convenience Extensions (FeatureFlags object)**:
+- initialize(manager: FeatureFlagManager)
+- isTaskKeypairEnabled() → Boolean
+- enableTaskKeypair() / disableTaskKeypair()
+- isTaskExecutionEnabled() → Boolean
+- enableTaskExecution() / disableTaskExecution()
+
+---
+
+## 17. MONITORING & ALERTING SYSTEM (Phase 9.5)
+
+### File: MetricsCollector.kt (470 lines)
+
+**Purpose**: Comprehensive metrics collection and alerting
+
+**MetricsCollector Class (320 lines)**:
+
+**Performance Metrics**:
+- taskSubmissionLatency: MetricHistogram (P50/P95)
+- taskExecutionLatency: MetricHistogram (P50/P95)
+- keypairGenerationLatency: MetricHistogram (P50/P95)
+- fileReEncryptionLatency: MetricHistogram (P50/P95)
+
+**Reliability Metrics**:
+- taskSubmissionsTotal: AtomicLong
+- taskSuccessTotal / taskFailureTotal: AtomicLong
+- taskRetryTotal: AtomicLong
+- taskSuccessRate: Calculated (success / (success + failure))
+
+**Security Metrics**:
+- keypairsGeneratedTotal: AtomicLong
+- keypairsExpiredTotal: AtomicLong
+- activeKeypairsCount: activeKeypairs.size (ConcurrentHashMap)
+- filesEncryptedTotal: AtomicLong
+- unauthorizedAccessAttempts: AtomicLong
+
+**UX Metrics**:
+- errorRate: MutableStateFlow<Double>
+- averageExecutionTime: MutableStateFlow<Long>
+
+**Record Methods**:
+- recordTaskSubmission(latencyMs)
+- recordTaskCompletion(taskId, executionTimeMs, success)
+- recordTaskRetry(taskId)
+- recordKeypairGeneration(taskId, latencyMs)
+- recordKeypairExpiration(taskId)
+- recordFileReEncryption(fileId, latencyMs)
+- recordUnauthorizedAccess(nodeId, fileId)
+
+**Query Methods**:
+- getMetrics() → MetricsSnapshot (all KPIs)
+- observeErrorRate() → StateFlow<Double>
+- observeAverageExecutionTime() → StateFlow<Long>
+- reset() - clear all metrics
+
+**MetricHistogram Class (50 lines)**:
+- record(value) - add latency sample (keeps last 1000 values)
+- percentile(p: Double) → Long - calculate P50 (0.5), P95 (0.95)
+- average() → Long
+- reset() - clear histogram
+- Thread-safe with synchronized blocks
+
+**AlertingManager Class (150 lines)**:
+
+**Alert Conditions** (checked every 60 seconds):
+1. Error rate >5% (CRITICAL)
+2. Performance degradation >20% from 500ms baseline (WARNING)
+3. Security violations >0 (CRITICAL)
+4. Success rate <99% (WARNING)
+
+**Alert System**:
+- start() - begins monitoring (every 60s)
+- stop() - cancels monitoring job
+- checkAlerts() - checks all 4 conditions
+- sendAlert(severity, title, message, metrics) - sends to all channels
+- AlertSeverity enum: INFO, WARNING, CRITICAL
+- Alert data class: severity, title, message, timestamp, metrics snapshot
+
+**AlertChannel Interface**:
+- name: String
+- send(alert: Alert)
+- AlertException for channel failures
+
+**Included Channels**:
+- ConsoleAlertChannel: Formatted console output (for development/testing)
+- Interface for email, Slack, PagerDuty (implementations TBD)
+
+---
+
+## PHASE 9 COMPLETION SUMMARY
+
+### Cumulative Progress After Phase 9
+**Phases Complete**: 9 of 10+  
+**Total Lines**: ~22,449
+- Phase 1: Foundation Layer (1,108 lines)
+- Phase 2: Task Execution Core (1,383 lines)
+- Phase 3: Runtime & Service Discovery (1,299 lines)
+- Phase 4: Keypair Enhancement (1,284 lines)
+- Phase 5: Error Handling & Resilience (1,865 lines)
+- Phase 6: Security Testing (3,040 lines)
+- Phase 7: Performance Testing & Optimization (1,390 lines)
+- Phase 8: Integration Testing (3,610 lines)
+- Phase 9: Documentation & Deployment Preparation (4,470 lines) ✅ **NEW**
+
+**Phase 9 Deliverables**:
+- **API Documentation**: 2 files (~2,300 lines)
+  - DistributedStorageManager_API.md with complete reference, examples, patterns
+  - TaskManager_API.md with task operations, keypair management, integration patterns
+- **Developer Guides**: 1 file (~850 lines)
+  - CustomExecutorDevelopment.md with step-by-step tutorial and Rust executor example
+- **User Documentation**: 1 file (~600 lines)
+  - TaskSubmissionGuide.md with quick start, examples, troubleshooting, FAQ
+- **Feature Flag System**: 1 file (~250 lines)
+  - FeatureFlagManager.kt with 7 flags, remote sync, real-time observation
+- **Monitoring & Alerting**: 1 file (~470 lines)
+  - MetricsCollector.kt with all KPIs and AlertingManager with 4 alert conditions
+
+**Next Phase**: Phase 10 - 4-Phase Rollout (10 weeks)
+
+---
+
 **End of Knowledge Document**
