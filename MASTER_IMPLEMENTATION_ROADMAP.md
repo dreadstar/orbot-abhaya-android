@@ -174,39 +174,45 @@ This roadmap consolidates:
   - `sendCompletionNotification()` - Notify requester with retry logic
   - `cleanupExecution()` - Release resources
   - **Verification**: Unit tests for each helper
+  - **Completed**: Lines 494-520 in TaskManager.kt
 
 ### 2.2 Resource Monitoring Implementation
-- [ ] **Implement `ensureResourceMonitoringActive()`**
+- [x] **Implement `ensureResourceMonitoringActive()`**
   - **Ref**: `TASK_EXECUTION_LAYER_IMPLEMENTATION_PLAN_PART2.md` Section 4.1
   - Start background monitoring loop (poll every 2s)
   - **Verification**: Loop stability tests
+  - **Completed**: Lines 525-538 in TaskManager.kt
 
-- [ ] **Implement `updateResourceMetrics()`**
+- [x] **Implement `updateResourceMetrics()`**
   - **Ref**: `TASK_EXECUTION_LAYER_IMPLEMENTATION_PLAN_PART2.md` Section 4.2
   - Poll all active containers
   - Accumulate totals (RAM, CPU, disk)
   - Update per-task metrics
   - **Verification**: Metrics accuracy tests
+  - **Completed**: Lines 540-581 in TaskManager.kt
 
-- [ ] **Implement `checkResourceLimitViolations()`**
+- [x] **Implement `checkResourceLimitViolations()`**
   - **Ref**: `TASK_EXECUTION_LAYER_IMPLEMENTATION_PLAN_PART2.md` Section 4.3
   - Check RAM, CPU, disk, execution time limits
   - Trigger termination if violated
   - **Verification**: Limit enforcement tests
+  - **Completed**: Lines 583-619 in TaskManager.kt
 
-- [ ] **Implement `terminateTask()`**
+- [x] **Implement `terminateTask()`**
   - **Ref**: `TASK_EXECUTION_LAYER_IMPLEMENTATION_PLAN_PART2.md` Section 4.4
   - Kill container with SIGKILL
   - Send error result to requester
   - Cleanup execution state
   - **Verification**: Graceful termination tests
+  - **Completed**: Lines 621-668 in TaskManager.kt
 
-- [ ] **Implement public APIs**
+- [x] **Implement public APIs**
   - **Ref**: `TASK_EXECUTION_LAYER_IMPLEMENTATION_PLAN_PART2.md` Section 4.5
   - `getTotalLoad()`, `getTaskMetrics()`, `getPeakMetrics()`
   - **Verification**: API contract tests
+  - **Completed**: Lines 670-718 in TaskManager.kt
 
-- [ ] **Extend `StrangersSafeComputeEngine` with container metrics**
+- [x] **Extend `StrangersSafeComputeEngine` with container metrics**
   - **Ref**: `TASK_EXECUTION_LAYER_IMPLEMENTATION_PLAN_PART2.md` Section 4.6
   - `getContainerMetrics()` - Main polling method
   - `readContainerMemoryUsage()` - Parse /proc/<pid>/status for VmRSS
@@ -214,19 +220,22 @@ This roadmap consolidates:
   - `readContainerDiskUsage()` - Parse /proc/<pid>/io for syscr/syscw
   - `killContainer()` - Runtime.exec("kill -9 <pid>")
   - **Verification**: /proc parsing accuracy tests
+  - **Completed**: Lines 650-780 in StrangersSafeComputeEngine.kt
 
-- [ ] **Extend `MicroContainer` with `memoryHistory`**
+- [x] **Extend `MicroContainer` with `memoryHistory`**
   - **Ref**: `TASK_EXECUTION_LAYER_IMPLEMENTATION_PLAN_PART2.md` Section 4.7
   - Track last 30 memory readings for average/peak calculation
   - **Verification**: History tracking tests
+  - **Completed**: Integrated with peakMetrics tracking
 
 ### 2.3 Executor Implementations
-- [ ] **Create `TaskExecutor` interface**
+- [x] **Create `TaskExecutor` interface**
   - **Ref**: `TASK_EXECUTION_LAYER_IMPLEMENTATION_PLAN_PART2.md` Section 5.1
   - Methods: `execute()`, `validateCodeBundle()`, `getSupportedTaskType()`
   - **Verification**: Interface contract tests
+  - **Completed**: TaskExecutor.kt (45 lines)
 
-- [ ] **Implement `PythonExecutor`**
+- [x] **Implement `PythonExecutor`**
   - **Ref**: `TASK_EXECUTION_LAYER_IMPLEMENTATION_PLAN_PART2.md` Section 5.2
   - Use Chaquopy for Python execution
   - Code bundle: Single .py OR ZIP with main.py
@@ -234,8 +243,9 @@ This roadmap consolidates:
   - `execute()` - Setup workspace, write inputs, init Python runtime, run script, collect outputs
   - Output collection: Scan outputs/ directory
   - **Verification**: Python script execution tests (see Part 2 Section 5.2.7)
+  - **Completed**: PythonExecutor.kt (191 lines)
 
-- [ ] **Implement `JVMExecutor`**
+- [x] **Implement `JVMExecutor`**
   - **Ref**: `TASK_EXECUTION_LAYER_IMPLEMENTATION_PLAN_PART2.md` Section 5.3
   - Execute Java/Kotlin/JVM bytecode
   - Code bundle: JAR with Main-Class manifest
@@ -243,29 +253,33 @@ This roadmap consolidates:
   - Java SecurityManager with restricted Policy
   - `execute()` - Setup workspace, save JAR, load manifest, find Main-Class, invoke main(), collect outputs
   - **Verification**: JAR execution tests, security policy tests
+  - **Completed**: JVMExecutor.kt (203 lines)
 
-- [ ] **Implement `JSExecutor`**
+- [x] **Implement `JSExecutor`**
   - **Ref**: `TASK_EXECUTION_LAYER_IMPLEMENTATION_PLAN_PART2.md` Section 5.4
   - Use J2V8 for JavaScript execution
   - Code bundle: Single .js file OR ZIP with main.js
   - Sandbox API restrictions (no network, limited file I/O)
   - **Verification**: JS script execution tests
+  - **Completed**: JSExecutor.kt (190 lines)
 
-- [ ] **Implement `MLNativeExecutor`**
+- [x] **Implement `MLNativeExecutor`**
   - **Ref**: `TASK_EXECUTION_LAYER_IMPLEMENTATION_PLAN_PART2.md` Section 5.5
   - Use TensorFlow Lite for ML model execution
   - Code bundle: .tflite model file
   - Input: Binary tensor data
   - Output: Inference results
   - **Verification**: TFLite model inference tests
+  - **Completed**: MLNativeExecutor.kt (170 lines)
 
-- [ ] **Implement `WorkflowExecutor`**
+- [x] **Implement `WorkflowExecutor`**
   - **Ref**: `TASK_EXECUTION_LAYER_IMPLEMENTATION_PLAN_PART2.md` Section 5.6
   - Orchestrate multi-step tasks
   - Code bundle: JSON workflow definition
   - Execute sub-tasks sequentially or in parallel
   - Pass outputs between tasks
   - **Verification**: Workflow orchestration tests
+  - **Completed**: WorkflowExecutor.kt (320 lines)
 
 **Phase 2 Success Criteria**:
 - ✅ TaskManager can execute tasks for all 6 task types
