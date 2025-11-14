@@ -2278,5 +2278,182 @@ grep -E "MeshComputeDataDefinitions\.kt|TaskType\.kt|TaskExecutor\.kt|TaskManage
 
 ---
 
+## Section 21: Deprecated Storage System Removal (November 14, 2025)
+
+### Background
+User discovered that `StorageOperation` enum in `ResourceRequirements.kt` was part of deprecated functionality. Investigation revealed a complete duplicate storage implementation that was never integrated into production.
+
+### Problem Analysis
+
+**Two Parallel Storage Systems Identified**:
+
+1. **✅ CANONICAL (Keep)**: `storage/DistributedStorageManager.kt`
+   - Location: Correct package (`/storage/`)
+   - Lines: 755 lines
+   - Status: Production-ready, fully integrated
+   - Features: Complete PGP encryption (Phase 1-4), chunk management, replication
+   - Integration: VirtualNode, MeshrabiyaApiImpl, TaskManager
+   - Usage: All Phase 1-10 production code
+
+2. **❌ DEPRECATED (Remove)**: `service/compute/DistributedStorageAgent.kt`
+   - Location: WRONG package (`/service/compute/` instead of `/storage/`)
+   - Lines: 934 lines
+   - Status: Prototype, never completed
+   - Features: All interface methods throw NotImplementedError
+   - Integration: NONE (only test code in ServiceLayerCoordinator)
+   - Usage: NONE in production
+
+**Root Cause**: Prototype storage implementation created in wrong package location, never removed after canonical implementation completed.
+
+### Execution Summary
+
+**Phase 1: Analysis** (DEPRECATED_STORAGE_ANALYSIS.md created)
+- Traced all 7 files with deprecated storage code
+- Identified ~1,200 lines to deprecate
+- Confirmed ZERO production usage
+
+**Phase 2: Planning** (DEPRECATION_EXECUTION_PLAN.md created)
+- Detailed file-by-file execution plan
+- Exact code sections to comment out
+- File renaming strategy
+
+**Phase 3: Deprecation Execution** (All 7 files completed)
+
+1. **DistributedStorageAgent.kt → DistributedStorageAgent.DEPRECATED.md**
+   - Renamed entire file (934 lines)
+   - Skipped markdown conversion per user efficiency directive
+
+2. **ServiceLayerCoordinator.kt** (~150 lines commented)
+   - storageAgent property
+   - activeStorageOps map
+   - StorageOperationStatus data class
+   - storage statistics fields
+   - storeFile()/retrieveFile() methods
+   - storage maintenance loop
+   - getActiveStorageOperationsCount()
+   - test storage initialization
+
+3. **MeshrabiyaInterop.kt** (~50 lines commented)
+   - UMFileTransportDTO.toAppFileMetadata()
+   - StorageRequest.toFileTransportDTO()
+
+4. **MeshNetworkInterface.kt** (interface cleaned)
+   - 8 storage operation methods
+   - StorageOperation import
+
+5. **VirtualNode_MeshNetworkInterface.kt** (~60 lines commented)
+   - 8 storage method stubs (all NotImplementedError)
+   - StorageOperation import
+
+6. **ResourceRequirements.kt** (enum deprecated)
+   - StorageOperation enum (STORE, RETRIEVE, DELETE, REPLICATE, VERIFY)
+
+7. **ServiceLayerTestInterface.kt** (~50 lines commented)
+   - testBasicStorageOperation() method
+   - Test invocation
+
+**Total Deprecated**: ~1,200 lines across 7 files
+
+### Impact Assessment
+
+**Build Impact**: ✅ NONE related to deprecation
+- All compile errors are pre-existing in compute/ML code
+- No new errors introduced by deprecation
+- StorageOperation import errors resolved
+
+**Runtime Impact**: ✅ NONE
+- Deprecated code never used in production
+- All production code uses canonical DistributedStorageManager
+- No VirtualNode integration existed
+
+**Test Impact**: ✅ MINIMAL
+- Only ServiceLayerCoordinator test affected
+- Storage test was using deprecated methods
+- Canonical storage tests unaffected
+
+### Documentation Generated
+
+1. **DEPRECATED_STORAGE_ANALYSIS.md**
+   - Purpose: Comprehensive analysis of deprecated storage functionality
+   - Content: File-by-file breakdown, usage analysis, impact assessment
+   - Status: Complete
+
+2. **DEPRECATION_EXECUTION_PLAN.md**
+   - Purpose: Step-by-step execution checklist
+   - Content: Exact code changes for each file, verification steps
+   - Status: Complete, all steps executed
+
+3. **INTERIM_COMMIT_LOG.md**
+   - Purpose: Track progress and changes
+   - Content: Detailed changelog of all file modifications
+   - Status: Updated with final results
+
+### Verification Results
+
+✅ **Import Errors**: Resolved  
+✅ **Deprecation Markers**: All code marked with "DEPRECATED: November 14, 2025" comments  
+✅ **Canonical Storage**: Untouched and operational  
+✅ **Build Status**: No new errors introduced  
+
+### Lessons Learned
+
+1. **Prototype Cleanup**: Remove prototype code immediately if not integrated within development cycle
+2. **Package Structure**: Storage code belongs in `/storage/`, not `/service/compute/`
+3. **Technical Debt**: Unused code accumulates quickly and causes confusion
+4. **Clear Markers**: Deprecation comments should include date and reason
+5. **Documentation First**: Analysis and planning documents prevent mistakes
+
+### Key Rules Applied
+
+1. **Critical Evaluation**: Analyzed user's StorageOperation discovery thoroughly before acting
+2. **Thoroughness**: Processed all 7 files completely, no shortcuts
+3. **Rules Documentation**: Documented deprecation strategy and execution pattern
+4. **Interim Commit Logging**: Updated INTERIM_COMMIT_LOG.md after completion
+5. **Efficient Execution**: User-directed: rename files, comment code, skip unnecessary markdown conversion
+
+### Canonical Storage System Reference
+
+**Production Storage**: `storage/DistributedStorageManager.kt`
+
+**Key Methods** (all production-ready):
+- `storeFile(fileId, path, data, pgpPublicKey)` - Store with PGP encryption
+- `retrieveFile(fileId, privateKey)` - Retrieve and decrypt
+- `deleteFile(fileId)` - Remove file and replicas
+- `searchFiles(query, owner)` - Search with access control
+- `shareFile(fileId, recipientPublicKeys)` - Multi-recipient sharing
+- `replicateFile(fileId, replicaCount)` - Automatic replication
+- `repairFile(fileId)` - Self-healing from replicas
+
+**Integration Points**:
+- VirtualNode.getDistributedStorageManager()
+- MeshrabiyaApiImpl storage endpoints
+- TaskManager distributed task storage
+- Phase 4 PGP encryption layer
+
+**DO NOT** use deprecated DistributedStorageAgent or service/compute storage methods.
+
+### Build Status Note
+
+Current build shows errors in compute/ML code (unrelated to storage deprecation):
+- TaskExecutor.kt: Missing MeshComputeDataDefinitions, TaskExecutionContext, ExecutionResult
+- WorkflowExecutor.kt: Similar missing types
+- PGPKeypairGenerator.kt: Missing bcpg/openpgp imports
+- Various ML files: Missing types
+
+These are **pre-existing errors** not caused by storage deprecation work.
+
+### Session Summary
+
+**Objective Achieved**: ✅ Complete  
+**Files Modified**: 7  
+**Lines Deprecated**: ~1,200  
+**Build Impact**: ✅ None (errors pre-existing)  
+**Production Impact**: ✅ None (deprecated code unused)  
+**Documentation**: ✅ Complete (3 new docs + 2 updated)
+
+**Status**: ✅ **DEPRECATED STORAGE CLEANUP COMPLETE**
+
+---
+
 **End of Knowledge Document**
 
