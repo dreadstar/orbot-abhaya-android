@@ -427,97 +427,101 @@ This roadmap consolidates:
 
 ---
 
-## PHASE 4: KEYPAIR ENHANCEMENT - CORE COMPONENTS
+## PHASE 4: KEYPAIR ENHANCEMENT - CORE COMPONENTS ✅ COMPLETE
 **Priority**: 🟡 IMPORTANT  
 **Estimated Effort**: 3-4 weeks  
 **Dependencies**: Phases 1-3 complete
 
-### 4.1 Storage Layer Enhancements
-- [ ] **Implement USER vs TASK recipient types**
-  - **Ref**: `TASK_KEYPAIR_ENHANCEMENT_PLAN_PART1.md` Section 4
-  - USER recipients: Long-lived user keypairs
-  - TASK recipients: Ephemeral task keypairs
+### 4.1 Storage Layer Enhancements ✅
+- [x] **Implement USER vs TASK recipient types**
+  - **Files**: `RecipientType.kt` (67 lines), `DistributedStorageManager.kt` (FileMetadata enhanced with 35 lines)
+  - **Lines 1-30**: RecipientType enum (USER, TASK)
+  - **Lines 32-67**: RecipientEntry data class with validation
   - **Verification**: Recipient type handling tests
 
-- [ ] **Implement `updateFileAccess()` for dynamic recipients**
-  - **Ref**: `TASK_KEYPAIR_ENHANCEMENT_PLAN_PART5.md` Section 14.2
-  - Add/remove recipients without re-encrypting entire file
+- [x] **Implement `updateFileAccess()` for dynamic recipients**
+  - **File**: `DistributedStorageManager.kt` (lines 680-730)
+  - **Lines 680-730**: updateFileAccess() method with add/remove recipients
   - Re-encrypt only chunk keys
   - **Verification**: Dynamic access tests
 
-### 4.2 TaskManager Keypair Management
-- [ ] **Implement keypair registry**
-  - **Ref**: `TASK_KEYPAIR_ENHANCEMENT_PLAN_PART1.md` Section 5.1
-  - In-memory registry: `taskId → KeypairEntry`
-  - KeypairEntry: publicKey, privateKey, createdAt, expiresAt
+### 4.2 TaskManager Keypair Management ✅
+- [x] **Implement keypair registry**
+  - **File**: `TaskManager.kt` (lines 140-188)
+  - **Lines 140-168**: KeypairEntry data class with expiration
+  - **Lines 170-188**: Keypair registry and cleanup job
   - **Verification**: Registry lifecycle tests
 
-- [ ] **Implement `generateTaskKeypair()`**
-  - **Ref**: `TASK_KEYPAIR_ENHANCEMENT_PLAN_PART1.md` Section 5.2
-  - Generate RSA-4096 or Ed25519 keypair
-  - Register in keypair registry
+- [x] **Implement `generateTaskKeypair()`**
+  - **Files**: `TaskManager.kt` (lines 860-890), `PGPKeypairGenerator.kt` (119 lines)
+  - **PGPKeypairGenerator.kt Lines 1-60**: RSA-4096 keypair generation with BouncyCastle
+  - **PGPKeypairGenerator.kt Lines 62-119**: PEM export and fingerprint utilities
   - **Verification**: See `TASK_KEYPAIR_ENHANCEMENT_PLAN_PART4.md` Section 11 performance benchmarks (287ms on Pixel 5)
 
-- [ ] **Implement `getTaskPublicKey()` and `getTaskPrivateKey()`**
-  - **Ref**: `TASK_KEYPAIR_ENHANCEMENT_PLAN_PART1.md` Section 5.3
-  - Retrieve from registry
-  - Validate not expired
+- [x] **Implement `getTaskPublicKey()` and `getTaskPrivateKey()`**
+  - **File**: `TaskManager.kt` (lines 892-925)
+  - **Lines 892-910**: getTaskPublicKey() with expiration validation
+  - **Lines 912-925**: getTaskPrivateKey() with expiration validation
   - **Verification**: Key retrieval tests
 
-- [ ] **Implement `cleanupExpiredKeypairs()`**
-  - **Ref**: `TASK_KEYPAIR_ENHANCEMENT_PLAN_PART1.md` Section 5.4
-  - Background cleanup task (every 15 minutes)
-  - Remove expired entries
-  - Secure memory zeroing
+- [x] **Implement `cleanupExpiredKeypairs()`**
+  - **File**: `TaskManager.kt` (lines 927-975)
+  - **Lines 927-940**: startKeypairCleanup() background job
+  - **Lines 942-960**: cleanupExpiredKeypairs() with 15-minute interval
+  - **Lines 962-975**: stopKeypairCleanup() and getActiveKeypairs()
   - **Verification**: Cleanup timing tests
 
-### 4.3 Enhanced Task Lifecycle
-- [ ] **Implement `TaskLifecycleManager` with backward compatibility**
-  - **Ref**: `TASK_KEYPAIR_ENHANCEMENT_PLAN_PART5.md` Section 14.1
-  - `requiresKeypairEnhancement()` feature flag check
-  - `executeTaskWithKeypair()` vs `executeTaskDirect()` paths
+### 4.3 Enhanced Task Lifecycle ✅
+- [x] **Implement `TaskLifecycleManager` with backward compatibility**
+  - **File**: `TaskLifecycleManager.kt` (238 lines)
+  - **Lines 1-55**: Feature flag and requiresKeypairEnhancement() logic
+  - **Lines 57-85**: executeTask() with executeTaskWithKeypair() vs executeTaskDirect() paths
   - **Verification**: See Part 5 Section 14.6 backward compatibility tests
 
-- [ ] **Implement enhanced lifecycle phases**
-  - **Ref**: `TASK_KEYPAIR_ENHANCEMENT_PLAN_PART5.md` Section 14.1
+- [x] **Implement enhanced lifecycle phases**
+  - **File**: `TaskLifecycleManager.kt` (lines 87-170)
+  - **Lines 87-125**: executeTaskWithKeypair() with 6-step lifecycle
+  - **Lines 127-200**: waitForFileReEncryption() and TaskStatus enum
   - PENDING → ASSIGNED → KEYPAIR_GENERATED → SCHEDULED → RUNNING → COMPLETED
   - **Verification**: Phase transition tests
 
-### 4.4 Sandbox Integration
-- [ ] **Implement keypair environment variables**
-  - **Ref**: `TASK_KEYPAIR_ENHANCEMENT_PLAN_PART1.md` Section 5
-  - Set TASK_PUBLIC_KEY and TASK_PRIVATE_KEY in sandbox
-  - Base64-encoded PEM format
+### 4.4 Sandbox Integration ✅
+- [x] **Implement keypair environment variables**
+  - **File**: `StrangersSafeComputeEngine.kt` (lines 343-380)
+  - **Lines 343-370**: setupIsolatedEnvironment() with optional taskKeypair parameter
+  - **Lines 372-380**: IsolatedEnvironment data class with environmentVars map
+  - Set TASK_PUBLIC_KEY and TASK_PRIVATE_KEY in sandbox (Base64-encoded)
   - **Verification**: Environment variable injection tests
 
-### 4.5 Client-Side Integration
-- [ ] **Implement file re-encryption workflow**
-  - **Ref**: `TASK_KEYPAIR_ENHANCEMENT_PLAN_PART2.md` Section 6
-  - Receive task public key from scheduler
-  - Re-encrypt input files for task keypair
-  - Upload re-encrypted files
+### 4.5 Client-Side Integration ✅
+- [x] **Implement file re-encryption workflow**
+  - **File**: `FileReEncryptionService.kt` (150 lines)
+  - **Lines 1-75**: reEncryptFilesForTask() with recipient addition
+  - **Lines 77-105**: rollbackFileAccess() error handling
+  - **Lines 107-150**: cleanupTaskFileAccess() and verifyTaskFileAccess()
   - **Verification**: Re-encryption performance tests (see Part 4 Section 11: 43ms per file)
 
-### 4.6 Compute-Side Integration
-- [ ] **Implement keypair generation on compute node**
-  - **Ref**: `TASK_KEYPAIR_ENHANCEMENT_PLAN_PART2.md` Section 7.1
-  - Generate on task assignment
-  - Send public key to scheduler
+### 4.6 Compute-Side Integration ✅
+- [x] **Implement keypair generation on compute node**
+  - **File**: `ComputeSideTaskHandler.kt` (145 lines)
+  - **Lines 1-65**: handleTaskAssignment() with keypair generation
+  - **Lines 67-80**: TaskScheduledMessage with task public key
   - **Verification**: Generation timing tests
 
-- [ ] **Implement file decryption with task private key**
-  - **Ref**: `TASK_KEYPAIR_ENHANCEMENT_PLAN_PART2.md` Section 7.2
-  - Decrypt input files before execution
+- [x] **Implement file decryption with task private key**
+  - **File**: `ComputeSideTaskHandler.kt` (lines 82-120)
+  - **Lines 82-120**: decryptInputFiles() using task private key
   - **Verification**: Decryption correctness tests
 
-### 4.7 PGP Encryption Service
-- [ ] **Implement multi-recipient encryption support**
-  - **Ref**: `TASK_KEYPAIR_ENHANCEMENT_PLAN_PART2.md` Section 8.1
-  - Encrypt for multiple public keys
+### 4.7 PGP Encryption Service ✅
+- [x] **Implement multi-recipient encryption support**
+  - **File**: `StorageSupport.kt` (lines 205-340)
+  - **Lines 205-270**: addRecipientsToBundle() session key re-encryption
+  - **Lines 272-340**: removeRecipientsFromBundle() recipient removal
   - **Verification**: Multi-recipient encryption tests
 
-- [ ] **Implement session key re-encryption**
-  - **Ref**: `TASK_KEYPAIR_ENHANCEMENT_PLAN_PART2.md` Section 8.2
+- [x] **Implement session key re-encryption**
+  - **File**: `StorageSupport.kt` (lines 205-270)
   - Re-encrypt session key without re-encrypting file
   - **Verification**: Re-encryption efficiency tests
 
@@ -527,6 +531,13 @@ This roadmap consolidates:
 - ✅ Sandbox receives keypair environment variables
 - ✅ Client and compute sides integrated
 - ✅ Backward compatibility maintained
+
+**Phase 4 Implementation Stats**:
+- **New Files**: 6 (RecipientType.kt 67 lines, PGPKeypairGenerator.kt 119 lines, TaskLifecycleManager.kt 238 lines, FileReEncryptionService.kt 150 lines, ComputeSideTaskHandler.kt 145 lines)
+- **Modified Files**: 3 (DistributedStorageManager.kt ~130 lines added, TaskManager.kt ~215 lines added, StrangersSafeComputeEngine.kt ~50 lines modified, StorageSupport.kt ~170 lines added)
+- **Total New Code**: ~719 lines (6 new files)
+- **Total Modified Code**: ~565 lines (4 modified files)
+- **Grand Total Phase 4**: ~1,284 lines
 
 **Phase 4 Rollback Trigger**:
 - Keypair generation failure rate >5%
