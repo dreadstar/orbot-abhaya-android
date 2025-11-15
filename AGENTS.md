@@ -18,6 +18,7 @@ This document defines the effective operational rules and protocols for all AI a
       `: > test_output.log && export JAVA_HOME=$(/usr/libexec/java_home -v 21) && ./gradlew test --console=plain 2>&1 | tee test_output.log`
     - **APK Deployment:**
       `export ANDROID_HOME="$HOME/Library/Android/sdk" && export PATH="$PATH:$ANDROID_HOME/platform-tools" && adb -s 30870044490006E install -r [apk_path]`
+- **NEVER use timeout commands** on Gradle builds or tests. The system is slow and timeouts abort legitimate work.
 - Always truncate log files before running commands: `: > logfile.log`
 - Always set JAVA_HOME to Java 21 before any Gradle command.
 - Always use device-specific ADB commands with the current device ID: `30870044490006E`.
