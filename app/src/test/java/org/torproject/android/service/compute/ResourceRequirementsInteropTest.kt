@@ -18,7 +18,7 @@ internal class ResourceRequirementsInteropTest {
             requiresNPU = false,
             requiresStorage = true,
             minStorageGB = 0.5f, // 512MB
-            thermalConstraints = setOf(ThermalState.COLD, ThermalState.WARM),
+            thermalConstraints = setOf(ThermalState.COOL, ThermalState.WARM),  // COOL replaces COLD
             maxNetworkLatencyMs = 500,
             minBatteryLevel = 20
         )

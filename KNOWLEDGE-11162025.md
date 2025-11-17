@@ -184,10 +184,11 @@ fun getDeviceCapabilities(): NodeCapabilitySnapshot?
 
 ### Priority 1: Fix EmergentRoleManager Compilation Issues ⚠️
 
-1. **Fix COORDINATOR References**
+1. **Comment Out COORDINATOR References**
    ```kotlin
-   // Verify MeshRole enum has COORDINATOR
-   // If missing, add: COORDINATOR
+   // Lines 257, 258, 336: Comment out any code using MeshRole.COORDINATOR
+   // COORDINATOR role is deprecated/not yet implemented
+   // DO NOT add COORDINATOR to MeshRole enum
    ```
 
 2. **Fix BatteryHealth Import**
@@ -346,13 +347,14 @@ fun getDeviceCapabilities(): NodeCapabilitySnapshot?
 ## TODOs for Next Session
 
 ### Immediate (Before Next Feature Work)
-- [ ] Fix COORDINATOR enum value in MeshRole.kt
+- [ ] Comment out COORDINATOR references in EmergentRoleManager.kt (lines 257, 258, 336)
 - [ ] Fix BatteryHealth import path (mmcp → vnet/hardware)
 - [ ] Fix FitnessScore type references in createDeviceCapabilities()
 - [ ] Search and update all EmergentRoleManager instantiations
 
 ### Short Term (This Week)
 - [ ] Archive MeshRoleManager.kt → MeshRoleManager.kt.md
+- [ ] Consider adding BFS centrality score from MeshRoleManager.md (moved from long-term)
 - [ ] Implement mesh intelligence from originator messages
 - [ ] Write unit tests for calculateLegacyFitnessScore()
 - [ ] Document new EmergentRoleManager API in README
@@ -364,7 +366,6 @@ fun getDeviceCapabilities(): NodeCapabilitySnapshot?
 - [ ] End-to-end integration tests
 
 ### Long Term (Backlog)
-- [ ] Consider adding BFS centrality score from MeshRoleManager.md
 - [ ] Evaluate need for gossip-based mesh intelligence
 - [ ] Optimize hardware monitoring battery impact
 - [ ] Add mesh visualization for debugging
