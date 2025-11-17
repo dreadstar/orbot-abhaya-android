@@ -887,6 +887,20 @@ fun routeViaProxy(packet: VirtualPacket): Boolean {
 **Priority**: HIGH  
 **Risk**: MEDIUM
 
+**⚠️ BREAKING CHANGE NOTE**: 
+Before implementing Phase 4, the following components must be updated to use the new topology format:
+- **EmergentRoleManager**: Update centrality calculation to use `NodeTopologyInfo.neighbors` instead of `Set<Int>`
+- **Any tests**: Update topology map assertions from `Map<Int, Set<Int>>` to `Map<Int, NodeTopologyInfo>`
+- **Migration commands documented in KNOWLEDGE-11172025.md**
+
+**Current TODOs (from INTERIM_COMMIT_LOG.md)**:
+1. ✅ Phase 1 Complete: NodeTopologyInfo, GatewaySelectionResult, GatewaySelector, GatewayRouter created
+2. ✅ OriginatingMessageManager enhanced with NodeTopologyInfo storage
+3. ⏳ **NEXT**: Update EmergentRoleManager to use `getTopologyMapInfo()` instead of deprecated `getTopologyMap()`
+4. ⏳ **CURRENT**: Implement VirtualNode integration (Phase 4)
+5. ⏳ Compile all changes and fix any type errors
+6. ⏳ Create Part 4 tests from REFACTORING_PLAN_COMPREHENSIVE_v2.md
+
 1. **VirtualNode Integration - GATEWAY SIDE**
    - Enhance existing `routeViaProxy()` method (line ~832) to return Boolean
    - Integrate with `GatewayRouter.routeThroughProxyAsGateway()`
