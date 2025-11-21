@@ -1,3 +1,18 @@
+### RULE: IMPORT STYLE (2025-11-21)
+**Always use import + short name, never fully qualified notation.**
+
+**The Rule:**
+- Always add an import statement for any type, class, or symbol used from another package/module, and refer to it by its short name in code.
+- Fully qualified notation (e.g., com.example.Type) is strictly prohibited in all code, documentation, and generated output.
+- Applies to all languages and all code generation or editing tasks.
+
+**Context:**
+- User requires all code to be clean, readable, and idiomatic for the language (Kotlin/Java/etc.).
+- This ensures maintainability, clarity, and consistency across the codebase.
+
+**Broader Application:**
+- Applies to all code, documentation, and AI-generated output, regardless of context or file type.
+- If a type is referenced, always import it and use the short name.
 # AI_RULES.md - COMPREHENSIVE CONSOLIDATED RULES
 **Created**: December 2025 (Consolidation from 40+ KNOWLEDGE documents)  
 **Last Updated**: January 12, 2025  
@@ -1041,7 +1056,7 @@ find . -name "TEST-*.xml" -path "*/test-results/*"
 
 ### Sources Summary
 **40+ KNOWLEDGE Documents Read**:
-- KNOWLEDGE-10112025.md, KNOWLEDGE-10102025.md, KNOWLEDGE-10052025.md
+- KNOWLEDGE-10112025.md, KNOWLEDGE-10102025.md, KNOWLEDGE-10050025.md
 - KNOWLEDGE-09282025.md, KNOWLEDGE-09262025.md, KNOWLEDGE-09252025.md
 - KNOWLEDGE-09232025.md, KNOWLEDGE-09212025.md, KNOWLEDGE-09192025.md
 - KNOWLEDGE-09182025.md, KNOWLEDGE-09162025.md, KNOWLEDGE-09152025.md
@@ -1056,3 +1071,16 @@ find . -name "TEST-*.xml" -path "*/test-results/*"
 ---
 
 *This document represents the complete consolidated knowledge from 40+ KNOWLEDGE files read thoroughly without shortcuts. Every rule has been extracted, contextualized, and organized for subsequent AI agent understanding.*
+
+---
+
+# Import/Class Verification Rule (2025-11-20)
+
+- For every import or unresolved reference error, agents must:
+  1. Read the canonical file (e.g., the .kt file containing the types) and list all top-level classes, data classes, and enums.
+  2. Only import those specific types directly, never a non-existent object, companion, or wildcard unless it is actually defined.
+  3. Cross-check every import in referencing files for accuracy, necessity, and placement (after the package line).
+  4. Never assume the existence of a class/object for import—always verify by reading the file.
+  5. Document the verification process in the commit or response.
+- This rule supersedes any prior shortcut or assumption-based import/type reference handling.
+- Applies to all languages and platforms.

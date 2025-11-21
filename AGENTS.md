@@ -1,3 +1,15 @@
+## IMPORT STYLE RULE (2025-11-21)
+**RULE: Always use import + short name, never fully qualified notation.**
+Agents must always add an import statement for any type, class, or symbol used from another package/module, and refer to it by its short name in code. Fully qualified notation (e.g., com.example.Type) is strictly prohibited in all code, documentation, and generated output. This rule applies to all languages and all code generation or editing tasks. (Added 2025-11-21 per user instruction.)
+- RULE: NO UNCERTAINTY ABOUT CODE EXISTENCE OR LOCATION
+Agents must never present uncertainty about whether a type, function, or file exists, or about its location, when this can be resolved by searching or reading the codebase. If a response would say "may not exist" or "likely in X" or similar, the agent must first perform the necessary search or file read to definitively answer. Only after this research is complete may the agent respond. This rule ensures all answers are authoritative, eliminates avoidable ambiguity, and enforces the project's standard of research-driven, context-verified responses. (Added 2025-11-20 per user instruction.)
+**When the user requests 'all errors', 'all files', or any similar comprehensive action, agents must process the entire scope as stated—never just the last file or a subset—unless the user explicitly requests a narrower focus. Never make assumptions to reduce scope. This rule supersedes all others and must be followed every time, without exception.**
+
+## 🚨 ERROR LOG EXTRACTION RULE (GRADLE/KOTLIN)
+**When extracting error-referenced files from build logs, agents must recognize that error lines in Gradle/Kotlin logs can start with 'e: ' (e.g., 'e: /path/to/File.kt:...'). Extraction logic must include this pattern, in addition to standard error/warning formats, to ensure all error-referenced files are captured.**
+
+**Agents must not assume only standard error keywords (like 'error:', 'Error:', or stack traces) are used. Always include 'e: ' as a possible error prefix in Gradle/Kotlin build logs.**
+
 ## KNOWLEDGE Document Date Rule
 Before updating or creating a KNOWLEDGE document, check the current date to be certain which KNOWLEDGE*.md file you should be using. Always use the most recent KNOWLEDGE*.md file (by date in the filename) as the authoritative source if there are contradictions.
 - Agents must NEVER use likely locations (guesses) for code references, imports, or types when the exact answer can be determined by reviewing the codebase or researching online. Always verify and use the true, precise location. Laziness or shortcuts in this regard are strictly prohibited.
@@ -72,6 +84,7 @@ This document defines the effective operational rules and protocols for all AI a
 ---
 
 ## GENERAL AGENT BEHAVIOR
+- After starting any long-running build or test command (e.g., Gradle build, test execution), always release the chat immediately so the user can work on other things. Wait for explicit user instruction to review logs or results once the process completes. This maximizes productivity and aligns with user workflow preferences.
 - Always review all relevant documentation before starting work.
 - When creating new KNOWLEDGE docs, use the format KNOWLEDGE-MMDDYYYY.md with the current date.
 - If information in one KNOWLEDGE doc contradicts another, the more recent doc takes precedence.
@@ -101,6 +114,18 @@ This document defines the effective operational rules and protocols for all AI a
 - If a task says "analyze all files in X", that means **every file in X**.
 - Format documentation and code for clarity and future maintainability.
 - Use examples where helpful.
+
+---
+
+## Import/Class Verification Protocol (2025-11-20)
+- For every import or unresolved reference error, agents must:
+  1. Read the canonical file (e.g., the .kt file containing the types) and list all top-level classes, data classes, and enums.
+  2. Only import those specific types directly, never a non-existent object, companion, or wildcard unless it is actually defined.
+  3. Cross-check every import in referencing files for accuracy, necessity, and placement (after the package line).
+  4. Never assume the existence of a class/object for import—always verify by reading the file.
+  5. Document the verification process in the commit or response.
+- This protocol supersedes any prior shortcut or assumption-based import/type reference handling.
+- Applies to all languages and platforms.
 
 ---
 

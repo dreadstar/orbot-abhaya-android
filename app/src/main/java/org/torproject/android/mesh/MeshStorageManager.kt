@@ -7,13 +7,7 @@ import kotlinx.coroutines.*
 import java.nio.file.*
 import com.ustadmobile.meshrabiya.api.MeshrabiyaApi
 import com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl
-import com.ustadmobile.meshrabiya.service.gossip.MeshGossipService
-import com.ustadmobile.meshrabiya.vnet.VirtualNode
-import com.ustadmobile.meshrabiya.storage.DataStore
-import com.ustadmobile.meshrabiya.vnet.StorageNodeRequest
-import com.ustadmobile.meshrabiya.vnet.StorageNodeResponse
-import com.ustadmobile.meshrabiya.MeshrabiyaConstants
-import com.ustadmobile.meshrabiya.storage.MeshChunk
+
 import java.io.File
 import java.io.FileInputStream
 import java.util.concurrent.Executors
@@ -41,15 +35,7 @@ class MeshStorageManager private constructor(private val context: Context) {
     private val meshrabiyaApi: MeshrabiyaApi = MeshrabiyaApiImpl.getInstance().apply {
         initMesh(context)
     }
-    private val dataStore: DataStore = DataStore.getInstance(context)
-    
-    // TEMPORARY: Access internal MeshGossipService for backward compatibility
-    // TODO: Replace all meshGossipService usage with MeshrabiyaApi high-level methods
-    private val meshGossipService: MeshGossipService by lazy {
-        // Access VirtualNode to get initialized MeshGossipService
-        val virtualNode = VirtualNode.getInstance(context)
-        MeshGossipService.getInstance()
-    }
+
 
     private val uiHandler = Handler(Looper.getMainLooper())
     private var uiCallback: MeshStorageUiCallback? = null
@@ -60,6 +46,7 @@ class MeshStorageManager private constructor(private val context: Context) {
             instance ?: synchronized(this) {
                 instance ?: MeshStorageManager(context.applicationContext).also { instance = it }
             }
+        // RETRY_DELAY_MS is now internal, not from MeshrabiyaConstants
         private const val RETRY_DELAY_MS = 10000L
     }
 
@@ -105,64 +92,24 @@ class MeshStorageManager private constructor(private val context: Context) {
     }
 
     /**
-     * Handles new file: chunking, broadcasts storage node request, processes responses, transfers chunks, and triggers replication.
+     * Handles new file: delegates storage to MeshrabiyaApi.
      */
     private fun handleDropFile(file: File) {
-    val chunkSizeKb = MeshrabiyaConstants.getChunkSizeKb()
-        val chunkSize = chunkSizeKb * 1024
-        val fileId = sha256File(file)
-        val relativePath = selectedDropFolder?.relativize(file.toPath())?.toString() ?: ""
-        val chunks = chunkFile(file, fileId, chunkSize, relativePath)
-        val totalChunks = chunks.size
-
-        // Store chunk metadata locally using direct SQLite API
-        CoroutineScope(Dispatchers.IO).launch {
-            chunks.forEach { chunk ->
-                dataStore.addMeshChunk(chunk)
+        meshrabiyaApi.storeFile(file, object : MeshrabiyaApi.StoreFileCallback {
+            override fun onSuccess(fileId: String) {
+                uiHandler.post { uiCallback?.showFileStored(fileId) }
             }
-        }
-
-        // For each chunk, discover storage nodes and transfer
-        chunks.forEach { chunk ->
-            val request = StorageNodeRequest(chunk.chunkSize, chunk.fileName, fileId)
-            meshGossipService.broadcastStorageNodeRequest(request, timeoutMs = 5000) { responses ->
-                processChunkStorageNodeResponses(chunk, responses)
+            override fun onFailure(error: Throwable) {
+                uiHandler.post { uiCallback?.showTransferFailedAlert() }
             }
-        }
+        })
     }
 
     /**
      * Chunks a file and returns a list of MeshChunk objects.
      */
-    private fun chunkFile(file: File, fileId: String, chunkSize: Int, relativePath: String): List<MeshChunk> {
-        val chunks = mutableListOf<MeshChunk>()
-        val fileName = file.name
-        val totalChunks = ((file.length() + chunkSize - 1) / chunkSize).toInt()
-        FileInputStream(file).use { fis ->
-            var chunkIndex = 0
-            var bytesRead: Int
-            val buffer = ByteArray(chunkSize)
-            while (fis.read(buffer).also { bytesRead = it } > 0) {
-                val chunkBytes = if (bytesRead < chunkSize) buffer.copyOf(bytesRead) else buffer.clone()
-                val chunkId = sha256(chunkBytes)
-                val hash = chunkId
-                chunks.add(
-                    MeshChunk(
-                        chunkId = chunkId,
-                        fileId = fileId,
-                        chunkIndex = chunkIndex,
-                        totalChunks = totalChunks,
-                        chunkSize = bytesRead.toLong(),
-                        fileName = fileName,
-                        relativePath = relativePath,
-                        hash = hash
-                    )
-                )
-                chunkIndex++
-            }
-        }
-        return chunks
-    }
+    // chunkFile and all chunking logic should be handled by the API; this method is now obsolete.
+    // If needed, implement chunking via MeshrabiyaApi utility methods.
 
     /**
      * Processes responses from candidate storage nodes for a chunk, selects best, and initiates chunk transfer.
@@ -276,81 +223,22 @@ class MeshStorageManager private constructor(private val context: Context) {
     }
 
     /**
-     * Retrieves a file by requesting all chunks and recomposing.
-     * Places the recomposed file in the drop folder or subfolder as indicated by relativePath.
+     * Retrieves a file using MeshrabiyaApi.
      */
     fun retrieveFile(fileId: String, onComplete: (Boolean) -> Unit) {
-    val timeoutMs = MeshrabiyaConstants.getTimeoutMs()
-        meshGossipService.broadcastChunkRetrievalRequest(fileId, timeoutMs) { chunkInfos ->
-            if (chunkInfos.isEmpty()) {
+        meshrabiyaApi.retrieveFile(fileId, object : MeshrabiyaApi.RetrieveFileCallback {
+            override fun onSuccess(file: File) {
+                uiHandler.post { uiCallback?.showFileStored(fileId) }
+                onComplete(true)
+            }
+            override fun onFailure(error: Throwable) {
                 uiHandler.post { uiCallback?.showTransferFailedAlert() }
                 onComplete(false)
-                return@broadcastChunkRetrievalRequest
             }
-            val totalChunks = chunkInfos.size
-            val retrievedChunks = Array<ByteArray?>(totalChunks) { null }
-            val jobs = mutableListOf<Job>()
-
-            chunkInfos.forEach { chunkInfo ->
-                val job = CoroutineScope(Dispatchers.IO).launch {
-                    var attempt = 0
-                    val maxRetries = MeshrabiyaConstants.getMaxRetries()
-                    var success = false
-                    while (attempt < maxRetries && !success) {
-                        meshGossipService.requestChunk(chunkInfo.chunkId, chunkInfo.nodeId, timeoutMs) { chunkBytes ->
-                            if (chunkBytes != null) {
-                                retrievedChunks[chunkInfo.chunkIndex] = chunkBytes
-                                success = true
-                            }
-                        }
-                        attempt++
-                        if (!success) delay(RETRY_DELAY_MS)
-                    }
-                }
-                jobs.add(job)
-            }
-
-            CoroutineScope(Dispatchers.IO).launch {
-                jobs.forEach { it.join() }
-                if (retrievedChunks.any { it == null }) {
-                    uiHandler.post { uiCallback?.showTransferFailedAlert() }
-                    onComplete(false)
-                } else {
-                    // Place recomposed file in drop folder/subfolder using relativePath
-                    val firstChunk = chunkInfos.first()
-                    val targetFolder = if (firstChunk.relativePath.isNotEmpty()) {
-                        File(selectedDropFolder?.toFile(), firstChunk.relativePath)
-                    } else {
-                        selectedDropFolder?.toFile()
-                    }
-                    if (targetFolder != null && !targetFolder.exists()) targetFolder.mkdirs()
-                    val outFile = File(targetFolder, firstChunk.fileName)
-                    val fileBytes = retrievedChunks.filterNotNull().reduce { acc, bytes -> acc + bytes }
-                    outFile.writeBytes(fileBytes)
-                    uiHandler.post { uiCallback?.showFileStored(fileId) }
-                    onComplete(true)
-                }
-            }
-        }
+        })
     }
 
-    private fun sha256File(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        FileInputStream(file).use { fis ->
-            val buffer = ByteArray(8192)
-            var bytesRead: Int
-            while (fis.read(buffer).also { bytesRead = it } > 0) {
-                digest.update(buffer, 0, bytesRead)
-            }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
 
-    private fun sha256(data: ByteArray): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val hashBytes = digest.digest(data)
-        return hashBytes.joinToString("") { "%02x".format(it) }
-    }
 }
 
 /**
