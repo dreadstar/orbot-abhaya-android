@@ -1,3 +1,11 @@
+## SUCCESSFUL CHECKLIST/TODO COMPLETION RULE (2025-11-21)
+Agents must follow these protocols for every assigned checklist or todo list:
+2. Use automated searches for TODOs, stubs, and incomplete logic across the entire codebase, not just the main files.
+3. Cross-reference checklist items with actual code and commit history to verify implementation.
+4. Only mark items complete after verifying all requirements, code, and documentation are present and correct.
+5. Document completion with commit references and implementation details for every item.
+6. Re-run error and TODO searches after each completion to catch any missed items.
+This ensures 100% coverage and prevents premature claims of completion.
 ## IMPORT STYLE RULE (2025-11-21)
 **RULE: Always use import + short name, never fully qualified notation.**
 Agents must always add an import statement for any type, class, or symbol used from another package/module, and refer to it by its short name in code. Fully qualified notation (e.g., com.example.Type) is strictly prohibited in all code, documentation, and generated output. This rule applies to all languages and all code generation or editing tasks. (Added 2025-11-21 per user instruction.)
