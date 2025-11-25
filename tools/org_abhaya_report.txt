@@ -1,0 +1,165 @@
+----
+FOUND: abhaya-sensor-android/app/src/main/java/org/abhaya/sensor/MainActivity.kt
+package: com.ustadmobile.meshrabiya.sensor
+top-level signatures:
+class MainActivity : ComponentActivity() {
+candidates:
+  - abhaya-sensor-android/app/src/main/java/com/ustadmobile/meshrabiya/sensor/MainActivity.kt
+  package: com.ustadmobile.meshrabiya.sensor
+  checksum org: 8fa5033daf16a28f598a9a468b844b18895400c6
+  checksum cand: 8fa5033daf16a28f598a9a468b844b18895400c6
+  diff: IDENTICAL
+suggestion: duplicate (IDENTICAL) — safe to delete org copy
+
+----
+FOUND: abhaya-sensor-android/app/src/main/java/org/abhaya/sensor/capture/AudioCapture.kt
+package: com.ustadmobile.meshrabiya.sensor.capture
+top-level signatures:
+class AudioCapture(private val ingestor: StreamIngestor) {
+fun start() {
+fun stop() {
+fun ShortArrayToByteArray(shorts: ShortArray, len: Int): ByteArray {
+candidates:
+  - abhaya-sensor-android/app/src/main/java/com/ustadmobile/meshrabiya/sensor/capture/AudioCapture.kt
+  package: com.ustadmobile.meshrabiya.sensor.capture
+  checksum org: a841a0701058deeb0452cfb84a32995853fd9fe0
+  checksum cand: a841a0701058deeb0452cfb84a32995853fd9fe0
+  diff: IDENTICAL
+suggestion: duplicate (IDENTICAL) — safe to delete org copy
+
+----
+FOUND: abhaya-sensor-android/app/src/main/java/org/abhaya/sensor/capture/CameraCapture.kt
+package: com.ustadmobile.meshrabiya.sensor.capture
+top-level signatures:
+class CameraCapture(
+fun start(previewView: PreviewView? = null, periodicSeconds: Int = 5) {
+fun stop() {
+fun captureOnce() {
+candidates:
+  - abhaya-sensor-android/app/src/main/java/com/ustadmobile/meshrabiya/sensor/capture/CameraCapture.kt
+  package: com.ustadmobile.meshrabiya.sensor.capture
+  checksum org: 9b511c5be432fc1da29f8f9538b4c457e3d31ba7
+  checksum cand: 9b511c5be432fc1da29f8f9538b4c457e3d31ba7
+  diff: IDENTICAL
+suggestion: duplicate (IDENTICAL) — safe to delete org copy
+
+----
+FOUND: abhaya-sensor-android/app/src/main/java/org/abhaya/sensor/stream/LocalStreamIngestor.kt
+package: com.ustadmobile.meshrabiya.sensor.stream
+top-level signatures:
+class LocalStreamIngestor : StreamIngestor {
+data class IngestEvent(val streamId: String, val timestampMs: Long, val payloadLength: Int)
+candidates:
+  - abhaya-sensor-android/app/src/main/java/com/ustadmobile/meshrabiya/sensor/stream/LocalStreamIngestor.kt
+  package: com.ustadmobile.meshrabiya.sensor.stream
+  checksum org: 319424571fe13a6433975f91a04976f8b48c596a
+  checksum cand: 319424571fe13a6433975f91a04976f8b48c596a
+  diff: IDENTICAL
+suggestion: duplicate (IDENTICAL) — safe to delete org copy
+
+----
+FOUND: abhaya-sensor-android/app/src/main/java/org/abhaya/sensor/stream/StreamIngestor.kt
+package: com.ustadmobile.meshrabiya.sensor.stream
+top-level signatures:
+interface StreamIngestor {
+fun start()
+fun stop()
+fun ingestSensorReading(streamId: String, timestampMs: Long, payload: ByteArray)
+candidates:
+  - abhaya-sensor-android/app/src/main/java/com/ustadmobile/meshrabiya/sensor/stream/StreamIngestor.kt
+  package: com.ustadmobile.meshrabiya.sensor.stream
+  checksum org: 4fd2b206f3531853146807b55fa284a0d4f0e9a4
+  checksum cand: 4fd2b206f3531853146807b55fa284a0d4f0e9a4
+  diff: IDENTICAL
+suggestion: duplicate (IDENTICAL) — safe to delete org copy
+
+----
+FOUND: abhaya-sensor-android/app/src/main/java/org/abhaya/sensor/ui/SensorApp.kt
+package: com.ustadmobile.meshrabiya.sensor.ui
+top-level signatures:
+fun SensorApp() {
+fun floatsToByteArray(values: FloatArray): ByteArray {
+fun defaultSensorCategories(): List<SensorCategory> {
+data class SensorCategory(val name: String, val sensors: List<SensorDescriptor>)
+data class SensorDescriptor(val id: String, val name: String, val desc: String)
+candidates:
+  - abhaya-sensor-android/app/src/main/java/com/ustadmobile/meshrabiya/sensor/ui/SensorApp.kt
+  package: com.ustadmobile.meshrabiya.sensor.ui
+  checksum org: 54eea673ff7d756382a6775e51a745a712d3638b
+  checksum cand: 54eea673ff7d756382a6775e51a745a712d3638b
+  diff: IDENTICAL
+suggestion: duplicate (IDENTICAL) — safe to delete org copy
+
+----
+FOUND: abhaya-sensor-android/src/main/java/org/abhaya/sensor/MainActivity.kt
+package: com.ustadmobile.meshrabiya.sensor
+top-level signatures:
+class MainActivity : AppCompatActivity() {
+candidates:
+  - abhaya-sensor-android/app/src/main/java/com/ustadmobile/meshrabiya/sensor/MainActivity.kt
+  package: com.ustadmobile.meshrabiya.sensor
+  checksum org: 66e7ca7ff249ade5de2d4eb382d8dd6186a72d83
+  checksum cand: 8fa5033daf16a28f598a9a468b844b18895400c6
+  diff: (first 80 chars of unified diff below)
+--- org/MainActivity.kt
++++ cand/MainActivity.kt
+@@ -1,19 +1,48 @@
+ package com.ustadmobile.meshrabiya.sensor
+ 
++import android.Manifest
++import android.content.pm.PackageManager
+ import android.os.Bundle
+-import android.webkit.WebView
+-import androidx.appcompat.app.AppCompatActivity
++import androidx.activity.ComponentActivity
++import androidx.activity.compose.setContent
++import androidx.activity.result.contract.ActivityResultContracts
++import androidx.compose.foundation.layout.*
++import androidx.compose.material.*
++import androidx.compose.runtime.*
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.unit.dp
++import androidx.core.content.ContextCompat
++import com.ustadmobile.meshrabiya.sensor.ui.SensorApp
+ 
+-class MainActivity : AppCompatActivity() {
+-    private lateinit var webView: WebView
++class MainActivity : ComponentActivity() {
++    private val requestPermissionsLauncher = registerForActivityResult(
++        ActivityResultContracts.RequestMultiplePermissions()
++    ) { permissions ->
++        // handle results if needed
++    }
+ 
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
+-        setContentView(R.layout.activity_main)
+ 
+-        webView = findViewById(R.id.webview)
+-        // Placeholder: you can load a local HTML bundle (built from the TSX prototype) or replace with native UI
+-        webView.settings.javaScriptEnabled = true
+-        webView.loadUrl("about:blank")
++        // Request runtime permissions for sensors/camera/audio
++        val needed = mutableListOf<String>()
++        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
++            needed.add(Manifest.permission.CAMERA)
++        }
++        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
++            needed.add(Manifest.permission.RECORD_AUDIO)
++        }
++        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
++            needed.add(Manifest.permission.ACCESS_FINE_LOCATION)
++        }
++        if (needed.isNotEmpty()) requestPermissionsLauncher.launch(needed.toTypedArray())
++
++        setContent {
++            MaterialTheme {
++                Surface(modifier = Modifier.fillMaxSize()) {
++                    SensorApp()
++                }
++            }
++        }
+     }
+ }
+suggestion: not identical — consider refactor: move to com.ustadmobile and fix package line, or manually merge
+

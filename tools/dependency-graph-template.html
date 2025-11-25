@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <title>Meshrabiya Dependency Graph</title>
+    <style>
+        body { margin:0; padding:0; }
+        #graph { width: 100vw; height: 100vh; background: #f8f8f8; }
+        .node { cursor: pointer; }
+        .tooltip { position: absolute; background: #fff; border: 1px solid #888; padding: 6px; border-radius: 4px; pointer-events: none; font-size: 13px; z-index: 10; }
+    </style>
+    <script src='https://d3js.org/d3.v7.min.js'></script>
+</head>
+<body>
+<div style="padding:10px 0 0 10px;position:absolute;z-index:20;">
+  <button id="toggleView">File View</button>
+</div>
+<div id='graph'></div>
+<script>
+// Utility: assign color by file/package
+function colorByFile(file) {
+  // Hash file string to a color
+  let hash = 0;
+  for (let i = 0; i < file.length; i++) hash = file.charCodeAt(i) + ((hash << 5) - hash);
+  const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+  return '#' + '00000'.substring(0, 6 - c.length) + c;
+}
+
+// D3 pan/zoom
+function enableZoom(svg) {
+  const zoom = d3.zoom().scaleExtent([0.1, 5]).on('zoom', (event) => {
+    svg.select('g').attr('transform', event.transform);
+  });
+  svg.call(zoom);
+}
+
+// let currentView = 'object';
+let currentView = 'file';
+
+async function loadChunksAndRender() {
+  const manifest = await fetch('graph-chunks.json').then(r => r.json());
+  const nodeChunks = await Promise.all(manifest.nodeChunks.map(f => fetch(f).then(r => r.json())));
+  const edgeChunks = await Promise.all(manifest.edgeChunks.map(f => fetch(f).then(r => r.json())));
+  // Flatten the inner arrays from chunked files
+  const allNodes = nodeChunks.map(chunk => chunk.nodes).flat();
+  const allEdges = edgeChunks.map(chunk => chunk.edges).flat();
+  // Debug: log node and edge counts
+  console.log('[DEBUG] Loaded nodes:', allNodes.length);
+  console.log('[DEBUG] Loaded edges:', allEdges.length);
+  if (allNodes.length > 0) console.log('[DEBUG] Sample node:', allNodes[0]);
+  if (allEdges.length > 0) console.log('[DEBUG] Sample edge:', allEdges[0]);
+  // Build node lookup map
+  const nodeMap = new Map(allNodes.map(n => [n.id, n]));
+  console.log('[DEBUG] NodeMap keys:', Array.from(nodeMap.keys()));
+  console.log('[DEBUG] NodeMap keys:', nodeMap);
+  // Debug: check for missing nodes referenced by edges
+  let missingNodes = [];
+  for (const edge of allEdges) {
+    if (!nodeMap.has(edge.source)) {
+      missingNodes.push(edge.source);
+    }
+    if (!nodeMap.has(edge.target)) {
+      missingNodes.push(edge.target);
+    }
+  }
+  if (missingNodes.length > 0) {
+    console.log('[DEBUG] Missing node IDs referenced by edges:', Array.from(new Set(missingNodes)).slice(0, 20));
+    console.log('[DEBUG] Total missing node references:', missingNodes.length);
+  } else {
+    console.log('[DEBUG] All edge sources/targets found in nodeMap.');
+  }
+
+  // --- File View Edge Calculation Debug Logging ---
+  // Log entity to file mapping
+  const entityToFile = {};
+  allNodes.forEach(n => { entityToFile[n.id] = n.file || 'unknown'; });
+  console.log('[DEBUG] entityToFile mapping (first 20):', Object.entries(entityToFile).slice(0, 20));
+
+
+
+  // Count connections between file pairs with logging
+  const fileEdgeCount = {};
+  allEdges.forEach(e => {
+    const srcFile = entityToFile[e.source];
+    const tgtFile = entityToFile[e.target];
+    if (srcFile && tgtFile && srcFile !== tgtFile) {
+      const key = srcFile + '->' + tgtFile;
+      fileEdgeCount[key] = (fileEdgeCount[key] || 0) + 1;
+      if (fileEdgeCount[key] === 1) {
+        // console.log(`[DEBUG] New file edge: ${key}`);
+      }
+    }
+  });
+  console.log('[DEBUG] fileEdgeCount object:', fileEdgeCount);
+
+  // Construct file view edges and log them
+  // const fileViewEdges = Object.keys(fileEdgeCount).map(s => {
+  //   const [src, tgt] = s.split('->');
+  //   return { source: src, target: tgt, weight: fileEdgeCount[s] };
+  // });
+  // console.log('[DEBUG] fileViewEdges :', fileViewEdges);
+
+  function render(viewType) {
+    d3.select('#graph').selectAll('*').remove();
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const svg = d3.select('#graph').append('svg')
+      .attr('width', width)
+      .attr('height', height);
+    svg.append('g'); // for zoom
+    enableZoom(svg);
+
+    // Remove tooltip creation
+
+    // Filter/group nodes
+    let nodes, edges;
+    if (viewType === 'object') {
+      nodes = allNodes.filter(n => n.type === 'object' || n.type === 'class');
+      edges = allEdges;
+      console.log('[DEBUG] ObjectNodes :', nodes);
+      console.log('[DEBUG] ObjectEdges :', edges);
+
+    } else {
+      // Coalesce all entities in a file into a single node
+      const fileGroups = {};
+      allNodes.forEach(n => {
+        const f = n.file || 'unknown';
+        if (!fileGroups[f]) fileGroups[f] = [];
+        fileGroups[f].push(n);
+      });
+      console.log('[DEBUG] fileGroups:', fileGroups);
+      // Define file nodes first, assign incrementing integer id
+      let fileNodeId = 0;
+      const fileNameToNodeId = {};
+      const fileNodeList = [];
+      Object.keys(fileGroups).forEach(f => {
+        // Package: extract from file path
+        let pkg = f.split('/').slice(0, -1).join('.');
+        const node = {
+          id: f,
+          file: f,
+          entities: fileGroups[f].map(e => e.id),
+          package: pkg
+        };
+        fileNameToNodeId[f] = fileNodeId;
+        fileNodeList.push(node);
+        fileNodeId++;
+      });
+      nodes = fileNodeList;
+    
+      console.log('[DEBUG] File_nodes:', nodes);
+      console.log('[DEBUG] fileNameToNodeId:', fileNameToNodeId);
+      // Edges: connect file nodes if any entity in one file references any entity in another
+      // const entityToFile = {};
+      // allNodes.forEach(n => { entityToFile[n.id] = n.file || 'unknown'; });
+      // Count connections between file pairs
+      // const fileEdgeCount = {};
+      // allEdges.forEach(e => {
+      //   const srcFile = entityToFile[e.source.id];
+      //   const tgtFile = entityToFile[e.target.id];
+      //   if (srcFile && tgtFile && srcFile !== tgtFile) {
+      //     const key = srcFile + '->' + tgtFile;
+      //     fileEdgeCount[key] = (fileEdgeCount[key] || 0) + 1;
+      //   }
+      // });
+      // console.log('[DEBUG] fileEdgeCount:', fileEdgeCount);
+      // Now create edges using file node ids
+      edges = Object.keys(fileEdgeCount).map((s,idx )=> {
+        const [src, tgt] = s.split('->');
+        return {
+          id: idx,
+          source: src,
+          target: tgt,
+          // source: fileNodeList[fileNameToNodeId[src]],
+          // target: fileNodeList[fileNameToNodeId[tgt]],
+          weight: fileEdgeCount[s],
+          line: idx
+        };
+      });
+      // .filter(e => Number.isInteger(e.source) && Number.isInteger(e.target))
+      // edges = fileViewEdges;
+      console.log('[DEBUG] File_edges:', edges);
+    }
+
+    // Cluster coloring: by package for file view, by type for object view
+    function nodeColor(d) {
+      if (viewType === 'object') return d.type === 'object' ? '#6fa' : '#69f';
+      // Color by package
+      let pkg = d.package || '';
+      let hash = 0;
+      for (let i = 0; i < pkg.length; i++) hash = pkg.charCodeAt(i) + ((hash << 5) - hash);
+      const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+      return '#' + '00000'.substring(0, 6 - c.length) + c;
+    }
+
+    // Cluster gravity: group by file (object view) or package (file view)
+    let clusterGroups = {};
+    if (viewType === 'object') {
+      nodes.forEach(n => {
+        const f = n.file || 'unknown';
+        if (!clusterGroups[f]) clusterGroups[f] = [];
+        clusterGroups[f].push(n);
+      });
+    } else {
+      nodes.forEach(n => {
+        const p = n.package || 'unknown';
+        if (!clusterGroups[p]) clusterGroups[p] = [];
+        clusterGroups[p].push(n);
+      });
+    }
+    const clusterKeys = Object.keys(clusterGroups);
+
+    // Assign cluster centers
+    let clusterCenters = {};
+    clusterKeys.forEach((k, i) => {
+      clusterCenters[k] = {
+        x: width/2 + 200 * Math.cos(2 * Math.PI * i / clusterKeys.length),
+        y: height/2 + 200 * Math.sin(2 * Math.PI * i / clusterKeys.length)
+      };
+    });
+
+    // D3 force simulation with cluster gravity
+    const simulation = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(edges)
+        .id(d => d.id)
+        .distance(d => {
+          // In file view, make distance proportional to inverse of weight (more connections = closer)
+          if (viewType === 'file' && d.weight) {
+            return Math.max(30, 200 / d.weight);
+          }
+          return 80;
+        })
+      )
+      .force('charge', d3.forceManyBody().strength(-120))
+      .force('center', d3.forceCenter(width/2, height/2))
+      .force('cluster', d3.forceManyBody().strength(0.1))
+      .force('gravity', d3.forceX().x(d => {
+        if (viewType === 'object') return clusterCenters[d.file]?.x || width/2;
+        return clusterCenters[d.package]?.x || width/2;
+      }).strength(0.08))
+      .force('gravityY', d3.forceY().y(d => {
+        if (viewType === 'object') return clusterCenters[d.file]?.y || height/2;
+        return clusterCenters[d.package]?.y || height/2;
+      }).strength(0.08));
+
+    const g = svg.select('g');
+    const link = g.append('g')
+      .attr('stroke', viewType === 'file' ? '#000' : '#999')
+      .attr('stroke-opacity', 0.8)
+      .selectAll('line')
+      .data(edges)
+      .join('line')
+      .attr('stroke-width', d => viewType === 'file' && d.weight ? Math.min(10, 1.5 + Math.log2(d.weight)) : 1.5);
+
+    // Edge labels for file view
+    if (viewType === 'file') {
+      g.append('g')
+        .selectAll('text')
+        .data(edges)
+        .join('text')
+        .attr('font-size', '10px')
+        .attr('fill', '#333')
+        .attr('text-anchor', 'middle')
+        .text(d => d.weight)
+        .attr('x', d => (nodes.find(n => n.id === d.source.id)?.x + nodes.find(n => n.id === d.target.id)?.x) / 2)
+        .attr('y', d => (nodes.find(n => n.id === d.source.id)?.y + nodes.find(n => n.id === d.target.id)?.y) / 2);
+    }
+
+    const node = g.append('g')
+      .attr('stroke', '#fff')
+      .attr('stroke-width', 1.5)
+      .selectAll('circle')
+      .data(nodes)
+      .join('circle')
+      .attr('r', 18)
+      .attr('fill', nodeColor)
+      .attr('class', 'node')
+      .call(drag(simulation));
+
+    // Mouseover tooltips removed
+
+    node.append('title').text(d => {
+      if (viewType === 'object') return d.id;
+      // File view: show file name, entities, and edge count
+      const edgeCount = edges.filter(e => e.source.id === d.id || e.target.id === d.id).length;
+      return `${d.file}\nEntities: ${d.entities.length}\nEdge Count: ${edgeCount}`;
+    });
+    // Edge count label above File nodes removed; edge count remains in popup only
+
+    simulation.on('tick', () => {
+      if (viewType === 'file') {
+        link
+          .attr('x1', d => {
+            const src = nodes.find(n => n.id === d.source.id);
+            console.log('[DEBUG] link x1:', d," source node:", src);
+            return src ? src.x : 0;
+          })
+          .attr('y1', d => {
+            const src = nodes.find(n => n.id === d.source.id);
+            
+            return src ? src.y : 0;
+          })
+          .attr('x2', d => {
+            const tgt = nodes.find(n => n.id === d.target.id);
+            console.log('[DEBUG] link x2:', d," target node:", tgt);
+            return tgt ? tgt.x : 0;
+          })
+          .attr('y2', d => {
+            const tgt = nodes.find(n => n.id === d.target.id);
+            return tgt ? tgt.y : 0;
+          });
+        g.selectAll('text')
+          .attr('x', d => {
+            const src = nodes.find(n => n.id === d.source.id);
+            const tgt = nodes.find(n => n.id === d.target.id);
+            return src && tgt ? (src.x + tgt.x) / 2 : 0;
+          })
+          .attr('y', d => {
+            const src = nodes.find(n => n.id === d.source.id);
+            const tgt = nodes.find(n => n.id === d.target.id);
+            return src && tgt ? (src.y + tgt.y) / 2 : 0;
+          });
+          console.log('[DEBUG] link:', edges);
+      } else {
+        link
+          .attr('x1', d => d.source.x)
+          .attr('y1', d => d.source.y)
+          .attr('x2', d => d.target.x)
+          .attr('y2', d => d.target.y);
+      }
+      node
+        .attr('cx', d => d.x)
+        .attr('cy', d => d.y);
+    });
+  }
+
+  // Initial render
+  render(currentView);
+
+  // Toggle button
+  document.getElementById('toggleView').onclick = function() {
+    currentView = currentView === 'object' ? 'file' : 'object';
+    this.textContent = currentView === 'object' ? 'Object View' : 'File View';
+    render(currentView);
+  };
+
+  function drag(simulation) {
+    function dragstarted(event, d) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+    }
+    function dragged(event, d) {
+      d.fx = event.x;
+      d.fy = event.y;
+    }
+    function dragended(event, d) {
+      if (!event.active) simulation.alphaTarget(0);
+      d.fx = null;
+      d.fy = null;
+    }
+    return d3.drag()
+      .on('start', dragstarted)
+      .on('drag', dragged)
+      .on('end', dragended);
+  }
+}
+// Start loader
+loadChunksAndRender();
+</script>
+</body>
+</html>
