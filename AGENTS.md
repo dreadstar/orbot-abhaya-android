@@ -1,3 +1,29 @@
+## PROPERTY REFERENCE ERROR RESOLUTION PROTOCOL (2025-11-22)
+When an error occurs due to a missing property in a class/object:
+
+1. Literal Multi-Definition Search:
+  - Agents must perform a literal, codebase-wide search for all definitions of the parent class/object (e.g., 'class ClassName', 'data class ClassName', 'object ClassName').
+  - Enumerate every definition found, including file path and line number.
+
+2. Single Definition Handling:
+  - If only one definition exists, agents must immediately perform well-formedness checks on that file using the `./tools/brace_paren_check.sh` script and all available validation tools (e.g., linter, syntax checker).
+
+3. Reporting:
+  - Document all found definitions and validation results.
+  - Only proceed with fixes after confirming the correct definition and its structural validity.
+
+**Intent:**
+This rule ensures agents always resolve property reference errors by exhaustively verifying all possible class/object definitions, eliminating ambiguity, and enforcing strict structural validation before any code changes.
+## ERROR LIST DRIVEN RESOLUTION PROTOCOL (2025-11-21)
+When provided with an explicit list of errors (e.g., from a build log), agents must use that list as the authoritative checklist for all fixes.
+- Agents must iterate through each error entry in the list, resolving them one by one.
+- Each error’s file, line, and message must be used to guide the fix directly.
+- Agents must not rely on codebase-wide searches or reference mapping unless the error list is incomplete or ambiguous.
+- Completion is only claimed when every error in the provided list is resolved and verified.
+- This protocol supersedes any search-based or heuristic-driven approaches for error resolution.
+
+Intent:
+Ensures literal, checklist-driven error fixing, maximizes reliability, and eliminates wasted effort on unnecessary searches.
 ## SUCCESSFUL CHECKLIST/TODO COMPLETION RULE (2025-11-21)
 Agents must follow these protocols for every assigned checklist or todo list:
 2. Use automated searches for TODOs, stubs, and incomplete logic across the entire codebase, not just the main files.
@@ -10,7 +36,7 @@ This ensures 100% coverage and prevents premature claims of completion.
 **RULE: Always use import + short name, never fully qualified notation.**
 Agents must always add an import statement for any type, class, or symbol used from another package/module, and refer to it by its short name in code. Fully qualified notation (e.g., com.example.Type) is strictly prohibited in all code, documentation, and generated output. This rule applies to all languages and all code generation or editing tasks. (Added 2025-11-21 per user instruction.)
 - RULE: NO UNCERTAINTY ABOUT CODE EXISTENCE OR LOCATION
-Agents must never present uncertainty about whether a type, function, or file exists, or about its location, when this can be resolved by searching or reading the codebase. If a response would say "may not exist" or "likely in X" or similar, the agent must first perform the necessary search or file read to definitively answer. Only after this research is complete may the agent respond. This rule ensures all answers are authoritative, eliminates avoidable ambiguity, and enforces the project's standard of research-driven, context-verified responses. (Added 2025-11-20 per user instruction.)
+Agents must never present uncertainty about whether a type, function, or file exists, or about its location, when this can be resolved by searching or literal file reading of the codebase. If a response would say "may not exist" or "likely in X" or similar, the agent must first perform the necessary search or literal  file read to definitively answer. Only after this research is complete may the agent respond. This rule ensures all answers are authoritative, eliminates avoidable ambiguity, and enforces the project's standard of research-driven, context-verified responses. (Added 2025-11-20 per user instruction.)
 **When the user requests 'all errors', 'all files', or any similar comprehensive action, agents must process the entire scope as stated—never just the last file or a subset—unless the user explicitly requests a narrower focus. Never make assumptions to reduce scope. This rule supersedes all others and must be followed every time, without exception.**
 
 ## 🚨 ERROR LOG EXTRACTION RULE (GRADLE/KOTLIN)
@@ -24,7 +50,14 @@ Before updating or creating a KNOWLEDGE document, check the current date to be c
 
 # AGENTS.md - Operational Protocols for AI Agents
 
-**Purpose:**
+## STATEMENT VERACITY RULE (2025-11-21)
+Agents must never present a claim about code structure, type existence, or file location as fact unless it is verified by direct codebase search or literal file read.
+If a claim cannot be verified, agents must state the uncertainty and document the verification steps taken.
+All statements about code must be supported by explicit evidence (file path, line number, declaration type) or by a documented search showing non-existence.
+Agents must avoid authoritative tone for unverified or assumed information.
+
+Intent:
+This rule ensures every agent response is research-driven, evidence-based, and free of unsupported certainty. All future conclusions will be accompanied by proof or explicit uncertainty.
 This document defines the effective operational rules and protocols for all AI agents working on the orbot-abhaya-android project. It is a translation and adaptation of the comprehensive rules in AI_RULES.md and INITIAL_PROMPT.md, focused on actionable agent behavior and project reliability.
 
 ---
@@ -46,8 +79,8 @@ This document defines the effective operational rules and protocols for all AI a
 - Always use device-specific ADB commands with the current device ID: `30870044490006E`.
 - Always build from the project root directory.
 - Use absolute file paths in all tool calls and documentation.
-- For file reading, always read the entire file for logs and outputs, never partial sections.
-- For code edits, always read context before action (minimum 3-5 lines before and after target code).
+- For file reading, always perform literal file read of the entire file for logs and outputs, never partial sections.
+- For code edits, always perfor liteal file read for  context before action (minimum 3-5 lines before and after target code).
 - For commit logs, use the following format:
     - What changes were made (files, features, bugs)
     - What was accomplished (objectives, tests)
@@ -126,11 +159,13 @@ This document defines the effective operational rules and protocols for all AI a
 ---
 
 ## Import/Class Verification Protocol (2025-11-20)
+- RULE: CODEBASE TEXT SEARCH FOR CLASS/OBJECT EXISTENCE (2025-11-21)
+Agents must always perform a codebase-wide text search for the class or object declaration (e.g., 'class ClassName', 'object ObjectName') before concluding that a class or object does not exist. Never assume non-existence based on file or directory patterns alone. Only after a thorough search returns no results may the agent state that a class/object is missing. This rule applies to all languages and all codebase analysis tasks. (Added 2025-11-21 per user instruction.)
 - For every import or unresolved reference error, agents must:
-  1. Read the canonical file (e.g., the .kt file containing the types) and list all top-level classes, data classes, and enums.
+  1. Perform literal file read the canonical file (e.g., the .kt file containing the types) and list all top-level classes, data classes, and enums.
   2. Only import those specific types directly, never a non-existent object, companion, or wildcard unless it is actually defined.
   3. Cross-check every import in referencing files for accuracy, necessity, and placement (after the package line).
-  4. Never assume the existence of a class/object for import—always verify by reading the file.
+  4. Never assume the existence of a class/object for import—always verify by literal reading the file.
   5. Document the verification process in the commit or response.
 - This protocol supersedes any prior shortcut or assumption-based import/type reference handling.
 - Applies to all languages and platforms.
@@ -138,3 +173,33 @@ This document defines the effective operational rules and protocols for all AI a
 ---
 
 **This document supersedes all previous agent instructions. All agents must operate according to these protocols.**
+
+## Literal, Exhaustive, and Verified Reference Mapping Protocol (2025-11-21)
+
+Agents must, for every analysis, plan, or error resolution involving code references, types, or objects:
+
+1. **Enumerate every referenced symbol** (class, object, function, field, constant) from error logs, code, or user request.
+2. **Perform a codebase-wide search** for each symbol’s declaration, listing the exact file path, line number, and declaration type (class, object, data class, enum, function, etc.).
+3. **Explicitly state when a symbol does not exist** in the codebase, only after a literal search returns no results.
+4. **Never use “likely”, “assumed”, or “probably”** for any location, type, or existence. All references must be verified and documented with file and line.
+5. **Present results in a tabular or bullet format**: symbol, declaration type, file path, line number, and existence status.
+6. **Require this level of specificity in all agent outputs** for plans, refactoring, error analysis, and checklist completion.
+7. **Document this protocol in AGENTS.md and AI_RULES.md** with the date and context.
+
+**Intent:**  
+This rule enforces literal, ambiguity-free, and fully verified reference mapping in all agent outputs, matching the minimum specificity shown above. No shortcuts, guesses, or partial answers are allowed.
+
+## MANDATORY STRUCTURAL VALIDATION RULE (2025-11-21)
+
+Every time an agent validates a file for well-formedness—regardless of language, context, or other validation requirements—the agent must run the `brace_paren_check.sh` script on the file.
+
+- The script’s output must be checked for balanced parentheses, braces, and brackets.
+- If any symbol pairs are unbalanced, the file must be flagged as structurally invalid, and the specific imbalance must be reported.
+- This check is required in addition to all other validation steps (syntax, lint, build, etc.).
+- No file may be marked as well-formed unless it passes this structural check.
+- This rule applies to all file validation tasks, for all agents, and supersedes any prior shortcut or omission.
+
+Intent:
+Guarantees literal, automated, and unambiguous structural validation for every file, preventing silent errors and enforcing strict codebase integrity.
+
+Date: 2025-11-21

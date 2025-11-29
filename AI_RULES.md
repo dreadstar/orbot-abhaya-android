@@ -1,3 +1,15 @@
+### RULE: ERROR LIST DRIVEN RESOLUTION PROTOCOL (2025-11-21)
+When provided with an explicit list of errors (e.g., from a build log), agents must use that list as the authoritative checklist for all fixes.
+- Agents must iterate through each error entry in the list, resolving them one by one.
+- Each error’s file, line, and message must be used to guide the fix directly.
+- Agents must not rely on codebase-wide searches or reference mapping unless the error list is incomplete or ambiguous.
+- Completion is only claimed when every error in the provided list is resolved and verified.
+- This protocol supersedes any search-based or heuristic-driven approaches for error resolution.
+
+**Intent:**
+Ensures literal, checklist-driven error fixing, maximizes reliability, and eliminates wasted effort on unnecessary searches.
+- RULE: CODEBASE TEXT SEARCH FOR CLASS/OBJECT EXISTENCE (2025-11-21)
+Agents must always perform a codebase-wide text search for the class or object declaration (e.g., 'class ClassName', 'object ObjectName') before concluding that a class or object does not exist. Never assume non-existence based on file or directory patterns alone. Only after a thorough search returns no results may the agent state that a class/object is missing. This rule applies to all languages and all codebase analysis tasks. (Added 2025-11-21 per user instruction.)
 ### RULE: SUCCESSFUL CHECKLIST/TODO COMPLETION (2025-11-21)
 For every assigned checklist or todo list, agents must:
 2. Use automated searches for TODOs, stubs, and incomplete logic across the entire codebase, not just the main files.
@@ -28,6 +40,22 @@ This ensures 100% coverage and prevents premature claims of completion.
 **Sources**: INITIAL_PROMPT.md + All 40 KNOWLEDGE*.md files (main folder + abhaya-sensor-android)
 
 ---
+
+
+## Literal, Exhaustive, and Verified Reference Mapping Protocol (2025-11-21)
+
+Agents must, for every analysis, plan, or error resolution involving code references, types, or objects:
+
+1. **Enumerate every referenced symbol** (class, object, function, field, constant) from error logs, code, or user request.
+2. **Perform a codebase-wide search** for each symbol’s declaration, listing the exact file path, line number, and declaration type (class, object, data class, enum, function, etc.).
+3. **Explicitly state when a symbol does not exist** in the codebase, only after a literal search returns no results.
+4. **Never use “likely”, “assumed”, or “probably”** for any location, type, or existence. All references must be verified and documented with file and line.
+5. **Present results in a tabular or bullet format**: symbol, declaration type, file path, line number, and existence status.
+6. **Require this level of specificity in all agent outputs** for plans, refactoring, error analysis, and checklist completion.
+7. **Document this protocol in AGENTS.md and AI_RULES.md** with the date and context.
+
+**Intent:**  
+This rule enforces literal, ambiguity-free, and fully verified reference mapping in all agent outputs, matching the minimum specificity shown above. No shortcuts, guesses, or partial answers are allowed.
 
 ## 🚨 CRITICAL USER-GIVEN META-RULES (ABSOLUTE HIGHEST PRIORITY)
 
@@ -1067,9 +1095,9 @@ find . -name "TEST-*.xml" -path "*/test-results/*"
 - KNOWLEDGE-10112025.md, KNOWLEDGE-10102025.md, KNOWLEDGE-10050025.md
 - KNOWLEDGE-09282025.md, KNOWLEDGE-09262025.md, KNOWLEDGE-09252025.md
 - KNOWLEDGE-09232025.md, KNOWLEDGE-09212025.md, KNOWLEDGE-09192025.md
-- KNOWLEDGE-09182025.md, KNOWLEDGE-09162025.md, KNOWLEDGE-09152025.md
-- KNOWLEDGE-09142025.md, KNOWLEDGE-09082025.md, KNOWLEDGE-09072025.md
-- KNOWLEDGE-09062025.md, KNOWLEDGE-09052025.md, KNOWLEDGE-MESHRABIYA-AIDL.md
+- KNOWLEDGE-09182025.md, KNOWLEDGE-09162025.md, KNOWLEDGE-09151525.md
+- KNOWLEDGE-09141525.md, KNOWLEDGE-09082025.md, KNOWLEDGE-09072025.md
+- KNOWLEDGE-09062025.md, KNOWLEDGE-09051525.md, KNOWLEDGE-MESHRABIYA-AIDL.md
 - abhaya-sensor-android/KNOWLEDGE.md, abhaya-sensor-android/KNOWLEDGE-09262025.md
 - Plus INITIAL_PROMPT.md and all other project documentation
 
@@ -1092,3 +1120,26 @@ find . -name "TEST-*.xml" -path "*/test-results/*"
   5. Document the verification process in the commit or response.
 - This rule supersedes any prior shortcut or assumption-based import/type reference handling.
 - Applies to all languages and platforms.
+
+## STATEMENT VERACITY RULE (2025-11-21)
+Agents must never present a claim about code structure, type existence, or file location as fact unless it is verified by direct codebase search or file read.
+If a claim cannot be verified, agents must state the uncertainty and document the verification steps taken.
+All statements about code must be supported by explicit evidence (file path, line number, declaration type) or by a documented search showing non-existence.
+Agents must avoid authoritative tone for unverified or assumed information.
+
+Intent:
+This rule ensures every agent response is research-driven, evidence-based, and free of unsupported certainty. All future conclusions will be accompanied by proof or explicit uncertainty.
+
+### MANDATORY STRUCTURAL VALIDATION RULE (2025-11-21)
+Every time an agent validates a file for well-formedness—regardless of language, context, or other validation requirements—the agent must run the `brace_paren_check.sh` script on the file.
+- The script’s output must be checked for balanced parentheses, braces, and brackets.
+- If any symbol pairs are unbalanced, the file must be flagged as structurally invalid, and the specific imbalance must be reported.
+- This check is required in addition to all other validation steps (syntax, lint, build, etc.).
+- No file may be marked as well-formed unless it passes this structural check.
+- This rule applies to all file validation tasks, for all agents, and supersedes any prior shortcut or omission.
+
+**Intent:**
+Guarantees literal, automated, and unambiguous structural validation for every file, preventing silent errors and enforcing strict codebase integrity.
+
+**Date:** 2025-11-21
+

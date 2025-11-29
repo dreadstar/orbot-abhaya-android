@@ -10,7 +10,7 @@ This guide provides onboarding instructions for developers who want to create, t
 All services are defined using the manifest-driven `LibraryEntry` schema. Supported service types:
 - Python
 - LiteRT (ML inference)
-- Hybrid (Python + LiteRT)
+
 - Java
 - NDK (native)
 - Workflow (multi-step)
@@ -59,6 +59,28 @@ val myService = LibraryEntry.PythonServiceEntry(
 - `platformSupport`: List of supported platforms (e.g., Android, Linux)
 - `files`: List of required files (models, scripts, etc.)
 - `builtin`: Set to `false` for user-defined services
+
+---
+
+        /**
+         * RECOMMENDED SERVICE BUNDLE FORMAT:
+         * 
+         * service-bundle.zip:
+         * ├── manifest.json          # Service metadata + signature info
+         * ├── service/
+         * │   ├── main.py           # Main executable
+         * │   ├── requirements.txt  # Dependencies
+         * │   └── assets/           # Additional files
+         * └── signatures/
+         *     ├── author.sig        # Author's signature over service files
+         *     └── author.pub        # Author's public key (Ed25519)
+         * 
+         * WHY THIS FORMAT:
+         * - Standard ZIP (built into Android)
+         * - Separates code from signatures
+         * - Supports multiple signers (future: community review)
+         * - Easy to verify individual components
+         */
 
 ---
 

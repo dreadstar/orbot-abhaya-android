@@ -37,32 +37,32 @@ data class TaskProgress(
     val status: String
 )
 
-data class TaskRequest(
-    val id: UUID = UUID.randomUUID(),
-    val serviceId: String,
-    val parameters: Map<String, Any> = emptyMap(),
-    val requester: String = "local"
-)
+// data class TaskRequest(
+//     val id: UUID = UUID.randomUUID(),
+//     val serviceId: String,
+//     val parameters: Map<String, Any> = emptyMap(),
+//     val requester: String = "local"
+// )
 
 /**
  * Thin facade that adapts calls from the UI to the compute TaskManager.
  * Keeps the UI decoupled from compute package types.
  */
-object TaskManager {
-    fun getInstance(): TaskManager = this
+// object TaskManager {
+//     fun getInstance(): TaskManager = this
 
-    // Delegate to compute TaskManager.searchServices and map to UI DTOs
-    fun searchServices(query: String): List<ServiceMetadata> {
-        val results = ComputeTaskManager.searchServices(query)
-        return results.map { it.toServiceMetadata() }
-    }
+//     // Delegate to compute TaskManager.searchServices and map to UI DTOs
+//     fun searchServices(query: String): List<ServiceMetadata> {
+//         val results = ComputeTaskManager.searchServices(query)
+//         return results.map { it.toServiceMetadata() }
+//     }
 
-    fun createTask(metadata: ServiceMetadata): java.util.UUID = java.util.UUID.randomUUID()
+//     fun createTask(metadata: ServiceMetadata): java.util.UUID = java.util.UUID.randomUUID()
 
-    fun createTaskWithParams(metadata: ServiceMetadata, params: Map<String, Any>): java.util.UUID = java.util.UUID.randomUUID()
+//     fun createTaskWithParams(metadata: ServiceMetadata, params: Map<String, Any>): java.util.UUID = java.util.UUID.randomUUID()
 
-    fun getTaskProgress(): List<TaskProgress> = emptyList()
-}
+//     fun getTaskProgress(): List<TaskProgress> = emptyList()
+// }
 
 // Conversion helpers from compute-layer types to UI DTOs.
 // These are defensive and will gracefully degrade if fields are missing.
