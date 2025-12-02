@@ -49,3 +49,10 @@ app/src/main/assets/LICENSE
 # AIDL generated files
 build/generated/meshrabiya-aidl/
 orbotservice/src/main/aidl/com/ustadmobile/meshrabiya/api/
+
+# Bolt related files
+bolt/logs/
+bolt-debug.log
+.rerun.json
+bolt/.java_home
+
