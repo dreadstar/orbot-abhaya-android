@@ -1,6 +1,18 @@
+# IMPLEMENTATION GUIDANCE
+When implementing these workflows:
+   - refactor existing data classes to add required properties or functions
+   - always use short name with import line dependency notation.
+   - Analyze existing Meshrabiya library codebase by literally reading the files on disk, use 
+   - all code should be fully implemented instead of TODOs or mocked data/functinality
+   - although you should review this entire document. You will be planning the implementation and refactoring required for Phases 5 through 7
+   - after initial planning, conduct additional round of code review with the goal of answering any uncertainties in the plan related to how the code is currently implemented. Repeat this process until the only questions left are decisions i need to make or clarification to the described workflow
+   - final plan should be as specfic as possible and be written to a file.
+   - `MeshEcosystemListener` and `CoreGossipBroadcastService` currently have references to `IntelligentDistributedComputeService`. These references will need to be repointed to `DistributedComputeClient` and `DistributedComputeServer` functions as apporpriate.
+
+
 # CANONICAL WORKFLOWS DOCUMENTATION
 
-**Date**: November 18, 2025  
+**Date**: December 3, 2025  
 **Purpose**: Define the canonical workflows for distributed storage and compute operations in the Meshrabiya mesh network  
 **Status**: COMPREHENSIVE REFERENCE
 
@@ -399,21 +411,27 @@ Storage nodes automatically replicate chunks to achieve target redundancy via da
 ### Overview
 Client node requests compute task execution on mesh network.
 
+### Notes
+    - User can allow all services or allow a subset of runtimes or select specific services to allow or a combination of the above as a part of the Compute Participation configuraion in the UI. These settings should be persisted through restart
+
 ### Workflow Steps
 
 #### 5.1 Client-Side: Prepare Task Request
 **Location**: Client application logic
 
+0. User creates a task request from the UI which is then sent to the client-side distributed compute service via the Meyrabiya API
+
 1. **Create LocalComputeTaskRequest**:
-   - taskId (UUID)
-   - taskType (PYTHON, JAVA, ML_NATIVE, etc.)
-   - jobType (IMAGE_PROCESSING, ML_INFERENCE, etc.)
+   - taskId (UUID generated) 
+   - serviceId
    - inputParams
-   - resourceLimits
    - requesterNodeId
+   - recipients (list of recipient nodes for users and recipient node and taskId for recipient tasks)
+   - status (iniitially set by `DistributedComputClient.processTaskRequest()` to PENDING)
+   - servicehash (set by `DistributedComputClient.processTaskRequest()` to the hash of the service associted with serviceId)
 
 #### 5.2 Client-Side: Process Task Request
-**Location**: `IntelligentDistributedComputeService.processTaskRequest()`
+**Location**: `DistributedComputeClient.processTaskRequest()`
 
 1. **Track request** in activeRequests map
 2. **Create tracked request** with status PENDING
@@ -422,96 +440,109 @@ Client node requests compute task execution on mesh network.
    coreGossipBroadcastService.sendComputeTaskRequest(
        taskId = request.taskId,
        serviceId = request.serviceId,
-       inputParams = request.inputParams,
-       metadata = request.metadata
+       serviceHash = hash of service associated with serviceId
    )
    ```
-4. **Wait for responses** asynchronously via `handleComputeNodeResponse()` callbacks
+4. **Wait for responses** asynchronously via `DistributedComputeClient.handleComputeNodeResponse()` callbacks via  `VirtualNode` router  →  `MeshEcosystemListener`
 
 #### 5.3 Compute Node-Side: Receive Broadcast & Respond
-**Location**: `IntelligentDistributedComputeService.handleIncomingComputeTaskRequest()`
+**Location**: `DistributedComputeServer.handleIncomingComputeTaskRequest()`
 
 1. **Receive ComputeTaskRequestMessage** via UDP
 2. **Check eligibility**:
-   - Is node a COMPUTE_NODE? (EmergentRoleManager) - This should be handled in MeshEcosystemListener or even better just ignored by the router if not a COMPUTE_NODE
-   - ServiceId maps to a service in service library
-   - Has required runtime? (Python, JVM, etc.) based on service profile in library
-   - Has required ML capabilities? (ML Kit features) based on service profile in library
-   - Queue depth acceptable?
-   - System state healthy?
-   - Is available
+   - Is node a COMPUTE_NODE? (EmergentRoleManager) - This should be handled in `MeshEcosystemListener` or even better just ignored by the `VirtualNode` router if not a COMPUTE_NODE before forwarding the message on to `MeshEconsystemListener` or `DistributedComputeServer.handleIncomingComputeTaskRequest()`
+   - Does ServiceId map to an enabled  `ServiceLIbraryEntry`  in the local compute node service library based on the user choices outlined in the Notes
+   - Do the serviceHash from the request and in the service library match 
+   - Does the compute_node have the required capabilities defined in the ServiceLibraryEntry for the service entry corresponding the the serviceId? This inlclude ML capabilities that can be included in the resource requirements
+   - Is the node `fitness` metric within acceptable levels
+
 3. **If eligible, send ComputeNodeResponse**:
+   - taskId
    - node mesh address
-   - fitness metrics
-   - capability metrics
-   - ram
-   - available storage
-   - mlKitFeatures
+   - fitness metrics 
+   - capability metrics 
    - estimatedLatencyMs
 
 #### 5.4 Client-Side: Select Compute Node
-**Location**: `IntelligentDistributedComputeService.handleComputeNodeResponses()`
+**Location**: `DistributedComputeClient.handleComputeNodeResponses()`
 
 1. **Collect responses** until timeout
-2. **Filter responses**:
-   - Has required ML capabilities, if required by task
-   - Sufficient memory
-   - Sufficient disk
-   - Fastest processing
-   - Latency (lower importance)
-3. **Rank candidates** by:
+
+2. **Rank candidates** by:
    - currentLoad (ascending - prefer less loaded)
    - processing speed (descending - prefer faster)
    - ram (descending - prefer more RAM)
    - available storage (descending - prefer more storage)
    - estimatedLatencyMs (ascending - prefer faster)
-   - mlKitFeatures.size (descending - prefer more capable), if needed
-4. **Select best node** (first in ranked list)
-5. **If no capable nodes**: Retry with backoff
+   - higher  capabilty metric better
+   - higher fitness metric better
+3. **Select best node** (first in ranked list)
+4. **If no capable nodes**: Retry with backoff
 
 #### 5.5 Client-Side: Assign Task
-**Location**: `IntelligentDistributedComputeService.assignTaskToNode()`
+**Location**: `DistributedComputeClient.assignTaskToNode()`
 
 1. **Update tracked request**:
    - status = ASSIGNED
    - selectedNodeAddress = chosen node
 2. **Create TaskAssignmentMessage**:
    - taskId
-   - taskExecutionContext (code bundle, inputs, limits)
+   - serviceId
+   - inputParams
    - requesterNodeId
-   - callbackAddress
+   - recipients (list of recipient nodes for users and recipient node and taskId for recipient tasks)
+
 3. **Send direct message** to selected compute node:
    ```kotlin
    virtualNode.sendDirectMessage(nodeAddress, assignmentMessage.toBytes())
    ```
 
 #### 5.6 Compute Node-Side: Execute Task
-**Location**: `IntelligentDistributedComputeService.handleTaskAssignmentMessage()`
+**Location**: `DistributedComputeServer.handleTaskAssignmentMessage()`
 
 1. **Receive TaskAssignmentMessage**
 2. **Validate resources** still available
-3. **Send TaskAcceptanceMessage** to client
-4. **Execute task** (see Section 7)
+3. call `TaskManager.addTask()` which returns the new task object including a publicKey property  which should be included in `TaskAcceptanceMessage` (see Section 7.1)
+3. **Send TaskAcceptanceMessage** to client with direct message
+   - taskId
+   - publicKey
+   - computeNodeAddress (mesh network address)
+4. **Start Preparation Phase and subsequent Steps** (see Section 7.2)
 5. **Send TaskCompletedMessage** when done
+   - taskId
+   - outputManifest
+   - executionTime
 
+
+#### 5.7 Client-Side: Recieve TaskAcceptanceMessage 
+**Location**: `DistributedComputeClient.update TaskStatusAccepted()`
+1. **Update tracked request for taskId**:
+   - status = ACCEPTED
+   - selectedNodeAddress = computeNodeAddress
+
+#### 5.8 Client-Side: Recieve TaskCompletedMessage 
+**Location**: `MeshEcosystemListener` → `DistributedComputeClient.update TaskStatusAccepted()`
+1. **Update tracked request for taskId**:
+   - status = COMPLETED
+   - selectedNodeAddress = computeNodeAddress
 ---
 
 ## 6. TASK MANAGER RECEIVES ACCESS UPDATE NOTICE
 
 ### Overview
-Compute node receives notification that task data access permissions changed (FileAccessUpdateConfirmation).
+Compute node receives notification that task data access permissions changed (FileAccessUpdateNotification).
 
 ### Workflow Steps
 
 #### 6.1 Compute Node-Side: Receive File Access Update
-**Location**: `MeshEcosystemListener` → `IntelligentDistributedComputeService.handleTaskDataAccessUpdate()`
+**Location**: `MeshEcosystemListener` → `DistributedComputeServer.handleTaskDataAccessUpdate()`
 
-1. **Receive FileAccessUpdateConfirmation message**
+1. **Receive FileAccessUpdateNotification message**
 2. **Check if running affected task** (TaskManager):
    - Look up taskId in active executions
 3. **If running, update task execution context** (TaskManager):
    - Retrieve new file (get chunks and reassemble) using Retrieve File workflow
-     - Make a call to `DistributedStorageManager.retrieveFile(fileId)`
+     - Make a call to `DistributedStorageClient.retrieveFile(fileId)`
    - Decrypt file with the task key
    - Add the decrypted file to the task sandbox
    - Trigger newFile event in the sandbox
@@ -522,28 +553,51 @@ Compute node receives notification that task data access permissions changed (Fi
 ## 7. COMPLETED TASK WORKFLOW
 
 ### Overview
-Compute node completes task execution and notifies client with results.
+`TaskManager` is the components which will manage the tasks running on a compute node. 
+`DistributedComputeServer` Compute node completes task execution and notifies client with results.
 
 ### Workflow Steps
 
-#### 7.1 Compute Node: Task Execution Finishes
-**Location**: Task executor (PythonExecutor, JVMExecutor, etc.)
+#### 7.1 Compute Node: Task Creation
+**Location**: `TaskManager.addTask()` 
+   - combines the accepted task request, serviceLibrary Entry to populate a new task with `state` set to PREPARING
+   - Create Keypair for task, which TaskMangaer should store to decode input files shared with the task and include the publicKey in the task object.
+   - addTask() add the task to a list of tasks it is managing and return this new task object  
+   
 
+#### 7.2 Compute Node: TaskManager execution preparation
+**Location**: `TaskManager.prepareTask()` 
+If the ServiceLibraryEntry corresponding to the serviceId for the task has `hasOutputFiles`  or `hasInputFiles` set to true
+1. `TaskManager` should create a sandbox container (or whatever functional equivalent is actually  possible with our current build configuration)  in which the task will run 
+2. if `hasInputFiles` is true: 
+   - `TaskManager` should wait to be notified of  `FileAccessUpdateNotification` for files for the task.
+   - `TaskManager` should retrieve the files and add them to the sandbox container
+
+
+
+#### 7.4 Compute Node: Task Execution 
+**Location**: `TaskManager.prepareTask()`  →  Task executor (JSSExecutor, JVMExecutor, MLNativeExecutor)
+Once the Preparation phase completes, 
+   - task  `state` is then set to EXECUTING
+   - `TaskManager` should begin execution of the task using the appropriate executor based on the `ServiceLibraryEntry` associated with the task in the sandbox container, running the codebase stored in the ServiceLibraryEntry
+   - as the  code is executed, it will generate 0 or more output files (using `SandboxStorageProxy`) and an `resultMessage` in json/xml/text format and `resultMessageType` (json/xml/text)
+
+#### 7.4 Compute Node: Task Execution Finishes
 1. **Task completes** (success or failure)
 2. **Collect execution metrics**:
    - executionTimeMs
-   - resourcesUsed (RAM, CPU, disk)
-   - containerId
-3. **Collect output files** (if any):
-   - Generate FileReference for each output
-   - Files already stored via SandboxStorageProxy during execution
+   - containerId (if possible with current build configuration)
 
-#### 7.2 Compute Node: Store Results to Distributed Storage
-**Location**: Task executor → `DistributedStorageManager.storeFile()`
+3. **Collect output files and output result fields** (if any):
+   - Generate FileReference for each output
+   - Files already stored via `SandboxStorageProxy` during execution
+
+#### 7.5 Compute Node: Store Results to Distributed Storage
+**Location**: Task executor → `DistributedStorageClient.storeFile()`
 
 **CRITICAL**: Results must be stored with TASK permissions
 
-1. **For each output file**:
+1. **For each output file (approximate code)**:
    ```kotlin
    val fileRef = distributedStorageManager.storeFile(
        path = outputPath,
@@ -568,16 +622,18 @@ Compute node completes task execution and notifies client with results.
 2. **Build OutputManifest** with all FileReferences
 3. **For each file in the Manifest**: send FilePermissionUpdateMessage with addedRecipients containing all the recipients including the owner
 
-#### 7.3 Compute Node: Send Completion Notification
-**Location**: `IntelligentDistributedComputeService.sendTaskCompletion()`
+#### 7.6 Compute Node: Send Completion Notification
+**Location**: `DistributedComputeServer.sendTaskCompletion()`
 
 1. **Create TaskCompletedMessage**:
    - taskId
    - success (true/false)
    - resultManifest (list of FileReferences)
    - resultMessage (optional)
-   - executionStats (time, resources, containerId)
+   - resultMessageType  (optional)
+   - executionStats (time, containerId)
    - error (if failure)
+   
 2. **Send direct message** to client node:
    ```kotlin
    virtualNode.sendDirectMessage(
@@ -589,9 +645,9 @@ Compute node completes task execution and notifies client with results.
    - Retry every `TASK_COMPLETION_RETRY_INTERVAL_MS` (30 sec)
    - For up to `TASK_COMPLETION_RETRY_PERIOD_MS` (5 min)
    - Stop after timeout or successful ACK
-
-#### 7.4 Client-Side: Receive Completion
-**Location**: `IntelligentDistributedComputeService.handleTaskCompletionMessage()`
+** NOTE: `TASK_COMPLETION_RETRY_INTERVAL_MS` and `TASK_COMPLETION_RETRY_PERIOD_MS` should be managed from `MeshrabiyaConstants.kt`
+#### 7.7 Client-Side: Receive Completion
+**Location**: `MeshEcosystemListener`  → `IntelligentDistributedComputeService.handleTaskCompletionMessage()`
 
 1. **Receive TaskCompletedMessage**
 2. **Validate taskId** matches tracked request
@@ -600,15 +656,12 @@ Compute node completes task execution and notifies client with results.
    - result = completion message
 4. **Download result files** (if any):
    - For each FileReference in resultManifest:
-     - Call `DistributedStorageManager.retrieveFile(fileRef)`
+     - Call `DistributedStorageClient.retrieveFile(fileRef)`
 5. **Send TaskCompletionAckMessage** to compute node
-6. **Trigger completion callback**:
-   ```kotlin
-   onTaskCompleted?.invoke(taskId, result)
-   ```
-
-#### 7.5 Compute Node: Receive ACK
-**Location**: `IntelligentDistributedComputeService.handleTaskCompletionAckMessage()`
+6. **Send Notification to UI via MeshrabiyaAPI**:
+    - forward all details from TaskCompletedMessage 
+#### 7.8 Compute Node: Receive ACK
+**Location**: `DistributedComputeServer.handleTaskCompletionAckMessage()`
 
 1. **Receive TaskCompletionAckMessage**
 2. **Stop retry loop** for this taskId
@@ -617,7 +670,7 @@ Compute node completes task execution and notifies client with results.
    - Clean up temporary files
    - Release sandbox resources
 
-#### 7.6 Compute Node: Cleanup After Timeout
+#### 7.9 Compute Node: Cleanup After Timeout
 **Location**: Retry loop timeout handler
 
 **If no ACK received within `TASK_COMPLETION_RETRY_PERIOD_MS`**:

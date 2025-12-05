@@ -32,12 +32,8 @@ Client node stores a file to the distributed mesh network with encryption and re
 
 ### Workflow Steps
 
-#### 0. DistributedStorageManager Startup
-**Location**: `DistributedStorageManager` initialization
-
-- At startup, DistributedStorageManager service creates a service keypair, which will be used for encrypting chunks with access for the node storing the file, separate from the access given to the user of the app
-- This keypair is stored in memory only (does not need to persist across restarts)
-- One keypair per DistributedStorageManager instance, used for ALL chunks that require it to sign/encrypt
+#### 0 DistributedStorageManage start
+   - At startup, DistributedSotorage service creates a service keypair, which will be used for encrypting chunks with access for the node storing the file, seprate from the access given to the user of the app.  it should persist till restart.
 
 #### 1.1 Client-Side: File Preparation
 **Location**: `DistributedStorageManager.storeFile()`
@@ -45,9 +41,10 @@ Client node stores a file to the distributed mesh network with encryption and re
 1. **Prepare permission metadata**:
    - `owner`: Task requester node public key (or local node)
    - `recipients`: List of `RecipientEntry` objects (type: USER or TASK)
+   - `accessScope`: TASK_ISOLATED, SERVICE_SHARED, or MESH_GLOBAL
 2. **Chunk file**: Split into chunks (size from `MeshrabiyaConstants.getChunkSizeKb()`)
    - Each chunk has: `chunkId`, `fileId`, `chunkIndex`, `totalChunks`, `hash`, `recipientKeyIds`, `sessionKeys`
-   - Chunks are NOT encrypted yet (encryption happens in step 1.5 after storage node selection)
+
 
 #### 1.2 Client-Side: Storage Node Discovery
 **Location**: `DistributedStorageManager.storeFile()` → `CoreGossipBroadcastService.sendStorageNodeRequest()`
@@ -55,9 +52,8 @@ Client node stores a file to the distributed mesh network with encryption and re
 1. **Create StorageNodeRequest** for each chunk:
    - requestId (UUID)
    - chunkId
-   - chunkIndex
    - fileId
-   - desiredReplicas (based on ReplicationLevel) - **Optional field**. Desired replication level for all files should default to `MeshrabiyaConstants.getReplicaCount()`
+   - desiredReplicas (based on ReplicationLevel).  Optional field. Desired Relication level for all files should default to the MeshtrabiyaConstants.getReplicaCount()
    - chunkSizeBytes
 2. **Broadcast request via CoreGossipBroadcastService**:
    ```kotlin
@@ -70,20 +66,20 @@ Client node stores a file to the distributed mesh network with encryption and re
 
 1. **Receive StorageNodeRequest broadcast** via UDP
 2. **Check eligibility**:
-   - Is node a STORAGE_NODE? (EmergentRoleManager) - This should be handled in MeshEcosystemListener or even better just ignored by the router if not a STORAGE_NODE
-   - **Validate quota**: Check if chunk size is within available storage
+   - Is node a STORAGE_NODE? (EmergentRoleManager) This should be handled in MeshEcosystemListener or even better just ignored by the rouuter if not a STORAGE_NODE.
+   -  **Validate quota**: Check if chunk size is within available storage
    - System state healthy? (battery, thermal)
 3. **If eligible, send StorageNodeResponse**:
    - nodeId
    - availableSpace
-   - totalStorageAllocated (secondary/tertiary ranking factor)
+   - totalStorageAllocated
    - systemState
    - meshUrl
    - latencyEstimate
    - fitnessScore
-   - DistributedStorageManager service public key from Step 0
+   - DistributedStorageManager  service pubbkey frmo Step 0
 
-#### 1.4 Client-Side: Select Storage Node
+#### 1.4 Client-Side: Select Storage Nodes
 **Location**: `DistributedStorageManager.storeFile()`
 
 1. **Collect responses** until timeout
@@ -92,18 +88,17 @@ Client node stores a file to the distributed mesh network with encryption and re
    - Available space (more preferred)
    - Latency (lower preferred)
    - Fitness score (higher preferred)
-   - Total storage allocated (secondary/tertiary factor)
-3. **Select best node** (singular - only ONE storage node per chunk, replication handled via daisy-chaining)
+3. **Select best  node** 
 
 #### 1.5 Client-Side: Chunk Transfer
 **Location**: `DistributedStorageManager.storeFile()` → Connection pool
 
-1. **For selected storage node**:
+1. **For  selected storage node**:
    - Acquire connection from MeshConnectionPool
-   - Using the Chunk created in 1.1, Create ChunkTransferMessage with encrypted chunk data
-   - **Encrypt file data**: Use hybrid encryption with per-recipient key encryption
-     - Chunk key encrypts data
-     - The owner's public key, the selected storage node's DistributedStorageManager service public key, and each recipient's public key encrypts the chunk key
+   
+   - Using the Chunk created in 1.1, Create ChunkTransferMessage with encrypted chunk data **Encrypt file data**: Use hybrid encryption with per-recipient key encryption
+      - Chunk key encrypts data
+      - The owner's public key, the selected storage node's DistributedStorageManager service public key and Each recipient's public key encrypts the chunk key
    - Send chunk via `virtualNode.sendChunkToNode(nodeId, chunk, bytes)`
    - Release connection
 
@@ -122,7 +117,7 @@ Client node stores a file to the distributed mesh network with encryption and re
    - chunkId, fileId, chunkIndex, totalChunks
    - fileName, relativePath
    - recipientKeyIds, sessionKeys
-   - **replicaCount = (value from ChunkTransferMessage) + 1** (CRITICAL: Increment before storing)
+   - **replicaCount = value from ChunkTransferMessage** +1
 5. **Send completion notification** to client node
 6. **Initiate replication workflow** (see Section 4) if replicaCount < target
 
@@ -144,6 +139,7 @@ suspend fun storeFile(
     data: ByteArray,
     priority: SyncPriority = SyncPriority.NORMAL,
     replicationLevel: ReplicationLevel = ReplicationLevel.STANDARD,
+    accessScope: AccessScope = AccessScope.TASK_ISOLATED,
     owner: String? = null,
     recipients: List<RecipientEntry>? = null
 ): FileReference?
@@ -165,13 +161,13 @@ data class MeshChunk(
 )
 
 // Replica count interpretation (CANONICAL):
-// replicaCount = The replica number stored on this node
+// replicaCount = Number of nodes that will replicate this chunk AFTER the current node
 // 
 // Example flow for target=3:
-// Client → Storage A (receives count=0, stores as count=1, sends count=1)
-// Storage A → Storage B (receives count=1, stores as count=2, sends count=2)
-// Storage B → Storage C (receives count=2, stores as count=3, sends count=3)
-// Storage C checks: count=3 >= target=3, STOPS replication
+// Client → Storage A (count=0) → stores → replicates with count=1
+// Storage A → Storage B (count=1) → stores → replicates with count=2
+// Storage B → Storage C (count=2) → stores → replicates with count=3
+// Storage C → Storage D (count=3) → stores → STOPS (count >= 3)
 ```
 
 ---
@@ -181,28 +177,26 @@ data class MeshChunk(
 ### Overview
 Client node retrieves a file from the distributed mesh network.
 
-**IMPORTANT**: There is NO local storage copy beyond the original file which the user places initially in the drop folder.
-
 ### Workflow Steps
 
-#### 2.1 Client-Side: Query Mesh Network
+#### 2.1 Client-Side: Check Local Storage
+**Location**: `DistributedStorageManager.retrieveFile()`
+
+
+
+#### 2.2 Client-Side: Query Mesh Network
 **Location**: `DistributedStorageManager.retrieveFile()` → `CoreGossipBroadcastService`
 
 1. **Broadcast ChunkRetrievalQuery** for fileId:
    ```kotlin
-   coreGossipBroadcastService.sendChunkRetrievalQuery(
-       fileId = fileId,
-       chunkIndexes = null  // Optional: specify missing chunks on retry
-   )
+   coreGossipBroadcastService.sendChunkRetrievalQuery(fileId)
    ```
 2. **Wait for responses** within timeout
 
-#### 2.2 Storage Node-Side: Respond to Query
+#### 2.3 Storage Node-Side: Respond to Query
 **Location**: Storage node chunk query handler
 
-1. **Check if node has chunks** for fileId
-   - If `chunkIndexes` parameter provided: only respond if node has matching chunks from that list
-   - If `chunkIndexes` is null: respond with all chunks for this fileId
+1. **Check if node has chunks** for fileId and if provided matching and of of the Indexes in the optionally provided list of ChunkIndexes
 2. **If found, send ChunkRetrievalResponse**:
    - nodeId
    - fileId
@@ -210,27 +204,26 @@ Client node retrieves a file from the distributed mesh network.
    - systemState
    - latencyEstimate
 
-#### 2.3 Client-Side: Download Chunks
+#### 2.4 Client-Side: Download Chunks
 **Location**: `DistributedStorageManager.retrieveFile()`
 
 1. **Build chunk map** from responses
 2. **For each chunk**:
    - Select best storage node
-   - Request chunk via connection pool
+   - Request chunk via  connection pool
    - Verify chunk hash
-   - Store in `retrievedChunks` array, which should persist and be appended to by retries until the retrieval succeeds or fails
-3. **Verify All Chunks present**:
-   - **If yes**: Reassemble file from chunks in order
-   - **If no**: Retry Query of Mesh Network for file, including missing chunkIndexes as optional parameter
+   - Store in retrievedChunks array, which shuld persist and be appended to by retries  until the retrieval succeeds or fails
+3. **Verify All Chunks present** 
+   - if yes, **Reassemble file** from chunks in order
+   - if no, retry Query of Mesh Network for file including missing chunkIndexes as optional paramter
 4. **Verify file integrity**
 5. **Return file bytes**
 
-#### 2.4 Client-Side: Update UI
+#### 2.5 Client-Side: Update UI
 **Location**: `DistributedStorageManager.onFileRetrieved` callback
 
 1. **Trigger UI callback**: `onFileRetrieved(fileId, file)` via API
-2. **fileAccess API function** should call DistributedStorageManager function to get list of those with access to the file
-   - This list should **exclude the DistributedStorageManager service accounts** (only show user/task recipients)
+2. fileAccess api function should call DistributedStorageManger  function to get list of those with access to the file.  this list should exclude the DistribtedStorageManager service accounts.
 
 ---
 
@@ -239,76 +232,50 @@ Client node retrieves a file from the distributed mesh network.
 ### Overview
 Update file permissions without re-encrypting entire file (only re-encrypt chunk keys).
 
-**CRITICAL ARCHITECTURAL CHANGE**: Re-encryption happens on storage nodes, not client-side. This avoids re-transferring chunks and avoids the need for the client to know where all chunks are stored.
-
 ### Workflow Steps
 
-#### 3.1 Client-Side: Broadcast Permission Update
-**Location**: `DistributedStorageManager.updateFileAccess()` → `CoreGossipBroadcastService.sendFilePermissionUpdate()`
 
-1. **Create FilePermissionUpdateMessage**:
+#### 3.3 Client-Side: Broadcast Permission Update
+**Location**: `DistributedStorageManager.updateFileAccess()`  → `CoreGossipBroadcastService.sendFilePermissionUpdate()`
+
+1. **Create FilePermissionUpdateMessage**:  recipientes can include tasks
    - fileId
-   - addedRecipients (can include tasks)
+   - addedRecipients
    - removedRecipients
-   - Optional: chunkIndexes (used for retry of specific chunks)
 2. **Broadcast to mesh network**:
    ```kotlin
    coreGossipBroadcastService.sendFilePermissionUpdate(message)
    ```
 
-#### 3.2 Storage Node-Side: Receive Permission Update
-**Location**: Storage node permission update handler in `DistributedStorageManager`
+#### 3.4 Storage Node-Side: Update Local Metadata
+**Location**: Storage node permission update handler
 
 1. **Receive FilePermissionUpdateMessage**
-2. **Check if node stores chunks** for this fileId
-3. **If yes, proceed to re-encryption** (Section 3.3)
 
-#### 3.3 Storage Node-Side: Re-encrypt Chunk Keys
+### 3.5 Storage-Side: Re-encrypt Chunk Keys
 **Location**: `StorageEncryptionManager.reEncryptChunkKeys()` (TODO)
 
-1. **For each chunk** this node stores for the fileId:
-   - Decrypt chunk key using the storage node's DistributedStorageManager service private key
+1. **For each chunk**:
+   - Decrypt chunk key using master key or owner private key
    - For each NEW recipient:
      - Encrypt chunk key with recipient's public key
      - Create session key packet
-   - For each REMOVED recipient:
-     - Remove their session key entry
-2. **Update chunk metadata** in StorageDataStore with new sessionKeys:
-   - Add new recipientKeyIds and sessionKeys
-   - Remove revoked recipientKeyIds
-3. **Send confirmation** (FileAccessUpdateConfirmation message) to client node and all recipients
-   - If recipient is a task, the message is sent to the compute node running the task
-   - Include: nodeId, fileId, chunkIndexes confirmed
+   - **Update chunk metadata** in StorageDataStore with new sessionKeys:
+      - Add new recipientKeyIds and sessionKeys
+      - Remove revoked recipientKeyIds
+2. **Send confirmation (FileAccessUpdate message )** to client node and all recipients. if recipeient is a task, the message is sent to the comput_node running the task
+**Location**: DistributedStorageManger  →  MeshEcosystemListener
 
-#### 3.4 Client-Side: Handle Confirmations
-**Location**: `MeshEcosystemListener` → `DistributedStorageManager` (FUTURE)
-
-1. **Listen for confirmations** (FileAccessUpdateConfirmation messages)
-2. **Track confirmed chunks** by chunkIndex
-3. **If all confirmations for all chunkIndexes NOT received by timeout**:
-   - Retry broadcast with optional parameter containing list of missing chunkIndexes
-4. **If retries fail** to get remaining confirmations for outstanding chunks:
-   - Initiate storeFile workflow for the missing chunks, as calculated by the chunk sizing, chunkIndex and local file
-   - This re-stores chunks to fresh nodes with updated permissions
-
----
-
-## 4. FILE REPLICATION WORKFLOW
-
-### Overview
-Storage nodes automatically replicate chunks to achieve target redundancy via daisy-chaining.
-
-### Workflow Steps
-
-#### 4.1 Storage Node: Check Replica Count
+#### 3.6 Client-Side: Handle confirmations
+**Location**: `MeshEcoSystemListener`  → `DistributedStorageManger` (FUTURE)
+Listen for confirmations. If all confirmation for all chunkIndexes not revieved by timeout, retry broadcast (use an option parameter for list of chunkIndexes).  if Retries fail to get remaining confirmations for the outstanding chunks, intitiate storeFIle workflow for the missing chunks, as calculated by the chunksizing, chunkIndex and localFile.
+## 4 Storage Node: Check Replica Count
 **Location**: Storage node replication logic (AFTER storing chunk)
 
-1. **Get current replica count**:
-   - Current count = (replicaCount from received ChunkTransferMessage) + 1
-   - This is the count that was stored in step 1.6
+1. **Get current replica count** current Count = replicaCount from received ChunkTransferMessage +1 (CRITICAL: Increment for next hop)
 2. **Check if replication needed**:
    ```kotlin
-   // After incrementing replicaCount from message
+   // after incrementing replicaCount from message
    if (chunk.replicaCount >= MeshrabiyaConstants.getReplicaCount()) {
        // Stop - target already reached
        betaLogger.log("Replication complete: count=${chunk.replicaCount} >= target")
@@ -317,17 +284,17 @@ Storage nodes automatically replicate chunks to achieve target redundancy via da
    }
    ```
 
+
 #### 4.2 Storage Node Acts as Client: Broadcast Storage Request
 **Location**: Storage node replication workflow
 
 **CRITICAL**: Storage node now acts like a CLIENT node
-
 1. **Create StorageNodeRequest** for the chunk:
    - Same owner and recipients as original
    - requestId (new UUID for replication)
    - chunkId, fileId
-   - **currentReplicaCount = chunk.replicaCount** (send current count, receiving node will increment)
-   - chunkSizeBytes
+   - **currentReplicaCount = chunk.replicaCount** 
+   
 2. **Broadcast via CoreGossipBroadcastService**:
    ```kotlin
    coreGossipBroadcastService.sendStorageNodeRequest(request)
@@ -338,8 +305,8 @@ Storage nodes automatically replicate chunks to achieve target redundancy via da
 **Location**: Standard storage node response logic
 
 1. **Receive StorageNodeRequest**
-2. **Check if already storing this chunk** (skip if yes - prevents duplicate storage and infinite loops)
-3. **Check eligibility** (same as original storage in Section 1.3)
+2. **Check if already storing this chunk** (skip if yes)
+3. **Check eligibility** (same as original storage)
 4. **Send StorageNodeResponse, IF eligible**
 
 #### 4.4 Storage Node: Select Replica Target
@@ -347,15 +314,15 @@ Storage nodes automatically replicate chunks to achieve target redundancy via da
 
 1. **Collect responses**
 2. **Rank candidates** (same criteria as client-side)
-3. **Select best node** (only ONE replica is chosen at a time - daisy-chain architecture)
+3. **Select best  node** (only one replica is chosen at a time)
 
-#### 4.5 Storage Node: Transfer Chunk to Replica
+#### 4.5 Storage Node: Transfer Chunk to Replicas
 **Location**: Storage node replication logic
 
-1. **For selected replica node**:
+1. **For each selected replica node**:
    - Acquire connection via connection pool
    - Read chunk from local copy of the chunk
-   - Create ChunkTransferMessage with **replicaCount = chunk.replicaCount** (CRITICAL: send current stored count)
+   - Create ChunkTransferMessage with **replicaCount = chunk.replicaCount** (CRITICAL)
    - Send chunk via `virtualNode.sendChunkToNode()`
    - Release connection
 
@@ -364,33 +331,31 @@ Storage nodes automatically replicate chunks to achieve target redundancy via da
 
 1. **Receive chunk** with replicaCount (same as Section 1.6)
 2. **Store chunk** to filesystem
-3. **Index metadata**, incrementing the **replicaCount from transfer message** (receives N, stores as N+1)
+3. **Index metadata** incrementing the **replicaCount from transfer message**
 4. **Send completion notification**
-5. **Check if more replication needed**: if replicaCount < target, goto 4.1 (recursive)
+5. **Check if more replication needed**: if replicaCount < target, goto 4.2 (recursive)
 
 #### 4.7 Natural Termination
 **Location**: Any storage node in replication chain
 
 **No explicit update needed** - Count is propagated through transfers:
 
-1. **Storage Node A** receives chunk with replicaCount=X
+1. **Storage Node A** receives chunk with replicaCount=x
 2. **Stores locally** with count=X+1
 3. **Checks**: if count >= target, STOP
-4. **Else**: Replicates with count=X+1 (sends current stored count)
-5. **Storage Node B** receives with count=X+1 (repeat from step 1)
+4. **Else**: Replicates with count=current count value=X+1
+5. **Storage Node B** receives with count=N+1 (repeat from step 1)
 
-**No incrementReplicaCount() function needed** - count increments naturally through the chain.
+**No incrementReplicaCount() function needed** - count increments naturally through the chain. 
 
 ### Key Points
 
 - **Replica count starts at 0** when client creates chunk
 - **Each storage node receives count N**, stores with count N+1, replicates with count N+1
-- **Count incremented before storage**, stored value represents which replica this is (1st, 2nd, 3rd, etc.)
 - **Count propagates through transfer messages**, not through post-storage updates
-- **No synchronization needed** - each node increments independently during storage
-- **Natural termination** when stored count >= target
+- **No synchronization needed** - each node increments independently during replication
+- **Natural termination** when received count >= target
 - **Retry strategy mirrors storage node request** - same timeout, retry count, delay values
-- **Infinite loop prevention**: Storage nodes that already have a chunk won't respond to replication requests
 
 ---
 
@@ -411,6 +376,7 @@ Client node requests compute task execution on mesh network.
    - inputParams
    - resourceLimits
    - requesterNodeId
+   - accessScope
 
 #### 5.2 Client-Side: Process Task Request
 **Location**: `IntelligentDistributedComputeService.processTaskRequest()`
@@ -421,6 +387,7 @@ Client node requests compute task execution on mesh network.
    ```kotlin
    coreGossipBroadcastService.sendComputeTaskRequest(
        taskId = request.taskId,
+
        serviceId = request.serviceId,
        inputParams = request.inputParams,
        metadata = request.metadata
@@ -433,19 +400,19 @@ Client node requests compute task execution on mesh network.
 
 1. **Receive ComputeTaskRequestMessage** via UDP
 2. **Check eligibility**:
-   - Is node a COMPUTE_NODE? (EmergentRoleManager) - This should be handled in MeshEcosystemListener or even better just ignored by the router if not a COMPUTE_NODE
+   - Is node a COMPUTE_NODE? (EmergentRoleManager) This should be handled in MeshEcosystemListener or even better just ignored by the rouuter if not a COMPUTE_NODE.
    - ServiceId maps to a service in service library
    - Has required runtime? (Python, JVM, etc.) based on service profile in library
    - Has required ML capabilities? (ML Kit features) based on service profile in library
    - Queue depth acceptable?
    - System state healthy?
-   - Is available
+   - is availabe 
 3. **If eligible, send ComputeNodeResponse**:
-   - node mesh address
-   - fitness metrics
-   - capability metrics
+   - nodeAddress
+   - currentLoad
+   - processing speed
    - ram
-   - available storage
+   - availabe storage
    - mlKitFeatures
    - estimatedLatencyMs
 
@@ -453,17 +420,17 @@ Client node requests compute task execution on mesh network.
 **Location**: `IntelligentDistributedComputeService.handleComputeNodeResponses()`
 
 1. **Collect responses** until timeout
-2. **Filter responses**:
-   - Has required ML capabilities, if required by task
-   - Sufficient memory
-   - Sufficient disk
-   - Fastest processing
-   - Latency (lower importance)
+2. **Filter responses**: (may require chagnesi n what is sent in reponse,  and captured device metrics on the preceding storage side)
+   - has required ML capabilities, if required by task
+   - Sufficinent Memeory 
+   - Sufficient Disk
+   - fastest processing
+   - laensy  (lower importance)
 3. **Rank candidates** by:
    - currentLoad (ascending - prefer less loaded)
-   - processing speed (descending - prefer faster)
-   - ram (descending - prefer more RAM)
-   - available storage (descending - prefer more storage)
+   - processing speed
+   - ram
+   - availabe storage
    - estimatedLatencyMs (ascending - prefer faster)
    - mlKitFeatures.size (descending - prefer more capable), if needed
 4. **Select best node** (first in ranked list)
@@ -499,22 +466,22 @@ Client node requests compute task execution on mesh network.
 ## 6. TASK MANAGER RECEIVES ACCESS UPDATE NOTICE
 
 ### Overview
-Compute node receives notification that task data access permissions changed (FileAccessUpdateConfirmation).
+Compute node receives notification that task data access permissions changed (FileAccessUpdate).
 
 ### Workflow Steps
 
-#### 6.1 Compute Node-Side: Receive File Access Update
-**Location**: `MeshEcosystemListener` → `IntelligentDistributedComputeService.handleTaskDataAccessUpdate()`
+#### 6.1 Compute-Side: Receives File Access Update (FileAccessUpdate)
+**Location**:  MeshEcosystemListener  →  `IntelligentDistributedComputeService.handleTaskDataAccessUpdate()`
 
-1. **Receive FileAccessUpdateConfirmation message**
-2. **Check if running affected task** (TaskManager):
+1. **Receive TaskDataAccessUpdateMessage**
+2. **Check if running affected task**: (TaskManager)
    - Look up taskId in active executions
-3. **If running, update task execution context** (TaskManager):
-   - Retrieve new file (get chunks and reassemble) using Retrieve File workflow
-     - Make a call to `DistributedStorageManager.retrieveFile(fileId)`
-   - Decrypt file with the task key
-   - Add the decrypted file to the task sandbox
-   - Trigger newFile event in the sandbox
+3. **if running, Update task execution context**: (TaskManager)
+   - Update AccessScope (what is AccessScope for?)
+   - Retrieve new file (get chunks and reasseble) to which the task with Retrieve File workflow (make a call to `DistributedStoraveManager.retrieveFile` )
+   - decrypt file with the task key 
+   - add the decrypted file to the task sandbox
+   - trigger newFile event in the sandbox 
 4. **Log update** for audit trail
 
 ---
@@ -550,6 +517,7 @@ Compute node completes task execution and notifies client with results.
        data = outputBytes,
        priority = SyncPriority.HIGH,
        replicationLevel = ReplicationLevel.STANDARD,
+       accessScope = AccessScope.TASK_ISOLATED,
        owner = taskContext.requesterNodeId,  // CRITICAL
        recipients = listOf(
            RecipientEntry(
@@ -566,7 +534,7 @@ Compute node completes task execution and notifies client with results.
    )
    ```
 2. **Build OutputManifest** with all FileReferences
-3. **For each file in the Manifest**: send FilePermissionUpdateMessage with addedRecipients containing all the recipients including the owner
+3. For each file in the Manifest send FileAccessUpdate with addedRecipients containing all the recipients including the owner
 
 #### 7.3 Compute Node: Send Completion Notification
 **Location**: `IntelligentDistributedComputeService.sendTaskCompletion()`
@@ -634,10 +602,10 @@ Compute node completes task execution and notifies client with results.
 |----------|-------------------|-------------------|---------------------|---------------------|
 | **Store File** | `DistributedStorageManager.storeFile()` | `CoreGossipBroadcastService.sendStorageNodeRequest()` | `handleIncomingChunkStorage()` (NEW) | N/A |
 | **Retrieve File** | `DistributedStorageManager.retrieveFile()` | `CoreGossipBroadcastService.sendChunkRetrievalQuery()` | Chunk query handler | N/A |
-| **Update File Access** | `DistributedStorageManager.updateFileAccess()` | `CoreGossipBroadcastService.sendFilePermissionUpdate()` | Permission update handler + re-encryption | N/A |
+| **Update File Access** | `DistributedStorageManager.updateFileAccess()` | `CoreGossipBroadcastService.sendFilePermissionUpdate()` | Permission update handler | N/A |
 | **Replicate File** | Storage node after store | `CoreGossipBroadcastService.sendStorageNodeRequest()` | `handleIncomingChunkStorage()` | N/A |
-| **Add Task** | `IntelligentDistributedComputeService.processTaskRequest()` | `CoreGossipBroadcastService.sendComputeTaskRequest()` | N/A | `handleIncomingComputeTaskRequest()` |
-| **Access Update Notice** | Storage node after re-encryption | Direct message (FileAccessUpdateConfirmation) | N/A | `handleTaskDataAccessUpdate()` |
+| **Add Task** | `IntelligentDistributedComputeService.processTaskRequest()` | `CoreGossipBroadcastService.sendComputeTaskRequest()` (FIX NEEDED) | N/A | `handleIncomingComputeTaskRequest()` |
+| **Access Update** | Client/TaskManager | `CoreGossipBroadcastService.sendTaskDataAccessUpdate()` | N/A | `handleTaskDataAccessUpdate()` |
 | **Task Complete** | Compute node executor | Direct message (not broadcast) | N/A | `handleTaskCompletionMessage()` |
 
 ---
@@ -646,8 +614,7 @@ Compute node completes task execution and notifies client with results.
 
 1. **Client-side vs Server-side separation**:
    - Client functions prepare requests and handle responses
-   - Storage/compute node functions handle incoming requests and execute operations
-   - Sometimes nodes act as clients (storage nodes during replication, compute nodes during result file storage)
+   - Storage/compute node functions handle incoming requests and execute operations and sometimes act as a client as in the case of remplication and task completion output file writing
    - **DON'T MIX**: `storeFile()` should only contain client logic
 
 2. **Broadcast via CoreGossipBroadcastService**:
@@ -660,40 +627,24 @@ Compute node completes task execution and notifies client with results.
 3. **Replica count propagation** (CANONICAL):
    - Client always creates chunks with replicaCount = 0
    - Each storage node **receives count N**, stores with count N+1, **replicates with count N+1**
-   - Count incremented **before storage** (stored count represents which replica: 1st, 2nd, 3rd, etc.)
-   - Example: Client sends(0) → StorageA receives(0), stores(1), sends(1) → StorageB receives(1), stores(2), sends(2) → StorageC receives(2), stores(3), sends(3) → STOP(3≥3)
+   - Count incremented **before storage**, 
+   - Example: Client(0)→StorageA(1→1)→StorageB(2→2)→StorageC(3→3)→STOP(3≥3)
    - No synchronization needed - trust propagation model
-   - Replication stops when stored count >= target
-   - **CRITICAL** for preventing infinite replication loops - also limited by the fact that only storage nodes that don't have a given chunk will respond
+   - Replication stops when received count >= target
+   - **CRITICAL** for preventing infinite replication loops, also limited by the fact that only storage nodes that dont have a given chunk will respond
 
 4. **Permission propagation**:
    - Owner and recipients set at initial storage
    - Passed unchanged during replication
-   - Updated via updateFileAccess() for permission changes (re-encryption happens on storage nodes)
+   - Updated via updateFileAccess() for permission changes
    - Task results use requester as owner, task as ephemeral recipient
 
 5. **Direct messages vs broadcasts**:
-   - **Discovery**: Broadcast with retry (storage nodes, compute nodes)
-   - **Assignment**: Direct message with retry (task assignment)
-   - **Completion**: Direct message with retry (task completion)
-   - **Permission updates**: Broadcast (FilePermissionUpdate to all storage nodes)
-   - **Permission confirmations**: Direct messages to recipients including tasks and owner (FileAccessUpdateConfirmation)
-
-6. **Daisy-chain architecture**:
-   - Storage: Client sends to ONE storage node, which replicates to ONE more node, which replicates to ONE more node, etc.
-   - This distributes the load and avoids overwhelming the client or any single node
-   - Each node only needs to know about the next node in the chain, not all replicas
-
-7. **Storage-side re-encryption**:
-   - Permission updates trigger re-encryption on storage nodes, not clients
-   - Avoids re-transferring entire chunks across the network
-   - Client doesn't need to know where all chunks are stored
-   - Storage nodes confirm updates via direct messages
-
-8. **No local caching**:
-   - Beyond the original file in the drop folder, there is NO local storage copy
-   - All retrievals go to the mesh network
-   - This ensures consistency and avoids cache invalidation issues
+   - Discovery: Broadcast  with retry(storage nodes, compute nodes)
+   - Assignment: Direct message with retry (task assignment)
+   - Completion: Direct message with retry (task completion)
+   - Permissions: Broadcast (file access updates)
+   - Permissions Update Update Notification: DIrect Messages to Recipients (incuding tasks) and Owner (FileAccessUpdate)
 
 ---
 
