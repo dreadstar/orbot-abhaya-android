@@ -789,7 +789,7 @@ All user clarifications from previous plan versions are preserved and integrated
 
 | Section | Methods | Status | Confidence | Notes |
 |---------|---------|--------|------------|-------|
-| 1. Compute/Task | addTask, getJobTypes | Ready | 98% | All TaskStatus values verified |
+| 1. Compute/Task | addTask | Ready | 98% | getJobTypes deprecated per tech debt cleanup |
 | 2. File Operations | 4 methods | Ready | 98% | "shared" logic verified |
 | 3. Gateway Controls | 5 methods | Ready | 100% | setPreferredRoles confirmed |
 | 4. Storage Participation | 5 methods | Ready | 100% | All APIs verified |
@@ -933,63 +933,6 @@ try {
 **Confidence:** 98%
 
 **Outstanding Questions:** None blocking
-
----
-
-### 1.2 getJobTypes()
-
-**Signature:**
-```kotlin
-override fun getJobTypes(callback: (Result<List<String>>) -> Unit)
-```
-
-**Purpose:**
-Retrieve list of available job types supported by the mesh network.
-
-**Implementation Steps:**
-
-**Step 1.2.1: Check Compute Client Availability**
-```kotlin
-val computeClient = distributedComputeClient ?: run {
-    callback(Result.failure(IllegalStateException("Compute client not initialized")))
-    return
-}
-```
-
-**Step 1.2.2: Query Available Job Types**
-```kotlin
-try {
-    val jobTypes = computeClient.getAvailableJobTypes()
-    callback(Result.success(jobTypes))
-} catch (e: Exception) {
-    callback(Result.failure(e))
-}
-```
-
-**Expected Job Types (Examples):**
-- "image_processing"
-- "data_analysis"
-- "machine_learning_inference"
-- "video_transcoding"
-- "encryption"
-- "hash_computation"
-
-**Error Handling:**
-- IllegalStateException: Compute client not initialized
-- Generic Exception: Job type retrieval failure
-
-**Testing Checklist:**
-- ✅ Returns non-empty list when compute client available
-- ✅ Compute client null handled
-- ✅ Empty list handled (no job types available)
-- ✅ Job types match those defined in DistributedComputeClient
-
-**Confidence:** 95%
-
-**Outstanding Questions:**
-- Q1.2.1: Does DistributedComputeClient.getAvailableJobTypes() exist?
-  - **Status:** MEDIUM priority (fallback: return hardcoded list)
-  - **Fallback:** Return predefined list of common job types if method doesn't exist
 
 ---
 

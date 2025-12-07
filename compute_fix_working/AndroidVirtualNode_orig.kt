@@ -1,29 +1,6 @@
 package com.ustadmobile.meshrabiya.vnet
 
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.util.Log
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import com.ustadmobile.meshrabiya.log.MNetLoggerStdout
-import com.ustadmobile.meshrabiya.log.MNetLogger
-import com.ustadmobile.meshrabiya.vnet.bluetooth.MeshrabiyaBluetoothState
-import com.ustadmobile.meshrabiya.vnet.wifi.ConnectBand
-import com.ustadmobile.meshrabiya.vnet.wifi.HotspotType
-import com.ustadmobile.meshrabiya.vnet.wifi.LocalHotspotResponse
-import com.ustadmobile.meshrabiya.vnet.wifi.WifiConnectConfig
-import com.ustadmobile.meshrabiya.vnet.wifi.MeshrabiyaWifiManagerAndroid
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
-import java.net.InetAddress
-import java.util.concurrent.atomic.AtomicBoolean
+// ...existing code...
 
 class AndroidVirtualNode(
     val appContext: Context,

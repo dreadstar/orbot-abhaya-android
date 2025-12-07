@@ -1022,18 +1022,14 @@ import java.io.File
 
 ## IMPLEMENTATION TRACKING CHECKLIST
 
-### Section 1: Compute/Task API (10 items)
+### Section 1: Compute/Task API (6 items)
 
-- [ ] 1.1.1: Implement addTask() input validation (jobType, priority, deadline)
+- [ ] 1.1.1: Implement addTask() input validation (taskType, priority)
 - [ ] 1.1.2: Implement addTask() compute client check
 - [ ] 1.1.3: Implement addTask() node address retrieval
 - [ ] 1.1.4: Implement addTask() LocalComputeTaskRequest creation
 - [ ] 1.1.5: Implement addTask() task submission and callback
 - [ ] 1.1.6: Test addTask() with all TaskStatus values (8 total)
-- [ ] 1.2.1: Implement getJobTypes() compute client check
-- [ ] 1.2.2: Implement getJobTypes() job type retrieval
-- [ ] 1.2.3: Test getJobTypes() returns expected job types
-- [ ] 1.2.4: Verify getAvailableJobTypes() exists in DistributedComputeClient (Q1.2.1)
 
 ---
 
@@ -1185,19 +1181,15 @@ import java.io.File
 
 **Remaining Uncertainties (None Blocking):**
 
-1. **Q1.2.1:** Does DistributedComputeClient.getAvailableJobTypes() exist?
-   - **Impact:** LOW
-   - **Fallback:** Return hardcoded list of job types
-
-2. **Q3.5.1:** Does Peer object have roles property?
+1. **Q3.5.1:** Does Peer object have roles property?
    - **Impact:** MEDIUM
    - **Fallback:** Query role manager for each peer individually
 
-3. **Q5.1.1:** Does MeshrabiyaService.getFitnessScore() exist?
+2. **Q5.1.1:** Does MeshrabiyaService.getFitnessScore() exist?
    - **Impact:** MEDIUM
    - **Fallback:** Calculate locally using battery + network + storage
 
-4. **Q5.2.1:** Does MeshrabiyaService.getMeshState() exist?
+3. **Q5.2.1:** Does MeshrabiyaService.getMeshState() exist?
    - **Impact:** MEDIUM
    - **Fallback:** Derive state from peer count and connection status
 
