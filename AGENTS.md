@@ -1,3 +1,114 @@
+## IMPLEMENTATION VERIFICATION BEFORE CODE GENERATION PROTOCOL (2025-12-06)
+
+**CRITICAL: Before writing ANY implementation code, agents MUST verify the actual current state of all touchpoints.**
+
+When planning or implementing code that refactors existing functionality or integrates with existing APIs:
+
+### 1. MANDATORY PRE-IMPLEMENTATION VERIFICATION
+
+**Step 1: Verify Current State of Target Files**
+- Read the ACTUAL current implementation on disk (full file or relevant sections)
+- Do NOT assume implementation matches documentation or plans
+- Document what currently exists vs. what the plan assumes
+
+**Step 2: Verify ALL API Touchpoints**
+- For EVERY class, method, property, or function the implementation will call:
+  - Search codebase to find its ACTUAL location
+  - Read its ACTUAL signature (parameters, return types, modifiers)
+  - Verify it EXISTS and is not deprecated/commented out
+  - Check if it's a suspend function, property, or method
+  - Note any special requirements (coroutines, permissions, etc.)
+
+**Step 3: Verify Data Structures**
+- For EVERY data class or model used:
+  - Find ACTUAL definition in codebase
+  - Verify ACTUAL property names (not assumed names)
+  - Verify ACTUAL property types
+  - Check for constructor requirements
+  - Note any serialization annotations
+
+**Step 4: Document Discrepancies**
+- List ALL differences between plan and actual code
+- Update implementation approach based on actual state
+- Never proceed with code generation until verification is complete
+
+### 2. ENFORCEMENT CHECKLIST
+
+Before writing implementation code, agents MUST answer:
+
+- [ ] Have I read the current state of ALL files I will modify?
+- [ ] Have I verified the signature of EVERY method/property I will call?
+- [ ] Have I confirmed EVERY data class property name and type?
+- [ ] Have I checked if methods are suspend functions vs. regular functions?
+- [ ] Have I verified return types match (callbacks vs. direct returns)?
+- [ ] Have I confirmed parameter names and types for ALL API calls?
+- [ ] Have I documented ANY discrepancies between plan and reality?
+
+**If ANY answer is "NO", STOP and perform verification BEFORE writing code.**
+
+### 3. EXAMPLES OF REQUIRED VERIFICATION
+
+**Example 1: Method Signature Verification**
+```
+PLAN SAYS: distributedStorageManager.storeFile(file: File, metadata: FileMetadata, callback: ...)
+MUST VERIFY:
+  - grep_search for "fun storeFile" 
+  - read actual signature
+  - ACTUAL: suspend fun storeFile(path: String, data: ByteArray, ...) <- DIFFERENT!
+```
+
+**Example 2: Property Access Verification**
+```
+PLAN SAYS: myNode.getAddress()
+MUST VERIFY:
+  - grep_search for "fun getAddress|val address"
+  - read actual property/method
+  - ACTUAL: val address: InetAddress <- Property, not method!
+```
+
+**Example 3: Data Class Field Verification**
+```
+PLAN SAYS: FileMetadata(fileId, fileName, fileSize, owner, createdAt, chunkIds)
+MUST VERIFY:
+  - grep_search for "data class FileMetadata"
+  - read actual definition
+  - ACTUAL: FileMetadata(fileId, path, sizeBytes, owner, ...) <- Different field names!
+```
+
+### 4. CONSEQUENCES OF VIOLATION
+
+Implementing code without verification leads to:
+- ❌ Compilation errors due to wrong signatures
+- ❌ Type mismatches (File vs. ByteArray, String vs. InetAddress)
+- ❌ Wrong parameter names (fileName vs. path)
+- ❌ Missing required parameters
+- ❌ Calling non-existent methods
+- ❌ Treating properties as methods or vice versa
+- ❌ Wasted time on avoidable compile-fix cycles
+
+### 5. CORRECT WORKFLOW
+
+**WRONG:**
+1. Read plan → 2. Write code → 3. Compile → 4. Fix errors → 5. Repeat
+
+**RIGHT:**
+1. Read plan → 2. **VERIFY ALL TOUCHPOINTS** → 3. Write validated code → 4. Compile successfully
+
+### 6. VERIFICATION TOOLS TO USE
+
+- `grep_search` - Find class/method/property definitions
+- `read_file` - Read actual signatures and implementations  
+- `semantic_search` - Locate related code if grep fails
+- `list_code_usages` - See how APIs are actually used elsewhere
+
+**Intent:**
+This protocol eliminates the discrepancy between planned implementations and actual codebase state. It ensures all generated code is harmonious with existing APIs from the start, drastically reducing compile-fix iterations. Agents have the capacity to write perfect code on the first attempt by simply verifying reality before coding.
+
+**Date Added:** 2025-12-06  
+**Trigger:** V4 implementation had significant discrepancies between plan assumptions and actual API signatures, requiring multiple fix rounds.
+
+---
+
 ## PROPERTY REFERENCE ERROR RESOLUTION PROTOCOL (2025-11-22)
 When an error occurs due to a missing property in a class/object:
 
