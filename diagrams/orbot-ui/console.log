@@ -1,0 +1,62 @@
+react-dom.development.js:29905 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+orbot-ui-diagram.js:216 Uncaught SyntaxError: Unexpected token 'export' (at orbot-ui-diagram.js:216:1)
+react.development.js:199 Warning: React.createElement: type is invalid -- expected a string (for built-in components) or a class/function (for composite components) but got: undefined. You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.
+printWarning @ react.development.js:199
+error @ react.development.js:173
+createElementWithValidation @ react.development.js:2344
+(anonymous) @ orbot-ui/:21
+react-dom.development.js:28488 Uncaught Error: Element type is invalid: expected a string (for built-in components) or a class/function (for composite components) but got: undefined. You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.
+    at createFiberFromTypeAndProps (react-dom.development.js:28488:19)
+    at createFiberFromElement (react-dom.development.js:28514:17)
+    at reconcileSingleElement (react-dom.development.js:13996:25)
+    at reconcileChildFibers (react-dom.development.js:14054:37)
+    at reconcileChildren (react-dom.development.js:19203:30)
+    at updateHostRoot (react-dom.development.js:19922:7)
+    at beginWork (react-dom.development.js:21664:16)
+    at HTMLUnknownElement.callCallback (react-dom.development.js:4151:16)
+    at Object.invokeGuardedCallbackDev (react-dom.development.js:4200:18)
+    at invokeGuardedCallback (react-dom.development.js:4264:33)
+createFiberFromTypeAndProps @ react-dom.development.js:28488
+createFiberFromElement @ react-dom.development.js:28514
+reconcileSingleElement @ react-dom.development.js:13996
+reconcileChildFibers @ react-dom.development.js:14054
+reconcileChildren @ react-dom.development.js:19203
+updateHostRoot @ react-dom.development.js:19922
+beginWork @ react-dom.development.js:21664
+callCallback @ react-dom.development.js:4151
+invokeGuardedCallbackDev @ react-dom.development.js:4200
+invokeGuardedCallback @ react-dom.development.js:4264
+beginWork$1 @ react-dom.development.js:27500
+performUnitOfWork @ react-dom.development.js:26609
+workLoopSync @ react-dom.development.js:26515
+renderRootSync @ react-dom.development.js:26483
+performConcurrentWorkOnRoot @ react-dom.development.js:25787
+workLoop @ react.development.js:2653
+flushWork @ react.development.js:2626
+performWorkUntilDeadline @ react.development.js:2920
+react-dom.development.js:28488 Uncaught Error: Element type is invalid: expected a string (for built-in components) or a class/function (for composite components) but got: undefined. You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.
+    at createFiberFromTypeAndProps (react-dom.development.js:28488:19)
+    at createFiberFromElement (react-dom.development.js:28514:17)
+    at reconcileSingleElement (react-dom.development.js:13996:25)
+    at reconcileChildFibers (react-dom.development.js:14054:37)
+    at reconcileChildren (react-dom.development.js:19203:30)
+    at updateHostRoot (react-dom.development.js:19922:7)
+    at beginWork (react-dom.development.js:21664:16)
+    at beginWork$1 (react-dom.development.js:27475:16)
+    at performUnitOfWork (react-dom.development.js:26609:14)
+    at workLoopSync (react-dom.development.js:26515:7)
+createFiberFromTypeAndProps @ react-dom.development.js:28488
+createFiberFromElement @ react-dom.development.js:28514
+reconcileSingleElement @ react-dom.development.js:13996
+reconcileChildFibers @ react-dom.development.js:14054
+reconcileChildren @ react-dom.development.js:19203
+updateHostRoot @ react-dom.development.js:19922
+beginWork @ react-dom.development.js:21664
+beginWork$1 @ react-dom.development.js:27475
+performUnitOfWork @ react-dom.development.js:26609
+workLoopSync @ react-dom.development.js:26515
+renderRootSync @ react-dom.development.js:26483
+performConcurrentWorkOnRoot @ react-dom.development.js:25787
+workLoop @ react.development.js:2653
+flushWork @ react.development.js:2626
+performWorkUntilDeadline @ react.development.js:2920

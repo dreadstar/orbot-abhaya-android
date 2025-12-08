@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orbot UI as of 12/7/2025</title>
+  <style>
+    body { background: #f8f8f8; margin: 0; }
+    #root { min-height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="./orbot-ui-diagram.js"></script>
+  <script>
+    // Wait for React and diagram to be loaded
+    window.addEventListener('DOMContentLoaded', function() {
+      const root = window.ReactDOM.createRoot(document.getElementById('root'));
+      root.render(window.React.createElement(window.OrbotUiDiagram));
+    });
+  </script>
+</body>
+</html>
