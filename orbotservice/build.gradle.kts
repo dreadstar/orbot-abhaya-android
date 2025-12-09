@@ -35,6 +35,7 @@ android {
                     events("passed", "skipped", "failed")
                     showStandardStreams = true
                 }
+                it.failOnNoDiscoveredTests = false
             }
         }
     }

@@ -1,3 +1,18 @@
+# Release Signing: keystore.properties Required
+
+To build signed release APKs, you must provide a `keystore.properties` file in the project root **(never commit this file to version control)**. Example:
+
+```
+keyAlias=yourKeyAlias
+keyPassword=yourKeyPassword
+storeFile=path/to/your/keystore.jks
+storePassword=yourStorePassword
+```
+
+The referenced keystore file (`.jks`) must also be present and accessible. For local/dev builds, if this file is missing, release signing will be skipped and unsigned APKs will be produced.
+
+**Do not share or commit your keystore or passwords.**
+
 <div align="center">
 
 <img width="" src="./app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" alt="Orbot" align="center"/>
