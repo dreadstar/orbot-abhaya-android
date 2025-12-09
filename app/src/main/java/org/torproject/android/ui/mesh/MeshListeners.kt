@@ -1,5 +1,8 @@
+
 package org.torproject.android.ui.mesh
 
+import com.ustadmobile.meshrabiya.api.MeshrabiyaApi
+import com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl
 import android.view.View
 import androidx.lifecycle.LifecycleCoroutineScope
 import org.torproject.android.ui.mesh.MeshManagers
@@ -7,37 +10,46 @@ import org.torproject.android.ui.mesh.MeshUIBindings
 
 object MeshListeners {
     fun setupListeners(view: View, lifecycleScope: LifecycleCoroutineScope) {
+        val api = MeshrabiyaApiImpl.getInstance()
         MeshUIBindings.gatewayToggle.setOnCheckedChangeListener { _, isChecked ->
-            MeshManagers.meshrabiyaApi.setGatewaySharing(isChecked)
+            // Simulate gateway sharing toggle
+            android.util.Log.d("MeshListeners", "Simulate setGatewaySharing($isChecked)")
         }
         MeshUIBindings.internetGatewayToggle.setOnCheckedChangeListener { _, isChecked ->
-            MeshManagers.meshrabiyaApi.setInternetSharing(isChecked)
+            // Simulate internet sharing toggle
+            android.util.Log.d("MeshListeners", "Simulate setInternetSharing($isChecked)")
         }
         MeshUIBindings.refreshButton.setOnClickListener {
-            // Use API to refresh mesh/gateway/storage state
-            MeshManagers.meshrabiyaApi.refreshStatus()
+            // Simulate refresh mesh/gateway/storage state
+            android.util.Log.d("MeshListeners", "Simulate refreshStatus()")
         }
         MeshUIBindings.meshToggleButton.setOnClickListener {
-            // Use API to start/stop mesh network
-            MeshManagers.meshrabiyaApi.toggleMeshNetwork()
+            // Simulate mesh network toggle
+            android.util.Log.d("MeshListeners", "Simulate toggleMeshNetwork()")
         }
         MeshUIBindings.storageParticipationToggle.setOnCheckedChangeListener { _, isChecked ->
             val allocation = MeshUIBindings.storageAllocationSlider.value.toInt()
-            MeshManagers.meshrabiyaApi.setStorageParticipation(isChecked, allocation)
+            // Simulate storage participation
+            android.util.Log.d("MeshListeners", "Simulate setStorageParticipation($isChecked, $allocation)")
+            // Example: api.setStorageParticipationEnabled(isChecked, callback)
         }
         MeshUIBindings.storageAllocationSlider.addOnChangeListener { _, value, _ ->
             val allocation = value.toInt()
             val isParticipating = MeshUIBindings.storageParticipationToggle.isChecked
-            MeshManagers.meshrabiyaApi.setStorageParticipation(isParticipating, allocation)
+            // Simulate storage participation
+            android.util.Log.d("MeshListeners", "Simulate setStorageParticipation($isParticipating, $allocation)")
         }
         MeshUIBindings.selectFolderButton.setOnClickListener {
-            MeshManagers.meshrabiyaApi.selectStorageFolder()
+            // Simulate select storage folder
+            android.util.Log.d("MeshListeners", "Simulate selectStorageFolder()")
         }
         MeshUIBindings.createFolderButton.setOnClickListener {
-            MeshManagers.meshrabiyaApi.createStorageFolder()
+            // Simulate create storage folder
+            android.util.Log.d("MeshListeners", "Simulate createStorageFolder()")
         }
         MeshUIBindings.serviceLayerParticipationSwitch.setOnCheckedChangeListener { _, isChecked ->
-            MeshManagers.meshrabiyaApi.setServiceLayerParticipation(isChecked)
+            // Simulate service layer participation
+            android.util.Log.d("MeshListeners", "Simulate setServiceLayerParticipation($isChecked)")
         }
     }
 }

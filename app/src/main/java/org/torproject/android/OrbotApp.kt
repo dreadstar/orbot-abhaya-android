@@ -104,11 +104,10 @@ class OrbotApp : Application() {
                 
                 android.util.Log.d("OrbotApp", "onCreate() - Creating AndroidVirtualNode")
                 virtualNode = AndroidVirtualNode(
-                    context = applicationContext,
+                    appContext = applicationContext,
                     logger = meshLogger,
                     json = meshJson,
-                    dataStore = meshDataStore,
-                    scheduledExecutorService = meshExecutor
+                    dataStore = meshDataStore
                 )
                 android.util.Log.d("OrbotApp", "onCreate() - AndroidVirtualNode created successfully")
             } catch (e: Exception) {

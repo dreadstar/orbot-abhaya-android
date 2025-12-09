@@ -3,34 +3,34 @@ package org.orbotabhaya.ui
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import org.orbotabhaya.task.TaskManager
-import org.orbotabhaya.task.TaskProgress
-import org.orbotabhaya.task.ServiceMetadata
+// All org.orbotabhaya.task.* imports removed; only simulated data used
 
 class TaskManagerViewModel : ViewModel() {
-    private val taskManager = TaskManager.getInstance()
-    private val _serviceResults = MutableLiveData<List<ServiceMetadata>>()
-    val serviceResults: LiveData<List<ServiceMetadata>> = _serviceResults
-    private val _taskProgress = MutableLiveData<List<TaskProgress>>()
-    val taskProgress: LiveData<List<TaskProgress>> = _taskProgress
+    // Simulated service results and progress
+    private val _serviceResults = MutableLiveData<List<String>>()
+    val serviceResults: LiveData<List<String>> = _serviceResults
+    private val _taskProgress = MutableLiveData<List<String>>()
+    val taskProgress: LiveData<List<String>> = _taskProgress
 
     fun searchServices(query: String) {
-        val results = taskManager.searchServices(query)
+        // Simulate search: filter static list
+        val allServices = listOf("Image Classification", "Text Translation", "File Upload", "Document OCR")
+        val results = if (query.isBlank()) allServices else allServices.filter { it.contains(query, true) }
         _serviceResults.postValue(results)
     }
 
-    fun createTask(metadata: ServiceMetadata) {
-        val taskId = taskManager.createTask(metadata)
-        updateProgress()
+    fun createTask(serviceName: String) {
+        // Simulate task creation
+        updateProgress(serviceName)
     }
 
-    fun createTaskWithParams(metadata: ServiceMetadata, params: Map<String, Any>) {
-        val taskId = taskManager.createTaskWithParams(metadata, params)
-        updateProgress()
+    fun createTaskWithParams(serviceName: String, params: Map<String, Any>) {
+        // Simulate task creation with params
+        updateProgress(serviceName)
     }
 
-    fun updateProgress() {
-        val progressList = taskManager.getTaskProgress()
-        _taskProgress.postValue(progressList)
+    fun updateProgress(serviceName: String) {
+        // Simulate progress
+        _taskProgress.postValue(listOf("Task for $serviceName: Complete"))
     }
 }
