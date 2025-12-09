@@ -8,14 +8,8 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import org.torproject.android.R
-// Simulated mesh service task for UI
+import org.torproject.android.ui.mesh.SimulatedServiceTask
 
-data class SimulatedServiceTask(
-    val serviceId: String,
-    val serviceName: String,
-    val author: String,
-    val serviceType: String
-)
 
 class TaskListAdapter(
     private val onTaskSelected: (SimulatedServiceTask) -> Unit

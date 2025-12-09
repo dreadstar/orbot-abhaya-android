@@ -31,6 +31,15 @@ class MoreFragment : Fragment() {
 
     private lateinit var tvStatus: TextView
 
+    // Activity Result Launchers for deprecated startActivityForResult usages
+    private val settingsLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { /* handle result if needed */ }
+
+    private val appManagerLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { /* handle result if needed */ }
+
     override fun onAttach(context: Context) {
         super.onAttach(context)
 
@@ -77,10 +86,7 @@ class MoreFragment : Fragment() {
 
         val listItems = listOf(
             OrbotMenuAction(R.string.menu_settings, R.drawable.ic_settings_gear) {
-                activity?.startActivityForResult(
-                    Intent(context, SettingsActivity::class.java),
-                    OrbotActivity.Companion.REQUEST_CODE_SETTINGS
-                )
+                settingsLauncher.launch(Intent(context, SettingsActivity::class.java))
             },
             OrbotMenuAction(R.string.system_vpn_settings, R.drawable.ic_vpn_key) {
                 activity?.startActivity(
@@ -89,10 +95,7 @@ class MoreFragment : Fragment() {
                 )
             },
             OrbotMenuAction(R.string.btn_choose_apps, R.drawable.ic_choose_apps) {
-                activity?.startActivityForResult(
-                    Intent(requireActivity(), AppManagerActivity::class.java),
-                    OrbotActivity.Companion.REQUEST_VPN_APP_SELECT
-                )
+                appManagerLauncher.launch(Intent(requireActivity(), AppManagerActivity::class.java))
             },
             OrbotMenuAction(R.string.menu_log, R.drawable.ic_log) { showLog() },
             OrbotMenuAction(R.string.v3_hosted_services, R.drawable.ic_menu_onion) {

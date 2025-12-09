@@ -11,6 +11,7 @@ import org.torproject.android.R
 import com.ustadmobile.meshrabiya.api.MeshrabiyaApi
 import com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl
 import org.torproject.android.ui.mesh.model.StorageItem
+import org.torproject.android.ui.mesh.SimulatedServiceTask
 
 class DropFolderFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
@@ -100,11 +101,11 @@ class DropFolderFragment : Fragment() {
         recyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
 
         val friendList: List<org.torproject.android.ui.mesh.model.FriendContact> = getFriendContactList()
-        val adapter = FriendListAdapter { selectedFriend ->
+        val adapter = FriendListAdapter { friend ->
             dialog.dismiss()
             // Integrate with backend: share item with selected friend using MeshrabiyaApi
             // Simulate sharing: show a toast and reload contents
-            android.widget.Toast.makeText(requireContext(), "Shared '${item.name}' with ${selectedFriend.name}", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(requireContext(), "Shared '${item.name}' with ${friend.displayName}", android.widget.Toast.LENGTH_SHORT).show()
             loadFolderContents()
         }
         recyclerView.adapter = adapter
@@ -145,13 +146,13 @@ class DropFolderFragment : Fragment() {
 
         // Simulated service/task list
         val cachedServiceList = listOf(
-            SimulatedServiceTask("Task 1", listOf("input1", "input2")),
-            SimulatedServiceTask("Task 2", listOf("inputA"))
+            SimulatedServiceTask("id1", "Task 1", "Alice", "ML"),
+            SimulatedServiceTask("id2", "Task 2", "Bob", "Data Processing")
         )
         val adapter = TaskListAdapter { selectedTask ->
             dialog.dismiss()
             val params = mutableMapOf<String, Any>()
-            val inputName = selectedTask.inputs.firstOrNull() ?: "input"
+            val inputName = "input" // Simulated input name
             if (item.isDirectory) {
                 val folderItems = meshrabiyaApi.getDropFolderFiles().filter { it.path.startsWith(item.path) }
                 params[inputName] = folderItems.map { it.absolutePath }
@@ -159,7 +160,7 @@ class DropFolderFragment : Fragment() {
                 params[inputName] = item.path
             }
             // Simulate task creation
-            android.widget.Toast.makeText(requireContext(), "Task '${selectedTask.name}' started with input(s): ${params[inputName]}", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(requireContext(), "Task '${selectedTask.serviceName}' started with input(s): ${params[inputName]}", android.widget.Toast.LENGTH_SHORT).show()
         }
         recyclerView.adapter = adapter
         adapter.submitList(cachedServiceList)
@@ -181,11 +182,11 @@ class DropFolderFragment : Fragment() {
         val setupButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.setupTaskTriggerButton)
 
         val cachedServiceList = listOf(
-            SimulatedServiceTask("Task 1", listOf("input1", "input2")),
-            SimulatedServiceTask("Task 2", listOf("inputA"))
+            SimulatedServiceTask("id1", "Task 1", "Alice", "ML"),
+            SimulatedServiceTask("id2", "Task 2", "Bob", "Data Processing")
         )
         val adapter = TaskListAdapter { selectedTask ->
-            val inputNames = selectedTask.inputs
+            val inputNames = listOf("input") // Simulated input names
             val spinnerAdapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, inputNames)
             spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             inputSpinner.adapter = spinnerAdapter
@@ -226,7 +227,7 @@ class DropFolderFragment : Fragment() {
                     val params = mutableMapOf<String, Any>()
                     params[inputName] = newFilePath
                     // Simulate task trigger
-                    android.widget.Toast.makeText(requireContext(), "Task '${task.name}' triggered for file: $newFilePath", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(requireContext(), "Task '${task.serviceName}' triggered for file: $newFilePath", android.widget.Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -235,4 +236,4 @@ class DropFolderFragment : Fragment() {
 }
 
 // Simulated service/task class for UI logic (top-level for full file access)
-data class SimulatedServiceTask(val name: String, val inputs: List<String>)
+// Only one declaration allowed; remove any duplicates above
