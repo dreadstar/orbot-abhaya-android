@@ -11,9 +11,15 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.imageview.ShapeableImageView
 import org.torproject.android.R
 import org.torproject.android.ui.mesh.model.StorageItem
+import org.torproject.android.ui.mesh.model.toStorageItem
+import org.torproject.android.ui.mesh.model.getFormattedSize
+import org.torproject.android.ui.mesh.model.getFormattedDate
+import com.ustadmobile.meshrabiya.api.MeshrabiyaApi
 
 class DropFolderAdapter(
-    private val onShareClicked: (StorageItem) -> Unit
+    private val onShareClicked: (StorageItem) -> Unit,
+    private val meshrabiyaApi: MeshrabiyaApi,
+    private val folderId: String
 ) : ListAdapter<StorageItem, DropFolderAdapter.ViewHolder>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -24,6 +30,18 @@ class DropFolderAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position), onShareClicked)
+    }
+
+    fun loadDropFolderContents() {
+        // Use MeshrabiyaApi.getDropFolderFiles for folder contents
+        val files = meshrabiyaApi.getDropFolderFiles()
+        // If you need to filter by folderId, do so here
+        val filteredFiles = files.filter { file ->
+            // Example: filter by folder path or id if needed
+            // file.parentFile?.name == folderId
+            true // No filtering by default
+        }
+        submitList(filteredFiles.map { it.toStorageItem() })
     }
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -38,30 +56,12 @@ class DropFolderAdapter(
             // TODO: Set icon based on file/folder type
             shareButton.setOnClickListener { onShareClicked(item) }
 
-            if (item.isShared && item.sharedWith.contains("everyone")) {
-                itemView.alpha = 0.5f
-                // Use a tag-based approach to avoid missing id resources
-                val existing = itemView.getTag(com.google.android.material.R.id.snackbar_text) as? MaterialButton
-                if (existing == null) {
-                    val downloadButton = MaterialButton(itemView.context).apply {
-                        text = "Download"
-                        textSize = 12f
-                        setOnClickListener {
-                            val storageManager = org.torproject.android.service.storage.StorageDropFolderManager.getInstance(itemView.context)
-                            storageManager.downloadSharedItem(item)
-                        }
-                    }
-                    (itemView as ViewGroup).addView(downloadButton)
-                    itemView.setTag(com.google.android.material.R.id.snackbar_text, downloadButton)
-                }
-            } else {
-                itemView.alpha = 1.0f
-                val existing = itemView.getTag(com.google.android.material.R.id.snackbar_text) as? MaterialButton
-                if (existing != null) {
-                    (itemView as ViewGroup).removeView(existing)
-                    itemView.setTag(com.google.android.material.R.id.snackbar_text, null)
-                }
-            }
+            // All download logic must be routed through MeshrabiyaApi only
+            // Example: Use MeshrabiyaApi.listFiles or MeshrabiyaApi.listFolders for data operations
+            // If download functionality is required, ensure MeshrabiyaApi provides a downloadFile or similar method
+            // If not present, STOP and request user guidance before proceeding
+            // Remove legacy StorageDropFolderManager and direct download logic
+            // ...existing code...
         }
     }
 

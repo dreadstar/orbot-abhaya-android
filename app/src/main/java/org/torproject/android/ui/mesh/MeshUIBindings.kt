@@ -1,4 +1,7 @@
+
 package org.torproject.android.ui.mesh
+
+import org.torproject.android.R
 
 import android.view.View
 import android.widget.TextView
@@ -7,7 +10,7 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.slider.Slider
 import androidx.recyclerview.widget.RecyclerView
-import org.torproject.android.ui.mesh.adapter.FolderContentsAdapter
+// import org.torproject.android.ui.mesh.adapter.FolderContentsAdapter
 
 object MeshUIBindings {
     lateinit var meshStatusText: TextView
@@ -31,7 +34,7 @@ object MeshUIBindings {
     lateinit var createFolderButton: MaterialButton
     lateinit var selectedFolderText: TextView
     lateinit var folderContentsRecyclerView: RecyclerView
-    lateinit var folderContentsAdapter: FolderContentsAdapter
+    // lateinit var folderContentsAdapter: FolderContentsAdapter
     lateinit var distributedServiceLayerCard: MaterialCardView
     lateinit var serviceLayerParticipationSwitch: SwitchMaterial
     lateinit var serviceLayerStatusText: TextView

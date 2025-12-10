@@ -50,15 +50,15 @@ class MeshrabiyaAidlService : Service() {
 
         override fun storeBlob(blob: ParcelFileDescriptor?): String? {
             if (!testMode || blob == null) return ""
-                return try {
-                    val fd = blob.fileDescriptor
-                    val bytes = FileInputStream(fd).use { it.readBytes() }
-                    val id = java.util.UUID.randomUUID().toString()
-                    testBlobStore[id] = bytes
-                    id
-                } catch (t: Throwable) {
-                    ""
-                }
+            return try {
+                val fd = blob.fileDescriptor
+                val bytes = FileInputStream(fd).use { it.readBytes() }
+                val id = java.util.UUID.randomUUID().toString()
+                testBlobStore[id] = bytes
+                id
+            } catch (t: Throwable) {
+                ""
+            }
         }
 
         override fun openBlob(blobId: String?): ParcelFileDescriptor? {

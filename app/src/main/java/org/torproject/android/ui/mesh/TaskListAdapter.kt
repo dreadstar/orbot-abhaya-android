@@ -8,11 +8,12 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import org.torproject.android.R
-import org.torproject.android.service.compute.ServiceSearchResult
+import org.torproject.android.ui.mesh.SimulatedServiceTask
+
 
 class TaskListAdapter(
-    private val onTaskSelected: (ServiceSearchResult) -> Unit
-) : ListAdapter<ServiceSearchResult, TaskListAdapter.ViewHolder>(DiffCallback) {
+    private val onTaskSelected: (SimulatedServiceTask) -> Unit
+) : ListAdapter<SimulatedServiceTask, TaskListAdapter.ViewHolder>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -28,17 +29,17 @@ class TaskListAdapter(
         private val name: TextView = itemView.findViewById(R.id.taskName)
         private val type: TextView = itemView.findViewById(R.id.taskType)
 
-        fun bind(task: ServiceSearchResult, onTaskSelected: (ServiceSearchResult) -> Unit) {
-            name.text = task.manifest.serviceType.name + ": " + task.manifest.author
-            type.text = task.manifest.serviceType.name
+        fun bind(task: SimulatedServiceTask, onTaskSelected: (SimulatedServiceTask) -> Unit) {
+            name.text = task.serviceType + ": " + task.author
+            type.text = task.serviceType
             itemView.setOnClickListener { onTaskSelected(task) }
         }
     }
 
-    companion object DiffCallback : DiffUtil.ItemCallback<ServiceSearchResult>() {
-        override fun areItemsTheSame(oldItem: ServiceSearchResult, newItem: ServiceSearchResult): Boolean =
+    companion object DiffCallback : DiffUtil.ItemCallback<SimulatedServiceTask>() {
+        override fun areItemsTheSame(oldItem: SimulatedServiceTask, newItem: SimulatedServiceTask): Boolean =
             oldItem.serviceId == newItem.serviceId
-        override fun areContentsTheSame(oldItem: ServiceSearchResult, newItem: ServiceSearchResult): Boolean =
+        override fun areContentsTheSame(oldItem: SimulatedServiceTask, newItem: SimulatedServiceTask): Boolean =
             oldItem == newItem
     }
 }

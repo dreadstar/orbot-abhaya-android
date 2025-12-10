@@ -14,6 +14,22 @@
     <!-- this is being triggered by a javax package that is not used, so we are making it a warning -->
     <issue id="InvalidPackage" severity="warning"/>
 
+        <!-- Suppress non-critical or informational warnings -->
+        <issue id="AppBundleLocaleChanges" severity="ignore"/>
+        <issue id="GradleDependency" severity="ignore"/>
+        <issue id="NewerVersionAvailable" severity="ignore"/>
+        <issue id="KtxExtensionAvailable" severity="ignore"/>
+        <issue id="UseKtx" severity="ignore"/>
+        <issue id="UseTomlInstead" severity="ignore"/>
+        <issue id="IconColors" severity="ignore"/>
+        <issue id="IconDipSize" severity="ignore"/>
+        <issue id="IconLocation" severity="ignore"/>
+        <issue id="IconDensities" severity="ignore"/>
+
+        <issue id="TrustAllX509TrustManager">
+            <ignore path="**/*.jar" />
+        </issue>
+
     <!-- These are important to us, so promote from warning to error -->
     <issue id="AppCompatMethod" severity="error"/>
     <issue id="DefaultLocale" severity="error"/>

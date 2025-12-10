@@ -18,7 +18,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         // --- Use MeshrabiyaApi singleton ---
-    meshrabiyaApi = MeshrabiyaApiImpl.getInstance(applicationContext)
+    meshrabiyaApi = MeshrabiyaApiImpl.getInstance()
 
         // --- Setup EnhancedMeshFragment UI callback integration ---
         val meshFragment = supportFragmentManager.findFragmentById(R.id.meshFragment) as? EnhancedMeshFragment
@@ -57,7 +57,7 @@ class MainActivity : AppCompatActivity() {
         return uri.path
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         // --- NEW CODE: Handle new drop folder selection while app is running ---
         handleDropFolderIntent(intent)

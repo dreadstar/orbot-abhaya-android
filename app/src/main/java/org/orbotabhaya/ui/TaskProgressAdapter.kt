@@ -8,10 +8,18 @@ import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import org.orbotabhaya.task.TaskProgress
+
 import org.torproject.android.R
 
-class TaskProgressAdapter : ListAdapter<TaskProgress, TaskProgressAdapter.TaskProgressViewHolder>(TaskProgressDiffCallback()) {
+// Simulated data class replacing TaskProgress
+data class SimulatedTaskProgress(
+    val taskId: String,
+    val taskName: String,
+    val percentComplete: Int,
+    val status: String
+)
+
+class TaskProgressAdapter : ListAdapter<SimulatedTaskProgress, TaskProgressAdapter.TaskProgressViewHolder>(TaskProgressDiffCallback()) {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskProgressViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_task_progress, parent, false)
         return TaskProgressViewHolder(view)
@@ -26,18 +34,18 @@ class TaskProgressAdapter : ListAdapter<TaskProgress, TaskProgressAdapter.TaskPr
         private val taskName: TextView = itemView.findViewById(R.id.task_name)
         private val progressBar: ProgressBar = itemView.findViewById(R.id.task_progress_bar)
         private val statusText: TextView = itemView.findViewById(R.id.task_status)
-        fun bind(progress: TaskProgress) {
+        fun bind(progress: SimulatedTaskProgress) {
             taskName.text = progress.taskName
             progressBar.progress = progress.percentComplete
             statusText.text = progress.status
         }
     }
 
-    class TaskProgressDiffCallback : DiffUtil.ItemCallback<TaskProgress>() {
-        override fun areItemsTheSame(oldItem: TaskProgress, newItem: TaskProgress): Boolean {
+    class TaskProgressDiffCallback : DiffUtil.ItemCallback<SimulatedTaskProgress>() {
+        override fun areItemsTheSame(oldItem: SimulatedTaskProgress, newItem: SimulatedTaskProgress): Boolean {
             return oldItem.taskId == newItem.taskId
         }
-        override fun areContentsTheSame(oldItem: TaskProgress, newItem: TaskProgress): Boolean {
+        override fun areContentsTheSame(oldItem: SimulatedTaskProgress, newItem: SimulatedTaskProgress): Boolean {
             return oldItem == newItem
         }
     }

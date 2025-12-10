@@ -78,14 +78,16 @@ android {
         create("release") {
             val keystorePropertiesFile = rootProject.file("keystore.properties")
             val keystoreProperties = Properties()
-            if (keystorePropertiesFile.canRead()) {
+            if (keystorePropertiesFile.exists() && keystorePropertiesFile.canRead()) {
                 keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-            }
-            if (!keystoreProperties.stringPropertyNames().isEmpty()) {
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["storePassword"] as String
+                if (!keystoreProperties.stringPropertyNames().isEmpty()) {
+                    keyAlias = keystoreProperties["keyAlias"] as String
+                    keyPassword = keystoreProperties["keyPassword"] as String
+                    storeFile = file(keystoreProperties["storeFile"] as String)
+                    storePassword = keystoreProperties["storePassword"] as String
+                }
+            } else {
+                logger.warn("keystore.properties not found or unreadable. Release signing will be skipped. See README.md for details.")
             }
         }
     }
@@ -95,7 +97,12 @@ android {
             isShrinkResources = false
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.txt")
-            signingConfig = signingConfigs.getByName("release")
+            // Only set signingConfig if keystore.properties is present and storeFile is set
+            signingConfig = if (signingConfigs.findByName("release")?.storeFile?.exists() == true) {
+                signingConfigs.getByName("release")
+            } else {
+                null // Skip signing if keystore is missing
+            }
         }
         getByName("debug") {
             isDebuggable = true
