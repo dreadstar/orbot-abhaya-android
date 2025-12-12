@@ -1,0 +1,11 @@
+{
+  "name": "orbot-onboard",
+  "version": "0.1.0",
+  "author": "orbot",
+  "summary": "Onboarding Bolt plan for Orbot",
+  "license": "Apache-2.0",
+  "project_page": "https://github.com/dreadstar/orbot-abhaya-android",
+  "source": "https://github.com/dreadstar/orbot-abhaya-android",
+  "dependencies": []
+}
+
