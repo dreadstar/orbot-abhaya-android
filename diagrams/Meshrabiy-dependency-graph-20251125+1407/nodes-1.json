@@ -1,0 +1,3974 @@
+{
+  "nodes": [
+    {
+      "id": "ExampleInstrumentedTest",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/androidTest/java/com/ustadmobile/test_app/ExampleInstrumentedTest.kt"
+    },
+    {
+      "id": "TestAppServerInstrumentedTest",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/androidTest/java/com/ustadmobile/meshrabiya/testapp/server/TestAppServerInstrumentedTest.kt"
+    },
+    {
+      "id": "TestAppServerNode",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/androidTest/java/com/ustadmobile/meshrabiya/testapp/server/TestAppServerInstrumentedTest.kt"
+    },
+    {
+      "id": "ExampleUnitTest",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/test/java/com/ustadmobile/test_app/ExampleUnitTest.kt"
+    },
+    {
+      "id": "App",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/App.kt"
+    },
+    {
+      "id": "ViewModelFactory",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/ViewModelFactory.kt"
+    },
+    {
+      "id": "ScanQrCodeContract",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/ScanQrCodeContract.kt"
+    },
+    {
+      "id": "VNetTestActivity",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/VNetTestActivity.kt"
+    },
+    {
+      "id": "MNetLoggerAndroid",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/MNetLoggerAndroid.kt"
+    },
+    {
+      "id": "CodeScannerActivity",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/CodeScannerActivity.kt"
+    },
+    {
+      "id": "SnackbarMessage",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/SnackbarMessage.kt"
+    },
+    {
+      "id": "ReceiveUiState",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/ReceiveViewModel.kt"
+    },
+    {
+      "id": "ReceiveViewModel",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/ReceiveViewModel.kt"
+    },
+    {
+      "id": "LocalVirtualNodeUiState",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/LocalVirtualNodeViewModel.kt"
+    },
+    {
+      "id": "LocalVirtualNodeViewModel",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/LocalVirtualNodeViewModel.kt"
+    },
+    {
+      "id": "NeighborNodeListUiState",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/NeighborNodeListViewModel.kt"
+    },
+    {
+      "id": "Filter",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/NeighborNodeListViewModel.kt"
+    },
+    {
+      "id": "NeighborNodeListViewModel",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/NeighborNodeListViewModel.kt"
+    },
+    {
+      "id": "SendFileUiState",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/SendFileViewModel.kt"
+    },
+    {
+      "id": "SendFileViewModel",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/SendFileViewModel.kt"
+    },
+    {
+      "id": "SelectDestNodeUiState",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/SelectDestNodeViewModel.kt"
+    },
+    {
+      "id": "SelectDestNodeViewModel",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/SelectDestNodeViewModel.kt"
+    },
+    {
+      "id": "LogFile",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/LogListViewModel.kt"
+    },
+    {
+      "id": "LogListUiState",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/LogListViewModel.kt"
+    },
+    {
+      "id": "LogListViewModel",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/LogListViewModel.kt"
+    },
+    {
+      "id": "InfoUiState",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/InfoViewModel.kt"
+    },
+    {
+      "id": "InfoViewModel",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/viewmodel/InfoViewModel.kt"
+    },
+    {
+      "id": "UriNameAndSize",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/ext/ContentResolverExt.kt"
+    },
+    {
+      "id": "ConnectBluetoothLauncherResult",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/composable/ConnectBluetooth.kt"
+    },
+    {
+      "id": "ConnectRequest",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/composable/ConnectWifiLauncher.kt"
+    },
+    {
+      "id": "ConnectWifiLauncherResult",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/composable/ConnectWifiLauncher.kt"
+    },
+    {
+      "id": "ConnectWifiLauncherStatus",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/composable/ConnectWifiLauncher.kt"
+    },
+    {
+      "id": "TestAppServer",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/server/TestAppServer.kt"
+    },
+    {
+      "id": "Status",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/server/TestAppServer.kt"
+    },
+    {
+      "id": "OutgoingTransfer",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/server/TestAppServer.kt"
+    },
+    {
+      "id": "IncomingTransfer",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/server/TestAppServer.kt"
+    },
+    {
+      "id": "InputStreamCounter",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/server/InputStreamCounter.kt"
+    },
+    {
+      "id": "AppUiState",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/appstate/AppUiState.kt"
+    },
+    {
+      "id": "FabState",
+      "type": "class",
+      "file": "Meshrabiya/test-app/src/main/java/com/ustadmobile/meshrabiya/testapp/appstate/FabState.kt"
+    },
+    {
+      "id": "BetaLoggerConsentDemoTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/beta/BetaLoggerConsentDemoTest.kt"
+    },
+    {
+      "id": "BetaLoggerIntegrationTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/beta/BetaLoggerIntegrationTest.kt"
+    },
+    {
+      "id": "EchoDatagramServer",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/test/EchoDatagramServer.kt"
+    },
+    {
+      "id": "FileEchoSocketServer",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/test/FileEchoSocketServer.kt"
+    },
+    {
+      "id": "VirtualNodeIntegrationTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/test/vnet/VirtualNodeIntegrationTest.kt"
+    },
+    {
+      "id": "UuidMaskUtilTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/util/UuidMaskUtilTest.kt"
+    },
+    {
+      "id": "ByteArrayExtTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/ext/ByteArrayExtTest.kt"
+    },
+    {
+      "id": "IntExtTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/ext/IntExtTest.kt"
+    },
+    {
+      "id": "EmergentRoleManagerDeepDebugTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManagerDeepDebugTest.kt"
+    },
+    {
+      "id": "VirtualNodeSharedTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/VirtualNodeSharedTest.kt"
+    },
+    {
+      "id": "EmergentRoleManagerCentralityTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManagerCentralityTest.kt"
+    },
+    {
+      "id": "MeshRoleManagerTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/MeshRoleManagerTest.kt"
+    },
+    {
+      "id": "VirtualNodeTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/VirtualNodeTest.kt"
+    },
+    {
+      "id": "MeshrabiyaConnectLinkTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/MeshrabiyaConnectLinkTest.kt"
+    },
+    {
+      "id": "GatewayProtocolIntegrationTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/GatewayProtocolIntegrationTest.kt"
+    },
+    {
+      "id": "VirtualPacketHeaderTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/VirtualPacketHeaderTest.kt"
+    },
+    {
+      "id": "VirtualPacketStreamTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/VirtualPacketStreamTest.kt"
+    },
+    {
+      "id": "EmergentRoleManagerNewNodeTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManagerNewNodeTest.kt"
+    },
+    {
+      "id": "EmergentRoleManagerSimpleIntegrationTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManagerSimpleIntegrationTest.kt"
+    },
+    {
+      "id": "VirtualNodeDatagramSocketTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/VirtualNodeDatagramSocketTest.kt"
+    },
+    {
+      "id": "EmergentRoleManagerSimpleTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManagerSimpleTest.kt"
+    },
+    {
+      "id": "EnhancedMockContextProvider",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/EnhancedMockContextProvider.kt"
+    },
+    {
+      "id": "OriginatingMessageManagerCallbackTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/OriginatingMessageManagerCallbackTest.kt"
+    },
+    {
+      "id": "TestMeshrabiyaWifiManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/TestMeshrabiyaWifiManager.kt"
+    },
+    {
+      "id": "TestMetrics",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/TestMeshrabiyaWifiManager.kt"
+    },
+    {
+      "id": "NetworkCondition",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/TestMeshrabiyaWifiManager.kt"
+    },
+    {
+      "id": "TopologyMapBuildingTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/TopologyMapBuildingTest.kt"
+    },
+    {
+      "id": "VirtualPacketTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/VirtualPacketTest.kt"
+    },
+    {
+      "id": "EmergentRoleManagerDebugTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManagerDebugTest.kt"
+    },
+    {
+      "id": "WifiConnectConfigTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/wifi/WifiConnectConfigTest.kt"
+    },
+    {
+      "id": "HotspotResponseTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/wifi/HotspotResponseTest.kt"
+    },
+    {
+      "id": "MockDeviceCapabilityManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/hardware/MockDeviceCapabilityManager.kt"
+    },
+    {
+      "id": "DeviceProfile",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/hardware/MockDeviceCapabilityManager.kt"
+    },
+    {
+      "id": "DeviceConfiguration",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/hardware/MockDeviceCapabilityManager.kt"
+    },
+    {
+      "id": "StateChange",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/hardware/MockDeviceCapabilityManager.kt"
+    },
+    {
+      "id": "AndroidDeviceCapabilityManagerTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/hardware/AndroidDeviceCapabilityManagerTest.kt"
+    },
+    {
+      "id": "HardwareIntegrationTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/hardware/HardwareIntegrationTest.kt"
+    },
+    {
+      "id": "VirtualDatagramSocketImplTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/datagram/VirtualDatagramSocketImplTest.kt"
+    },
+    {
+      "id": "ChainSocketFactoryTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/socket/ChainSocketFactoryTest.kt"
+    },
+    {
+      "id": "ChainSocketServerTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/vnet/socket/ChainSocketServerTest.kt"
+    },
+    {
+      "id": "DistributedStorageIntegrationTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/storage/DistributedStorageIntegrationTest.kt"
+    },
+    {
+      "id": "MmcpHotspotResponseTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/mmcp/MmcpHotspotResponseTest.kt"
+    },
+    {
+      "id": "MmcpMessageTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/mmcp/MmcpMessageTest.kt"
+    },
+    {
+      "id": "MmcpPongTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/mmcp/MmcpPongTest.kt"
+    },
+    {
+      "id": "ForwardingTest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/test/java/com/ustadmobile/meshrabiya/portforward/ForwardingTest.kt"
+    },
+    {
+      "id": "UuidUtil",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/UuidUtil.kt"
+    },
+    {
+      "id": "RemoteEndpoint",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/RemoteEndpoint.kt"
+    },
+    {
+      "id": "MeshrabiyaConstants",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/MeshrabiyaConstants.kt"
+    },
+    {
+      "id": "BetaTestLogger",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/beta/BetaTestLogger.kt"
+    },
+    {
+      "id": "LogLevel",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/beta/LogLevel.kt"
+    },
+    {
+      "id": "representing",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/beta/LogEntry.kt"
+    },
+    {
+      "id": "LogEntry",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/beta/LogEntry.kt"
+    },
+    {
+      "id": "WifiConcurrencyUtil",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/util/WifiConcurrencyUtil.kt"
+    },
+    {
+      "id": "FileSerializer",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/util/FileSerializer.kt"
+    },
+    {
+      "id": "code",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/util/RandomString.kt"
+    },
+    {
+      "id": "InetAddressSerializer",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/util/InetAddressSerializer.kt"
+    },
+    {
+      "id": "MLCapabilitySnapshot",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/MLCapabilitySnapshot.kt"
+    },
+    {
+      "id": "MLCapabilities",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/MLCapabilitySnapshot.kt"
+    },
+    {
+      "id": "MLComputeCapability",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/MLCapabilitySnapshot.kt"
+    },
+    {
+      "id": "AndroidVirtualNode",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/AndroidVirtualNode.kt"
+    },
+    {
+      "id": "WifiRole",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/WifiRole.kt"
+    },
+    {
+      "id": "VirtualPacketHeader",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/VirtualPacketHeader.kt"
+    },
+    {
+      "id": "NodeTopologyInfo",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/NodeTopologyInfo.kt"
+    },
+    {
+      "id": "LocalNodeState",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/LocalNodeState.kt"
+    },
+    {
+      "id": "MeshConnectionPool",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/MeshConnectionPool.kt"
+    },
+    {
+      "id": "Connection",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/MeshConnectionPool.kt"
+    },
+    {
+      "id": "that",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/VirtualNodeDatagramSocket.kt"
+    },
+    {
+      "id": "is",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/VirtualNodeDatagramSocket.kt"
+    },
+    {
+      "id": "VirtualNodeDatagramSocket",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/VirtualNodeDatagramSocket.kt"
+    },
+    {
+      "id": "CoreGossipBroadcastService",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/CoreGossipBroadcastService.kt"
+    },
+    {
+      "id": "BroadcastStats",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/CoreGossipBroadcastService.kt"
+    },
+    {
+      "id": "NodeConfig",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/NodeConfig.kt"
+    },
+    {
+      "id": "MeshrabiyaConnectLink",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/MeshrabiyaConnectLink.kt"
+    },
+    {
+      "id": "MeshRole",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/MeshRole.kt"
+    },
+    {
+      "id": "representing",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/GatewaySelectionResult.kt"
+    },
+    {
+      "id": "GatewaySelectionResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/GatewaySelectionResult.kt"
+    },
+    {
+      "id": "SingleGateway",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/GatewaySelectionResult.kt"
+    },
+    {
+      "id": "MultipleGateways",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/GatewaySelectionResult.kt"
+    },
+    {
+      "id": "NoGatewayAvailable",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/GatewaySelectionResult.kt"
+    },
+    {
+      "id": "GatewayDisabledByUser",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/GatewaySelectionResult.kt"
+    },
+    {
+      "id": "GatewayNode",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/GatewaySelectionResult.kt"
+    },
+    {
+      "id": "DistributionStrategy",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/GatewaySelectionResult.kt"
+    },
+    {
+      "id": "VirtualNode",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/VirtualNode.kt"
+    },
+    {
+      "id": "LastOriginatorMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/VirtualNode.kt"
+    },
+    {
+      "id": "Zone",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/VirtualNode.kt"
+    },
+    {
+      "id": "moved",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/VirtualNode.kt"
+    },
+    {
+      "id": "moved",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/VirtualNode.kt"
+    },
+    {
+      "id": "StorageNodeRequest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/StorageNodeRequest.kt"
+    },
+    {
+      "id": "VirtualNodeReturnPathSocketFactory",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/VirtualNodeReturnPathSocketFactory.kt"
+    },
+    {
+      "id": "GatewayRouter",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/GatewayRouter.kt"
+    },
+    {
+      "id": "CachedGatewayPool",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/GatewayRouter.kt"
+    },
+    {
+      "id": "BluetoothSocketISocketAdapter",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/BluetoothSocketISocketAdapter.kt"
+    },
+    {
+      "id": "GatewaySelector",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/GatewaySelector.kt"
+    },
+    {
+      "id": "MeshChunk",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/MeshStorageDataDefinitions.kt"
+    },
+    {
+      "id": "MeshFile",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/MeshStorageDataDefinitions.kt"
+    },
+    {
+      "id": "VirtualPacket",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/VirtualPacket.kt"
+    },
+    {
+      "id": "AndroidVirtualNodeFactory",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/AndroidVirtualNodeFactory.kt"
+    },
+    {
+      "id": "capturing",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManager.kt"
+    },
+    {
+      "id": "NodeCapabilitySnapshot",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManager.kt"
+    },
+    {
+      "id": "DeviceCapabilities",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManager.kt"
+    },
+    {
+      "id": "MeshIntelligence",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManager.kt"
+    },
+    {
+      "id": "RoleTransition",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManager.kt"
+    },
+    {
+      "id": "RoleTransitionPlan",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManager.kt"
+    },
+    {
+      "id": "EmergentRoleManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManager.kt"
+    },
+    {
+      "id": "LegacyFitnessScore",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManager.kt"
+    },
+    {
+      "id": "for",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManager.kt"
+    },
+    {
+      "id": "CentralityResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManager.kt"
+    },
+    {
+      "id": "GatewayMode",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManager.kt"
+    },
+    {
+      "id": "GatewayType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/EmergentRoleManager.kt"
+    },
+    {
+      "id": "Protocol",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/Protocol.kt"
+    },
+    {
+      "id": "OriginatingMessageManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/OriginatingMessageManager.kt"
+    },
+    {
+      "id": "PendingPing",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/OriginatingMessageManager.kt"
+    },
+    {
+      "id": "PingTime",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/OriginatingMessageManager.kt"
+    },
+    {
+      "id": "after",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/OriginatingMessageManager.kt"
+    },
+    {
+      "id": "OriginatingMessageState",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/OriginatingMessageManager.kt"
+    },
+    {
+      "id": "represents",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/WifiConnectConfig.kt"
+    },
+    {
+      "id": "WifiConnectConfig",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/WifiConnectConfig.kt"
+    },
+    {
+      "id": "Inet6AddressSerializer",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/WifiConnectConfig.kt"
+    },
+    {
+      "id": "DnsSdResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/DnsSdResponse.kt"
+    },
+    {
+      "id": "WifiDirectError",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/WifiDirectError.kt"
+    },
+    {
+      "id": "WifiP2pFailure",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/WifiP2pFailure.kt"
+    },
+    {
+      "id": "HotspotType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/HotspotType.kt"
+    },
+    {
+      "id": "HotspotTypeSerializer",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/HotspotType.kt"
+    },
+    {
+      "id": "WifiDirectException",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/WifiDirectException.kt"
+    },
+    {
+      "id": "WifiP2pActionListenerAdapter",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/WifiP2pActionListenerAdapter.kt"
+    },
+    {
+      "id": "MeshrabiyaWifiManagerAndroid",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/MeshrabiyaWifiManagerAndroid.kt"
+    },
+    {
+      "id": "ConnectNetworkCallback",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/MeshrabiyaWifiManagerAndroid.kt"
+    },
+    {
+      "id": "for",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/MeshrabiyaWifiManagerAndroid.kt"
+    },
+    {
+      "id": "UnhiddenSoftApConfigurationBuilder",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/UnhiddenSoftApConfigurationBuilder.kt"
+    },
+    {
+      "id": "WifiConnectException",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/WifiConnectException.kt"
+    },
+    {
+      "id": "HotspotPersistenceType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/HotspotPersistenceType.kt"
+    },
+    {
+      "id": "HotspotPersistenceTypeSerializer",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/HotspotPersistenceType.kt"
+    },
+    {
+      "id": "LocalHotspotRequest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/LocalHotspotRequest.kt"
+    },
+    {
+      "id": "ConnectBand",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/ConnectBand.kt"
+    },
+    {
+      "id": "ConnectBandSerializer",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/ConnectBand.kt"
+    },
+    {
+      "id": "LocalOnlyHotspotManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/LocalOnlyHotspotManager.kt"
+    },
+    {
+      "id": "HotspotStatus",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/HotspotStatus.kt"
+    },
+    {
+      "id": "MacAddressUtils",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/MacAddressUtils.kt"
+    },
+    {
+      "id": "and",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/MacAddressUtils.kt"
+    },
+    {
+      "id": "used",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/MacAddressUtils.kt"
+    },
+    {
+      "id": "WifiConnectEvent",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/WifiConnectEvent.kt"
+    },
+    {
+      "id": "LocalHotspotResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/LocalHotspotResponse.kt"
+    },
+    {
+      "id": "WifiDirectManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/WifiDirectManager.kt"
+    },
+    {
+      "id": "MeshrabiyaWifiState",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/state/MeshrabiyaWifiState.kt"
+    },
+    {
+      "id": "for",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/state/WifiStationState.kt"
+    },
+    {
+      "id": "WifiStationState",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/state/WifiStationState.kt"
+    },
+    {
+      "id": "Status",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/state/WifiStationState.kt"
+    },
+    {
+      "id": "LocalOnlyHotspotState",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/state/LocalOnlyHotspotState.kt"
+    },
+    {
+      "id": "WifiDirectState",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/wifi/state/WifiDirectState.kt"
+    },
+    {
+      "id": "ResourceCapabilities",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceMetrics.kt"
+    },
+    {
+      "id": "SerializableNetworkInterfaceInfo",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceMetrics.kt"
+    },
+    {
+      "id": "BatteryInfo",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceMetrics.kt"
+    },
+    {
+      "id": "BatteryHealth",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceMetrics.kt"
+    },
+    {
+      "id": "ChargingSource",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceMetrics.kt"
+    },
+    {
+      "id": "PowerState",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceMetrics.kt"
+    },
+    {
+      "id": "ThermalState",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceMetrics.kt"
+    },
+    {
+      "id": "HardwareMetricsException",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceCapabilityManager.kt"
+    },
+    {
+      "id": "for",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceCapabilityManager.kt"
+    },
+    {
+      "id": "CpuMetrics",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceCapabilityManager.kt"
+    },
+    {
+      "id": "for",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceCapabilityManager.kt"
+    },
+    {
+      "id": "MemoryMetrics",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceCapabilityManager.kt"
+    },
+    {
+      "id": "for",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceCapabilityManager.kt"
+    },
+    {
+      "id": "NetworkMetrics",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceCapabilityManager.kt"
+    },
+    {
+      "id": "NetworkConnectionType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceCapabilityManager.kt"
+    },
+    {
+      "id": "StabilityMetrics",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/DeviceCapabilityManager.kt"
+    },
+    {
+      "id": "AndroidDeviceCapabilityManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/hardware/AndroidDeviceCapabilityManager.kt"
+    },
+    {
+      "id": "VirtualNodeGattServer",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/bluetooth/VirtualNodeGattServer.kt"
+    },
+    {
+      "id": "DataAcceptRunnable",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/bluetooth/VirtualNodeGattServer.kt"
+    },
+    {
+      "id": "MeshrabiyaBluetoothState",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/bluetooth/MeshrabiyaBluetoothState.kt"
+    },
+    {
+      "id": "MeshrabiyaBluetoothManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/bluetooth/MeshrabiyaBluetoothManager.kt"
+    },
+    {
+      "id": "to",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/datagram/VirtualDatagramSocketImpl.kt"
+    },
+    {
+      "id": "VirtualDatagramSocketImpl",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/datagram/VirtualDatagramSocketImpl.kt"
+    },
+    {
+      "id": "VirtualDatagramSocketImplFactory",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/datagram/VirtualDatagramSocketImplFactory.kt"
+    },
+    {
+      "id": "VirtualDatagramSocket2",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/datagram/VirtualDatagramSocket2.kt"
+    },
+    {
+      "id": "variables",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/socket/ChainSocket.kt"
+    },
+    {
+      "id": "ChainSocket",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/socket/ChainSocket.kt"
+    },
+    {
+      "id": "ChainSocketInitResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/socket/ChainSocketInitResponse.kt"
+    },
+    {
+      "id": "ChainSocketNextHop",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/socket/ChainSocketNextHop.kt"
+    },
+    {
+      "id": "ChainSocketInitRequest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/socket/ChainSocketInitRequest.kt"
+    },
+    {
+      "id": "ChainSocketFactoryImpl",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/socket/ChainSocketFactoryImpl.kt"
+    },
+    {
+      "id": "ChainSocketServer",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/socket/ChainSocketServer.kt"
+    },
+    {
+      "id": "ClientInitRunnable",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/socket/ChainSocketServer.kt"
+    },
+    {
+      "id": "CopyStreamRunnable",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/socket/ChainSocketServer.kt"
+    },
+    {
+      "id": "ChainSocketFactory",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/socket/ChainSocketFactory.kt"
+    },
+    {
+      "id": "ChainSocketResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/vnet/socket/ChainSocketFactory.kt"
+    },
+    {
+      "id": "AbstractHttpOverBluetoothServer",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/server/AbstractHttpOverBluetoothServer.kt"
+    },
+    {
+      "id": "StorageParticipationManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StorageParticipationManager.kt"
+    },
+    {
+      "id": "StorageDevice",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StorageParticipationManager.kt"
+    },
+    {
+      "id": "StorageAllocation",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StorageParticipationManager.kt"
+    },
+    {
+      "id": "StorageDeviceType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StorageParticipationManager.kt"
+    },
+    {
+      "id": "StorageParticipationUIState",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StorageParticipationManager.kt"
+    },
+    {
+      "id": "StorageQuotaManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StorageSupport.kt"
+    },
+    {
+      "id": "QuotaInfo",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StorageSupport.kt"
+    },
+    {
+      "id": "StorageEncryptionManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StorageSupport.kt"
+    },
+    {
+      "id": "ReplicationTracker",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StorageSupport.kt"
+    },
+    {
+      "id": "StagedSyncManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StagedSyncManager.kt"
+    },
+    {
+      "id": "SyncedFile",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StagedSyncManager.kt"
+    },
+    {
+      "id": "SyncOperation",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StagedSyncManager.kt"
+    },
+    {
+      "id": "FileState",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StagedSyncManager.kt"
+    },
+    {
+      "id": "SyncType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StagedSyncManager.kt"
+    },
+    {
+      "id": "SyncResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StagedSyncManager.kt"
+    },
+    {
+      "id": "Success",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StagedSyncManager.kt"
+    },
+    {
+      "id": "Failure",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StagedSyncManager.kt"
+    },
+    {
+      "id": "Conflict",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StagedSyncManager.kt"
+    },
+    {
+      "id": "Partial",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StagedSyncManager.kt"
+    },
+    {
+      "id": "SyncProgress",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StagedSyncManager.kt"
+    },
+    {
+      "id": "BatteryAwareSync",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StagedSyncManager.kt"
+    },
+    {
+      "id": "MeshDataStoreDb",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StorageDatastore.kt"
+    },
+    {
+      "id": "StorageDataStore",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StorageDatastore.kt"
+    },
+    {
+      "id": "StorageSummary",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/StorageDatastore.kt"
+    },
+    {
+      "id": "DistributedStorageManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/DistributedStorageManager.kt"
+    },
+    {
+      "id": "for",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/DistributedStorageManager.kt"
+    },
+    {
+      "id": "StorageParticipationConfig",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/DistributedStorageManager.kt"
+    },
+    {
+      "id": "StorageConfiguration",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/DistributedStorageManager.kt"
+    },
+    {
+      "id": "StorageStats",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/DistributedStorageManager.kt"
+    },
+    {
+      "id": "StorageQuotaExceededException",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/DistributedStorageManager.kt"
+    },
+    {
+      "id": "FileReference",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/DistributedStorageManager.kt"
+    },
+    {
+      "id": "ReplicationLevel",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/DistributedStorageManager.kt"
+    },
+    {
+      "id": "SyncPriority",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/DistributedStorageManager.kt"
+    },
+    {
+      "id": "FileMetadata",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/DistributedStorageManager.kt"
+    },
+    {
+      "id": "RecipientType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/RecipientType.kt"
+    },
+    {
+      "id": "RecipientEntry",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/RecipientType.kt"
+    },
+    {
+      "id": "DistributedStorageServer",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/DistributedStorageServer.kt"
+    },
+    {
+      "id": "DistributedStorageClient",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/DistributedStorageClient.kt"
+    },
+    {
+      "id": "PendingStorageNodeRequest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/storage/DistributedStorageClient.kt"
+    },
+    {
+      "id": "ApiResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/model/ApiResult.kt"
+    },
+    {
+      "id": "Success",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/model/ApiResult.kt"
+    },
+    {
+      "id": "Failure",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/model/ApiResult.kt"
+    },
+    {
+      "id": "ServiceAnnouncement",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/model/ServiceAnnouncement.kt"
+    },
+    {
+      "id": "ServiceType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/model/ServiceAnnouncement.kt"
+    },
+    {
+      "id": "ExecutionProfile",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/model/ExecutionProfile.kt"
+    },
+    {
+      "id": "DeviceCapabilities",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/model/DeviceCapabilities.kt"
+    },
+    {
+      "id": "DeviceClass",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/model/DeviceCapabilities.kt"
+    },
+    {
+      "id": "NetworkInfo",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/model/NetworkInfo.kt"
+    },
+    {
+      "id": "NodeInfo",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/model/NodeInfo.kt"
+    },
+    {
+      "id": "MeshState",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/model/MeshState.kt"
+    },
+    {
+      "id": "ResourceRequirements",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/model/ResourceRequirements.kt"
+    },
+    {
+      "id": "MeshrabiyaApiImpl",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/api/MeshrabiyaApiImpl.kt"
+    },
+    {
+      "id": "MNetLogger",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/log/MNetLogger.kt"
+    },
+    {
+      "id": "MNetLoggerStdout",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/log/MNetLoggerStdout.kt"
+    },
+    {
+      "id": "LogLine",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/log/LogLine.kt"
+    },
+    {
+      "id": "AccessType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/AccessType.kt"
+    },
+    {
+      "id": "MeshEcosystemListener",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemListener.kt"
+    },
+    {
+      "id": "MeshGossipService",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshGossipService.kt"
+    },
+    {
+      "id": "to",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshGossipService.kt"
+    },
+    {
+      "id": "ResponseCollector",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshGossipService.kt"
+    },
+    {
+      "id": "AnySerializer",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "StorageNodeRequest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "StorageNodeResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "ChunkRetrievalQuery",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "ChunkRetrievalResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "ReplicaQuery",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "ReplicaResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "MessageType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "for",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "MeshEcosystemMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "StorageNodeResponseMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "StorageNodeRequestMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "ChunkTransferMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "ChunkRetrievalQueryMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "ChunkRetrievalResponseMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "ReplicaQueryMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "ReplicaResponseMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "StorageCapabilitiesMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "FilePermissionUpdateMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "FilePermissionUpdateConfirmationMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "EcosystemBroadcastMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "ComputeTaskRequestMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "ComputeNodeResponseMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "TaskCompletedMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "ExecutionStats",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "ExecutionError",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "TaskScheduledMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "TaskAssignmentMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/MeshEcosystemMessage.kt"
+    },
+    {
+      "id": "AdaptivePowerManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/power/AdaptivePowerManager.kt"
+    },
+    {
+      "id": "PowerSettings",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/power/AdaptivePowerManager.kt"
+    },
+    {
+      "id": "DeviceProfile",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/power/AdaptivePowerManager.kt"
+    },
+    {
+      "id": "DeviceCapabilities",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/power/AdaptivePowerManager.kt"
+    },
+    {
+      "id": "PowerState",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/power/AdaptivePowerManager.kt"
+    },
+    {
+      "id": "ThermalState",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/power/AdaptivePowerManager.kt"
+    },
+    {
+      "id": "PowerSavingMode",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/power/AdaptivePowerManager.kt"
+    },
+    {
+      "id": "SandboxStorageProxy",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "StorageAccessPolicy",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "StorageOperation",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "RetentionPolicy",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "StorageRequest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "Store",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "Retrieve",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "List",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "Delete",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "GetMetadata",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "StorageResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "StoreResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "RetrieveResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "ListResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "DeleteResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "MetadataResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "FileInfo",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "SandboxWithStorageAccess",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "EnhancedCommunicationChannels",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "SandboxWithStorageInstance",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "OCRWithStorageExample",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/SandboxStorageProxy.kt"
+    },
+    {
+      "id": "PrivacyPreservingMeshProcessor",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "PrivateProcessingRequest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "ProcessingConstraints",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "PrivacyLevel",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "AuditTrail",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "EndToEndEncryption",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "DifferentialPrivacyManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "DataMinimizationEngine",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "detection",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "EphemeralProcessingManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "ProcessingContract",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "DeletionProof",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "ComplianceResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "Compliant",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "Violation",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "DeviceInfo",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "OnionAddressRotationManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "MeshIdentity",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "RotationRecord",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/PrivacyPreservingMeshProcessor.kt"
+    },
+    {
+      "id": "DecentralizedServiceSigning",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/DecentralizedServiceSigning.kt"
+    },
+    {
+      "id": "InputDef",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/DecentralizedServiceSigning.kt"
+    },
+    {
+      "id": "OutputDef",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/DecentralizedServiceSigning.kt"
+    },
+    {
+      "id": "AuthorInfo",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/DecentralizedServiceSigning.kt"
+    },
+    {
+      "id": "SignatureInfo",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/DecentralizedServiceSigning.kt"
+    },
+    {
+      "id": "FileHash",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/DecentralizedServiceSigning.kt"
+    },
+    {
+      "id": "VerificationResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/DecentralizedServiceSigning.kt"
+    },
+    {
+      "id": "Valid",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/DecentralizedServiceSigning.kt"
+    },
+    {
+      "id": "Invalid",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/DecentralizedServiceSigning.kt"
+    },
+    {
+      "id": "ServiceWebOfTrust",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/DecentralizedServiceSigning.kt"
+    },
+    {
+      "id": "TrustRelationship",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/DecentralizedServiceSigning.kt"
+    },
+    {
+      "id": "MeshServiceDistribution",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/DecentralizedServiceSigning.kt"
+    },
+    {
+      "id": "StrangersSafeComputeEngine",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/StrangersSafeComputeEngine.kt"
+    },
+    {
+      "id": "StrangersTrustEngine",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/StrangersSafeComputeEngine.kt"
+    },
+    {
+      "id": "ExecutionProof",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/StrangersSafeComputeEngine.kt"
+    },
+    {
+      "id": "ExecutionTrace",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/StrangersSafeComputeEngine.kt"
+    },
+    {
+      "id": "above",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/StrangersSafeComputeEngine.kt"
+    },
+    {
+      "id": "ComputeEconomics",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/StrangersSafeComputeEngine.kt"
+    },
+    {
+      "id": "ComputeReward",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/StrangersSafeComputeEngine.kt"
+    },
+    {
+      "id": "ContainerExecutionResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/StrangersSafeComputeEngine.kt"
+    },
+    {
+      "id": "Success",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/StrangersSafeComputeEngine.kt"
+    },
+    {
+      "id": "Failure",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/StrangersSafeComputeEngine.kt"
+    },
+    {
+      "id": "CodeVerification",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/StrangersSafeComputeEngine.kt"
+    },
+    {
+      "id": "IsolatedEnvironment",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/StrangersSafeComputeEngine.kt"
+    },
+    {
+      "id": "ExecutionResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/StrangersSafeComputeEngine.kt"
+    },
+    {
+      "id": "BulletproofSandbox",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/BulletproofSandbox.kt"
+    },
+    {
+      "id": "SandboxPolicy",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/BulletproofSandbox.kt"
+    },
+    {
+      "id": "InputOutputOnlyProcess",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/BulletproofSandbox.kt"
+    },
+    {
+      "id": "CommunicationChannels",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/BulletproofSandbox.kt"
+    },
+    {
+      "id": "SandboxInstance",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/BulletproofSandbox.kt"
+    },
+    {
+      "id": "SandboxExecutionResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/BulletproofSandbox.kt"
+    },
+    {
+      "id": "Success",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/BulletproofSandbox.kt"
+    },
+    {
+      "id": "Timeout",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/BulletproofSandbox.kt"
+    },
+    {
+      "id": "PolicyViolation",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/BulletproofSandbox.kt"
+    },
+    {
+      "id": "SecurityViolation",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/BulletproofSandbox.kt"
+    },
+    {
+      "id": "Error",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/BulletproofSandbox.kt"
+    },
+    {
+      "id": "ResourceUsage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/BulletproofSandbox.kt"
+    },
+    {
+      "id": "SandboxCreationException",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/BulletproofSandbox.kt"
+    },
+    {
+      "id": "SandboxExamples",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/security/BulletproofSandbox.kt"
+    },
+    {
+      "id": "ComputeSideTaskHandler",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ComputeSideTaskHandler.kt"
+    },
+    {
+      "id": "TaskScheduledMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ComputeSideTaskHandler.kt"
+    },
+    {
+      "id": "FileReEncryptionCompleteMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ComputeSideTaskHandler.kt"
+    },
+    {
+      "id": "CodeVerification",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/CodeVerification.kt"
+    },
+    {
+      "id": "TaskLifecycleManager",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskLifecycleManager.kt"
+    },
+    {
+      "id": "TaskExecutionException",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskLifecycleManager.kt"
+    },
+    {
+      "id": "MicroContainer",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/MicroContainer.kt"
+    },
+    {
+      "id": "MicroContainer",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/MicroContainer.kt"
+    },
+    {
+      "id": "CommunicationPipe",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/MicroContainer.kt"
+    },
+    {
+      "id": "FileReEncryptionService",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/FileReEncryptionService.kt"
+    },
+    {
+      "id": "ContainerExecution",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ContainerExecution.kt"
+    },
+    {
+      "id": "ExecutionResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ContainerExecution.kt"
+    },
+    {
+      "id": "StrangersTrustEngine",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/StrangersTrustEngine.kt"
+    },
+    {
+      "id": "ExecutionProof",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/StrangersTrustEngine.kt"
+    },
+    {
+      "id": "ExecutionTrace",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/StrangersTrustEngine.kt"
+    },
+    {
+      "id": "ComputeEconomics",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ComputeEconomics.kt"
+    },
+    {
+      "id": "ComputeReward",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ComputeEconomics.kt"
+    },
+    {
+      "id": "DistributedServiceLibrary",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/DistributedServiceLibrary.kt"
+    },
+    {
+      "id": "ServiceLibraryEntry",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/DistributedServiceLibrary.kt"
+    },
+    {
+      "id": "MaintainerInfo",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/DistributedServiceLibrary.kt"
+    },
+    {
+      "id": "AuditReport",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/DistributedServiceLibrary.kt"
+    },
+    {
+      "id": "I2PServiceRegistry",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/DistributedServiceLibrary.kt"
+    },
+    {
+      "id": "TorrentServiceDistribution",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/DistributedServiceLibrary.kt"
+    },
+    {
+      "id": "MaintainerWebOfTrust",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/DistributedServiceLibrary.kt"
+    },
+    {
+      "id": "LocalDeviceServiceLibrary",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/LocalDeviceServiceLibrary.kt"
+    },
+    {
+      "id": "DeviceProfile",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/LocalDeviceServiceLibrary.kt"
+    },
+    {
+      "id": "Runtime",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/LocalDeviceServiceLibrary.kt"
+    },
+    {
+      "id": "ValidationResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/LocalDeviceServiceLibrary.kt"
+    },
+    {
+      "id": "Valid",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/LocalDeviceServiceLibrary.kt"
+    },
+    {
+      "id": "Rejected",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/LocalDeviceServiceLibrary.kt"
+    },
+    {
+      "id": "ResourceRequirements",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/SupportTypes.kt"
+    },
+    {
+      "id": "PythonLibrary",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/SupportTypes.kt"
+    },
+    {
+      "id": "InferenceConfig",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/SupportTypes.kt"
+    },
+    {
+      "id": "Precision",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/SupportTypes.kt"
+    },
+    {
+      "id": "CPUIntensity",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/SupportTypes.kt"
+    },
+    {
+      "id": "ThermalState",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/SupportTypes.kt"
+    },
+    {
+      "id": "TaskManager",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskManager.kt"
+    },
+    {
+      "id": "TaskStatus",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskManager.kt"
+    },
+    {
+      "id": "TaskPhase",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskManager.kt"
+    },
+    {
+      "id": "TaskExecutionResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskManager.kt"
+    },
+    {
+      "id": "Success",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskManager.kt"
+    },
+    {
+      "id": "Failed",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskManager.kt"
+    },
+    {
+      "id": "Timeout",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskManager.kt"
+    },
+    {
+      "id": "TaskRequest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskManager.kt"
+    },
+    {
+      "id": "TaskStatus",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskManager.kt"
+    },
+    {
+      "id": "State",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskManager.kt"
+    },
+    {
+      "id": "ProgressMetric",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskManager.kt"
+    },
+    {
+      "id": "OutputPublishAudit",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskManager.kt"
+    },
+    {
+      "id": "KeypairEntry",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskManager.kt"
+    },
+    {
+      "id": "PublishEvent",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/TaskManager.kt"
+    },
+    {
+      "id": "for",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/IntelligentDistributedComputeService.kt"
+    },
+    {
+      "id": "IntelligentDistributedComputeService",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/IntelligentDistributedComputeService.kt"
+    },
+    {
+      "id": "TrackedRequest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/IntelligentDistributedComputeService.kt"
+    },
+    {
+      "id": "RequestStatus",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/IntelligentDistributedComputeService.kt"
+    },
+    {
+      "id": "and",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/IntelligentDistributedComputeService.kt"
+    },
+    {
+      "id": "ServicePackageManager",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ServicePackageManager.kt"
+    },
+    {
+      "id": "RuntimeSpec",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ServicePackageManager.kt"
+    },
+    {
+      "id": "ResourceSpec",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ServicePackageManager.kt"
+    },
+    {
+      "id": "SignatureInfo",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ServicePackageManager.kt"
+    },
+    {
+      "id": "ValidationSpec",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ServicePackageManager.kt"
+    },
+    {
+      "id": "ModelFileSpec",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ServicePackageManager.kt"
+    },
+    {
+      "id": "AssetFileSpec",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ServicePackageManager.kt"
+    },
+    {
+      "id": "DependencySpec",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ServicePackageManager.kt"
+    },
+    {
+      "id": "TestCaseSpec",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ServicePackageManager.kt"
+    },
+    {
+      "id": "AuditReport",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ServicePackageManager.kt"
+    },
+    {
+      "id": "ServiceDevelopmentTools",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ServiceDevelopmentTools.kt"
+    },
+    {
+      "id": "ServiceType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ServiceDevelopmentTools.kt"
+    },
+    {
+      "id": "ProgrammingLanguage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/ServiceDevelopmentTools.kt"
+    },
+    {
+      "id": "PGPKeypairGenerator",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/security/PGPKeypairGenerator.kt"
+    },
+    {
+      "id": "RuntimeRegistry",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/runtime/RuntimeRegistry.kt"
+    },
+    {
+      "id": "RuntimeInfo",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/runtime/RuntimeRegistry.kt"
+    },
+    {
+      "id": "RuntimeInstaller",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/runtime/RuntimeInstaller.kt"
+    },
+    {
+      "id": "TaskAssignmentMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/TaskAssignmentMessages.kt"
+    },
+    {
+      "id": "TaskRejectionMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/TaskAssignmentMessages.kt"
+    },
+    {
+      "id": "TaskAcceptanceMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/TaskAssignmentMessages.kt"
+    },
+    {
+      "id": "TaskCompletedMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/TaskAssignmentMessages.kt"
+    },
+    {
+      "id": "TaskCompletionAckMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/TaskAssignmentMessages.kt"
+    },
+    {
+      "id": "ServiceManifest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ServiceManifest.kt"
+    },
+    {
+      "id": "ServiceManifest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ServiceManifest.kt"
+    },
+    {
+      "id": "ServiceManifest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ServiceManifest.kt"
+    },
+    {
+      "id": "ServiceManifest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ServiceManifest.kt"
+    },
+    {
+      "id": "ServiceType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ServiceManifest.kt"
+    },
+    {
+      "id": "ExecutionProfile",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ServiceManifest.kt"
+    },
+    {
+      "id": "ServiceMeta",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ServiceManifest.kt"
+    },
+    {
+      "id": "ServiceInput",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ServiceManifest.kt"
+    },
+    {
+      "id": "ServiceOutput",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ServiceManifest.kt"
+    },
+    {
+      "id": "ServiceCapability",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ServiceManifest.kt"
+    },
+    {
+      "id": "TaskType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/TaskType.kt"
+    },
+    {
+      "id": "files",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/TaskType.kt"
+    },
+    {
+      "id": "files",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/TaskType.kt"
+    },
+    {
+      "id": "RuntimeType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/TaskType.kt"
+    },
+    {
+      "id": "LocalComputeTaskRequest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/LocalComputeTaskRequest.kt"
+    },
+    {
+      "id": "representing",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ComputeTask.kt"
+    },
+    {
+      "id": "TaskStatus",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ComputeTask.kt"
+    },
+    {
+      "id": "ComputeTask",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ComputeTask.kt"
+    },
+    {
+      "id": "PythonTask",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ComputeTask.kt"
+    },
+    {
+      "id": "LiteRTTask",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ComputeTask.kt"
+    },
+    {
+      "id": "HybridTask",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ComputeTask.kt"
+    },
+    {
+      "id": "TaskResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ComputeTask.kt"
+    },
+    {
+      "id": "TaskResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ComputeTask.kt"
+    },
+    {
+      "id": "is",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ComputeNodeResponse.kt"
+    },
+    {
+      "id": "ComputeNodeResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ComputeNodeResponse.kt"
+    },
+    {
+      "id": "TaskExecutionContext",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/MeshComputeDataDefinitions.kt"
+    },
+    {
+      "id": "FileReference",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/MeshComputeDataDefinitions.kt"
+    },
+    {
+      "id": "ResourceLimits",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/MeshComputeDataDefinitions.kt"
+    },
+    {
+      "id": "ResourceMetrics",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/MeshComputeDataDefinitions.kt"
+    },
+    {
+      "id": "ExecutionResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/MeshComputeDataDefinitions.kt"
+    },
+    {
+      "id": "ExecutionErrorType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/MeshComputeDataDefinitions.kt"
+    },
+    {
+      "id": "OutputManifest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/MeshComputeDataDefinitions.kt"
+    },
+    {
+      "id": "AccessScope",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/MeshComputeDataDefinitions.kt"
+    },
+    {
+      "id": "JobType",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/JobTypes.kt"
+    },
+    {
+      "id": "JobPriority",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/JobTypes.kt"
+    },
+    {
+      "id": "AggregationStrategy",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/JobTypes.kt"
+    },
+    {
+      "id": "SpecializedCapability",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/JobTypes.kt"
+    },
+    {
+      "id": "OutputSchema",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ResourceRequirements.kt"
+    },
+    {
+      "id": "OutputFormat",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ResourceRequirements.kt"
+    },
+    {
+      "id": "StorageOperation",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/model/ResourceRequirements.kt"
+    },
+    {
+      "id": "JSExecutor",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/executor/JSExecutor.kt"
+    },
+    {
+      "id": "TaskExecutionRequest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/executor/Executors.kt"
+    },
+    {
+      "id": "TaskExecutionResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/executor/Executors.kt"
+    },
+    {
+      "id": "Success",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/executor/Executors.kt"
+    },
+    {
+      "id": "Failed",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/executor/Executors.kt"
+    },
+    {
+      "id": "Timeout",
+      "type": "object",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/executor/Executors.kt"
+    },
+    {
+      "id": "TaskExecutionResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/executor/Executors.kt"
+    },
+    {
+      "id": "Success",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/executor/Executors.kt"
+    },
+    {
+      "id": "Failed",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/executor/Executors.kt"
+    },
+    {
+      "id": "MLNativeExecutor",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/executor/MLNativeExecutor.kt"
+    },
+    {
+      "id": "PythonExecutor",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/executor/PythonExecutor.kt"
+    },
+    {
+      "id": "JVMExecutor",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/executor/JVMExecutor.kt"
+    },
+    {
+      "id": "WorkflowExecutor",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/compute/executor/WorkflowExecutor.kt"
+    },
+    {
+      "id": "MLServiceResult",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/ml/MLServiceResult.kt"
+    },
+    {
+      "id": "MLKitCustomWrapper",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/ml/MLKitCustomWrapper.kt"
+    },
+    {
+      "id": "MLServiceInput",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/ml/MLServiceInput.kt"
+    },
+    {
+      "id": "MLKitNativeWrapper",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/ml/MLKitNativeWrapper.kt"
+    },
+    {
+      "id": "PreQuantizedModelService",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/ml/PreQuantizedModelWorkflow.kt"
+    },
+    {
+      "id": "RuntimeModelSelector",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/ml/PreQuantizedModelWorkflow.kt"
+    },
+    {
+      "id": "return",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/ml/PreQuantizedModelWorkflow.kt"
+    },
+    {
+      "id": "QuantizedModelLibrary",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/ml/PreQuantizedModelWorkflow.kt"
+    },
+    {
+      "id": "ModelFamily",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/ml/PreQuantizedModelWorkflow.kt"
+    },
+    {
+      "id": "ModelVariant",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/service/ml/PreQuantizedModelWorkflow.kt"
+    },
+    {
+      "id": "MmcpHeader",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/MmcpHeader.kt"
+    },
+    {
+      "id": "MmcpHeartbeat",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/MmcpHeartbeat.kt"
+    },
+    {
+      "id": "MmcpMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/MmcpMessage.kt"
+    },
+    {
+      "id": "doesn",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/MmcpMessage.kt"
+    },
+    {
+      "id": "doesn",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/MmcpMessage.kt"
+    },
+    {
+      "id": "doesn",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/MmcpMessage.kt"
+    },
+    {
+      "id": "doesn",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/MmcpMessage.kt"
+    },
+    {
+      "id": "MmcpNetworkMetrics",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/MmcpNetworkMetrics.kt"
+    },
+    {
+      "id": "MmcpHotspotRequest",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/MmcpHotspotRequest.kt"
+    },
+    {
+      "id": "MmcpHotspotResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/MmcpHotspotResponse.kt"
+    },
+    {
+      "id": "MmcpAck",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/MmcpAck.kt"
+    },
+    {
+      "id": "MmcpMessageAndPacketHeader",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/MmcpMessageAndPacketHeader.kt"
+    },
+    {
+      "id": "StorageCapabilities",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/StorageCapabilities.kt"
+    },
+    {
+      "id": "MmcpPing",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/MmcpPing.kt"
+    },
+    {
+      "id": "MmcpOriginatorMessage",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/MmcpOriginatorMessage.kt"
+    },
+    {
+      "id": "MmcpPong",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/mmcp/MmcpPong.kt"
+    },
+    {
+      "id": "BluetoothHttpResponse",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/client/BluetoothHttpResponse.kt"
+    },
+    {
+      "id": "UuidAllocationClient",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/client/UuidAllocationClient.kt"
+    },
+    {
+      "id": "GetDataUuidGattCallback",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/client/UuidAllocationClient.kt"
+    },
+    {
+      "id": "HttpOverBluetoothClient",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/client/HttpOverBluetoothClient.kt"
+    },
+    {
+      "id": "ForwardBindPoint",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/portforward/ForwardBindPoint.kt"
+    },
+    {
+      "id": "UdpForwardRule",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/portforward/UdpForwardRule.kt"
+    },
+    {
+      "id": "ReturnPathDatagramSocket",
+      "type": "class",
+      "file": "Meshrabiya/lib-meshrabiya/src/main/java/com/ustadmobile/meshrabiya/portforward/UdpForwardRule.kt"
+    },
+    {
+      "id": "EchoDatagramServer",
+      "type": "class",
+      "file": "Meshrabiya/test-shared/src/main/java/com/ustadmobile/meshrabiya/test/EchoDatagramServer.kt"
+    },
+    {
+      "id": "FileEchoSocketServer",
+      "type": "class",
+      "file": "Meshrabiya/test-shared/src/main/java/com/ustadmobile/meshrabiya/test/FileEchoSocketServer.kt"
+    },
+    {
+      "id": "TestVirtualNode",
+      "type": "class",
+      "file": "Meshrabiya/test-shared/src/main/java/com/ustadmobile/meshrabiya/test/TestVirtualNode.kt"
+    },
+    {
+      "id": "VirtualNodeIntegrationTest",
+      "type": "class",
+      "file": "Meshrabiya/test-shared/src/main/java/com/ustadmobile/meshrabiya/vnet/VirtualNodeIntegrationTest.kt"
+    },
+    {
+      "id": "BackwardCompatibilityTestSuite",
+      "type": "class",
+      "file": "Meshrabiya/src/test/java/org/torproject/meshrabiya/compute/integration/BackwardCompatibilityTestSuite.kt"
+    },
+    {
+      "id": "TestResult",
+      "type": "class",
+      "file": "Meshrabiya/src/test/java/org/torproject/meshrabiya/compute/integration/BackwardCompatibilityTestSuite.kt"
+    },
+    {
+      "id": "SuiteResult",
+      "type": "class",
+      "file": "Meshrabiya/src/test/java/org/torproject/meshrabiya/compute/integration/BackwardCompatibilityTestSuite.kt"
+    },
+    {
+      "id": "EndToEndTestSuite",
+      "type": "class",
+      "file": "Meshrabiya/src/test/java/org/torproject/meshrabiya/compute/integration/EndToEndTestSuite.kt"
+    },
+    {
+      "id": "TestResult",
+      "type": "class",
+      "file": "Meshrabiya/src/test/java/org/torproject/meshrabiya/compute/integration/EndToEndTestSuite.kt"
+    },
+    {
+      "id": "SuiteResult",
+      "type": "class",
+      "file": "Meshrabiya/src/test/java/org/torproject/meshrabiya/compute/integration/EndToEndTestSuite.kt"
+    },
+    {
+      "id": "LifecycleStages",
+      "type": "class",
+      "file": "Meshrabiya/src/test/java/org/torproject/meshrabiya/compute/integration/EndToEndTestSuite.kt"
+    },
+    {
+      "id": "TaskProcessor",
+      "type": "class",
+      "file": "Meshrabiya/src/test/java/org/torproject/meshrabiya/compute/integration/EndToEndTestSuite.kt"
+    },
+    {
+      "id": "IntegrationTestSuite",
+      "type": "class",
+      "file": "Meshrabiya/src/test/java/org/torproject/meshrabiya/compute/integration/IntegrationTestSuite.kt"
+    },
+    {
+      "id": "TestResult",
+      "type": "class",
+      "file": "Meshrabiya/src/test/java/org/torproject/meshrabiya/compute/integration/IntegrationTestSuite.kt"
+    },
+    {
+      "id": "SuiteResult",
+      "type": "class",
+      "file": "Meshrabiya/src/test/java/org/torproject/meshrabiya/compute/integration/IntegrationTestSuite.kt"
+    },
+    {
+      "id": "RetryManager",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/retry/RetryManager.kt"
+    },
+    {
+      "id": "RetryConfig",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/retry/RetryManager.kt"
+    },
+    {
+      "id": "RetryState",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/retry/RetryManager.kt"
+    },
+    {
+      "id": "RetryError",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/retry/RetryManager.kt"
+    },
+    {
+      "id": "CircuitBreakerState",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/retry/RetryManager.kt"
+    },
+    {
+      "id": "RetryStateInfo",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/retry/RetryManager.kt"
+    },
+    {
+      "id": "CircuitBreakerInfo",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/retry/RetryManager.kt"
+    },
+    {
+      "id": "RetryStatistics",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/retry/RetryManager.kt"
+    },
+    {
+      "id": "RetryExhaustedException",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/retry/RetryManager.kt"
+    },
+    {
+      "id": "CircuitBreakerOpenException",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/retry/RetryManager.kt"
+    },
+    {
+      "id": "SecurityTestSuite",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/security/tests/SecurityTestSuite.kt"
+    },
+    {
+      "id": "TestResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/security/tests/SecurityTestSuite.kt"
+    },
+    {
+      "id": "SuiteResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/security/tests/SecurityTestSuite.kt"
+    },
+    {
+      "id": "EncryptionTests",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/security/tests/EncryptionTests.kt"
+    },
+    {
+      "id": "TestResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/security/tests/EncryptionTests.kt"
+    },
+    {
+      "id": "SuiteResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/security/tests/EncryptionTests.kt"
+    },
+    {
+      "id": "FileIsolationTests",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/security/tests/FileIsolationTests.kt"
+    },
+    {
+      "id": "TestResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/security/tests/FileIsolationTests.kt"
+    },
+    {
+      "id": "SuiteResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/security/tests/FileIsolationTests.kt"
+    },
+    {
+      "id": "KeypairIsolationTests",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/security/tests/KeypairIsolationTests.kt"
+    },
+    {
+      "id": "TestResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/security/tests/KeypairIsolationTests.kt"
+    },
+    {
+      "id": "SuiteResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/security/tests/KeypairIsolationTests.kt"
+    },
+    {
+      "id": "PartialExecutionRecovery",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/recovery/PartialExecutionRecovery.kt"
+    },
+    {
+      "id": "ExecutionCheckpoint",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/recovery/PartialExecutionRecovery.kt"
+    },
+    {
+      "id": "IntermediateResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/recovery/PartialExecutionRecovery.kt"
+    },
+    {
+      "id": "CheckpointSession",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/recovery/PartialExecutionRecovery.kt"
+    },
+    {
+      "id": "RecoveryStatistics",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/recovery/PartialExecutionRecovery.kt"
+    },
+    {
+      "id": "SessionInfo",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/recovery/PartialExecutionRecovery.kt"
+    },
+    {
+      "id": "CheckpointBuilder",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/recovery/PartialExecutionRecovery.kt"
+    },
+    {
+      "id": "NetworkFailureRecovery",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/network/NetworkFailureRecovery.kt"
+    },
+    {
+      "id": "ConnectionState",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/network/NetworkFailureRecovery.kt"
+    },
+    {
+      "id": "ConnectionInfo",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/network/NetworkFailureRecovery.kt"
+    },
+    {
+      "id": "PendingMessage",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/network/NetworkFailureRecovery.kt"
+    },
+    {
+      "id": "MessagePriority",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/network/NetworkFailureRecovery.kt"
+    },
+    {
+      "id": "ConnectionInfoPublic",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/network/NetworkFailureRecovery.kt"
+    },
+    {
+      "id": "RecoveryStatistics",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/network/NetworkFailureRecovery.kt"
+    },
+    {
+      "id": "FeatureFlagManager",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/features/FeatureFlagManager.kt"
+    },
+    {
+      "id": "FeatureFlag",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/features/FeatureFlagManager.kt"
+    },
+    {
+      "id": "RemoteConfigException",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/features/FeatureFlagManager.kt"
+    },
+    {
+      "id": "FeatureFlags",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/features/FeatureFlagManager.kt"
+    },
+    {
+      "id": "TaskTimeoutManager",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/timeout/TaskTimeoutManager.kt"
+    },
+    {
+      "id": "TimeoutConfig",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/timeout/TaskTimeoutManager.kt"
+    },
+    {
+      "id": "TimeoutState",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/timeout/TaskTimeoutManager.kt"
+    },
+    {
+      "id": "TimeoutStatistics",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/timeout/TaskTimeoutManager.kt"
+    },
+    {
+      "id": "ActiveTimeout",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/timeout/TaskTimeoutManager.kt"
+    },
+    {
+      "id": "FeatureFlagCleanupManager",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "CleanupState",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "NotStarted",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "VerifyingStability",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "DetectingFlags",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "ValidatingRemoval",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "GeneratingPlan",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "PlanGenerated",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "ExecutingRemoval",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "Failed",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "Complete",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "CleanupResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "Success",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "Failure",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "StabilityCheckResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "ExecutionResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "CleanupStatus",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "RemovalStep",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "RemovalAction",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "RemovalRisk",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "FlagUsage",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "UsageType",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "LegacyCodeDetector",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "DefaultSafeRemovalValidator",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/FeatureFlagCleanupManager.kt"
+    },
+    {
+      "id": "CanaryDeploymentManager",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "CanaryState",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "NotStarted",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "Selecting",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "DeployingStage1",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "MonitoringStage1",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "DeployingStage2",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "MonitoringStage2",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "RollingBack",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "RolledBack",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "Failed",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "Success",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "CanaryNodeInfo",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "CanaryResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "Success",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "Failure",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "DeploymentResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "HealthResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "SuccessCriteria",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "CanaryStatus",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "CanaryMetrics",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "RollbackTrigger",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "CriticalError",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "PerformanceDegradation",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "TestFailureRate",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "ReliabilityBasedNodeSelector",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "NodeInfo",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "DefaultHealthMonitor",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "CanaryMetricsCollector",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/CanaryDeploymentManager.kt"
+    },
+    {
+      "id": "StagedRolloutController",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "StagedRolloutState",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "NotStarted",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "SelectingStage",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "DeployingStage",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "MonitoringStage",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "ValidatingStage",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "AwaitingProgression",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "Paused",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "RollingBack",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "RolledBack",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "Failed",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "Complete",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "RolloutNodeInfo",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "StageResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "Success",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "Failure",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "StagedRolloutResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "Success",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "Failure",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "StagedSuccessCriteria",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "StagedRolloutStatus",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "StagedRolloutMetrics",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "StagedRollbackTrigger",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "UserIssues",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "PerformanceDegradation",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "TaskFailureRate",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "SecurityIncident",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "ValidationResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "DefaultStageValidator",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "AutomaticProgressionEngine",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "ManualProgressionEngine",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "StagedMetricsCollector",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/StagedRolloutController.kt"
+    },
+    {
+      "id": "RolloutOrchestrator",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "RolloutState",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "NotStarted",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "Initializing",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "ExecutingPhase",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "AwaitingApproval",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "MonitoringStability",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "Paused",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "Cancelled",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "Failed",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "Complete",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "RolloutPhase",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "PhaseStatus",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "PhaseResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "Success",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "Failure",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "RolloutResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "Success",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "Failure",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "RolloutStatus",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "RolloutMetrics",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "DeploymentDashboard",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/RolloutOrchestrator.kt"
+    },
+    {
+      "id": "BetaDeploymentManager",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "BetaState",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "NotStarted",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "Announcing",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "SelectingWeek1",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "DeployingWeek1",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "MonitoringWeek1",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "SelectingWeek2",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "DeployingWeek2",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "MonitoringWeek2",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "RollingBack",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "RolledBack",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "Failed",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "Success",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "BetaNodeInfo",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "BetaResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "Success",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "Failure",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "BetaSuccessCriteria",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "BetaStatus",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "BetaMetrics",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "BetaRollbackTrigger",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "UserIssues",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "PerformanceDegradation",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "TaskFailureRate",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "UserFeedback",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "FeedbackSentiment",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "FeedbackCategory",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "FeedbackSummary",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "DefaultUserFeedbackCollector",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "PerformanceComparison",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "DefaultPerformanceComparator",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "BetaMetricsCollector",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/rollout/BetaDeploymentManager.kt"
+    },
+    {
+      "id": "GracefulDegradationManager",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/degradation/GracefulDegradationManager.kt"
+    },
+    {
+      "id": "DegradationLevel",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/degradation/GracefulDegradationManager.kt"
+    },
+    {
+      "id": "ServiceType",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/degradation/GracefulDegradationManager.kt"
+    },
+    {
+      "id": "FallbackStrategy",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/degradation/GracefulDegradationManager.kt"
+    },
+    {
+      "id": "UseAlternative",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/degradation/GracefulDegradationManager.kt"
+    },
+    {
+      "id": "QueueOperations",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/degradation/GracefulDegradationManager.kt"
+    },
+    {
+      "id": "UseLocalCache",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/degradation/GracefulDegradationManager.kt"
+    },
+    {
+      "id": "RejectNewRequests",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/degradation/GracefulDegradationManager.kt"
+    },
+    {
+      "id": "EmergencyMode",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/degradation/GracefulDegradationManager.kt"
+    },
+    {
+      "id": "Unavailable",
+      "type": "object",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/degradation/GracefulDegradationManager.kt"
+    },
+    {
+      "id": "DegradationState",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/degradation/GracefulDegradationManager.kt"
+    },
+    {
+      "id": "DegradationPolicy",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/degradation/GracefulDegradationManager.kt"
+    },
+    {
+      "id": "DegradationThreshold",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/degradation/GracefulDegradationManager.kt"
+    },
+    {
+      "id": "DegradationStatistics",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/degradation/GracefulDegradationManager.kt"
+    },
+    {
+      "id": "ServiceStateInfo",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/degradation/GracefulDegradationManager.kt"
+    },
+    {
+      "id": "MetricsCollector",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/monitoring/MetricsCollector.kt"
+    },
+    {
+      "id": "MetricsSnapshot",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/monitoring/MetricsCollector.kt"
+    },
+    {
+      "id": "MetricHistogram",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/monitoring/MetricsCollector.kt"
+    },
+    {
+      "id": "AlertingManager",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/monitoring/MetricsCollector.kt"
+    },
+    {
+      "id": "AlertSeverity",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/monitoring/MetricsCollector.kt"
+    },
+    {
+      "id": "Alert",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/monitoring/MetricsCollector.kt"
+    },
+    {
+      "id": "ConsoleAlertChannel",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/monitoring/MetricsCollector.kt"
+    },
+    {
+      "id": "AlertException",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/compute/monitoring/MetricsCollector.kt"
+    },
+    {
+      "id": "PerformanceBenchmarkSuite",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/performance/PerformanceBenchmarkSuite.kt"
+    },
+    {
+      "id": "BenchmarkResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/performance/PerformanceBenchmarkSuite.kt"
+    },
+    {
+      "id": "PerformanceStats",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/performance/PerformanceBenchmarkSuite.kt"
+    },
+    {
+      "id": "BenchmarkTarget",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/performance/PerformanceBenchmarkSuite.kt"
+    },
+    {
+      "id": "SuiteResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/performance/PerformanceBenchmarkSuite.kt"
+    },
+    {
+      "id": "EdgeCaseTestSuite",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/performance/EdgeCaseTestSuite.kt"
+    },
+    {
+      "id": "TestResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/performance/EdgeCaseTestSuite.kt"
+    },
+    {
+      "id": "SuiteResult",
+      "type": "class",
+      "file": "Meshrabiya/src/main/java/org/torproject/meshrabiya/performance/EdgeCaseTestSuite.kt"
+    }
+  ]
+}

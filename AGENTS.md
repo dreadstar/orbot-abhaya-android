@@ -1,3 +1,77 @@
+
+## PATCH ANCHORING AND IMPORT PLACEMENT RULE (2025-12-100)
+
+### 100. PATCH ANCHORING FOR ALL CODE EDITS
+
+**RULE: All code patches, regardless of language or tool, MUST anchor new code insertions and edits to the correct syntactic location in the file.**
+
+- For all languages with a `package` or module declaration (e.g., Kotlin, Java, Python, TypeScript):
+  - **Imports MUST be placed immediately after the package/module declaration and before any class, object, or function definitions.**
+  - **No code, import, or comment may be inserted before the package/module declaration.**
+  - If the file does not have a package/module declaration, imports must be placed at the very top, before any code or docstring.
+- For all other code insertions (functions, classes, etc.), the patch must be anchored to the correct syntactic block, never at the file's start unless the language requires it.
+
+### 200. PATCH CONTEXT VERIFICATION
+
+- Before generating a patch, agents MUST read the first 10–20 lines of the file to:
+  - Identify the package/module declaration.
+  - Identify the correct location for imports and top-level code.
+- Patches must be generated so that the context always includes the package/module declaration and any existing imports, to ensure correct placement.
+
+### 300. PATCH TOOL ENFORCEMENT
+
+- Any patch tool or agent that generates code must:
+  - Refuse to insert imports or code before the package/module declaration.
+  - Refuse to insert code at the file's start unless it is valid for the language.
+  - If the patch context is ambiguous, the agent must re-read the file and anchor the patch explicitly after the package/module declaration.
+
+### 400. GENERALIZATION
+
+- These rules apply to all languages (Kotlin, Java, Python, TypeScript, etc.) and all patch/edit tools.
+- Any agent or tool that violates these rules must be flagged and corrected before code is committed or merged.
+
+### 500. INTENT
+
+- This protocol guarantees that no code, import, or comment will ever be placed before the package/module declaration or in an invalid location, regardless of patch tool or agent implementation.
+
+**Date Added:** 2025-12-100
+**Trigger:** Multiple build failures and syntax errors due to imports/code being placed before the package line by patch tools and agents.
+
+### 1. PATCH ANCHORING FOR ALL CODE EDITS
+
+**RULE: All code patches, regardless of language or tool, MUST anchor new code insertions and edits to the correct syntactic location in the file.**
+
+- For all languages with a `package` or module declaration (e.g., Kotlin, Java, Python, TypeScript):
+  - **Imports MUST be placed immediately after the package/module declaration and before any class, object, or function definitions.**
+  - **No code, import, or comment may be inserted before the package/module declaration.**
+  - If the file does not have a package/module declaration, imports must be placed at the very top, before any code or docstring.
+- For all other code insertions (functions, classes, etc.), the patch must be anchored to the correct syntactic block, never at the file's start unless the language requires it.
+
+### 2. PATCH CONTEXT VERIFICATION
+
+- Before generating a patch, agents MUST read the first 10–20 lines of the file to:
+  - Identify the package/module declaration.
+  - Identify the correct location for imports and top-level code.
+- Patches must be generated so that the context always includes the package/module declaration and any existing imports, to ensure correct placement.
+
+### 3. PATCH TOOL ENFORCEMENT
+
+- Any patch tool or agent that generates code must:
+  - Refuse to insert imports or code before the package/module declaration.
+  - Refuse to insert code at the file's start unless it is valid for the language.
+  - If the patch context is ambiguous, the agent must re-read the file and anchor the patch explicitly after the package/module declaration.
+
+### 4. GENERALIZATION
+
+- These rules apply to all languages (Kotlin, Java, Python, TypeScript, etc.) and all patch/edit tools.
+- Any agent or tool that violates these rules must be flagged and corrected before code is committed or merged.
+
+### 5. INTENT
+
+- This protocol guarantees that no code, import, or comment will ever be placed before the package/module declaration or in an invalid location, regardless of patch tool or agent implementation.
+
+**Date Added:** 2025-12-10
+**Trigger:** Multiple build failures and syntax errors due to imports/code being placed before the package line by patch tools and agents.
 ## IMPLEMENTATION VERIFICATION BEFORE CODE GENERATION PROTOCOL (2025-12-06)
 
 **CRITICAL: Before writing ANY implementation code, agents MUST verify the actual current state of all touchpoints.**

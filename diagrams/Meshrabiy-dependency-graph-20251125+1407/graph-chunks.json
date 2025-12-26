@@ -1,0 +1,28 @@
+{
+  "nodeChunks": [
+    "nodes-1.json"
+  ],
+  "edgeChunks": [
+    "edges-1.json",
+    "edges-2.json",
+    "edges-3.json",
+    "edges-4.json",
+    "edges-5.json",
+    "edges-6.json",
+    "edges-7.json",
+    "edges-8.json",
+    "edges-9.json",
+    "edges-10.json",
+    "edges-11.json",
+    "edges-12.json",
+    "edges-13.json",
+    "edges-14.json"
+  ],
+  "meta": {
+    "generated_at": "2025-11-25T14:07:13.662756-05:00",
+    "source_path": "Meshrabiya/",
+    "file_count": 314,
+    "node_count": 794,
+    "edge_count": 69278
+  }
+}

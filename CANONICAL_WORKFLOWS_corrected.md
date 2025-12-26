@@ -91,7 +91,7 @@ Client node stores a file to the distributed mesh network with encryption and re
 3. **Select best  node** 
 
 #### 1.5 Client-Side: Chunk Transfer
-**Location**: `DistributedStorageManager.storeFile()` → Connection pool
+**Location**: `DistributedStorageClient.storeFile()` → Connection pool
 
 1. **For  selected storage node**:
    - Acquire connection from MeshConnectionPool

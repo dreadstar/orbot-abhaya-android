@@ -765,14 +765,16 @@ interface MeshrabiyaApi {
 6. ✅ Auto-store on file creation (matched recipients)
 7. ✅ Non-persistent triggers (counter resets - Clarification 12)
 8. ✅ Comprehensive file/folder/trigger rules (Clarification 13)
+9. Remove associated trigger  if File is moved or deleted (move and delete will be handled outside the app but FileObserver should detect )
+10. Remove triggers for a sufolder  and for any of the sub items, if that subfolder is moved or deleted (move and delete will be handled outside the app but FileObserver should detect )
 
 **Drop Folder API Methods (Part 3 Section 7):**
 - `selectDropFolder(path, callback)` - Configure drop folder
 - `getDropFolder()` - Get current drop folder
 - `getDropFolderFiles()` - List files in drop folder
-- `createDropFolderTrigger(subPath, recipients, callback)` - Create trigger
-- `updateDropFolderTrigger(triggerId, subPath, recipients, callback)` - Update trigger
-- `deleteDropFolderTrigger(triggerId, callback)` - Delete trigger
+- `createDropFolderTrigger(subPath, recipients)` - Create trigger
+- `updateDropFolderTrigger(triggerId, subPath, recipients)` - Update trigger
+- `deleteDropFolderTrigger(triggerId)` - Delete trigger
 - `getDropFolderTriggers()` - List all triggers
 
 **Drop Folder Triggers (Data Structure):**
@@ -780,7 +782,7 @@ interface MeshrabiyaApi {
 data class StoreFileTrigger(
     val id: Int,           // Unique ID (starts at 0, not persisted)
     val subPath: String,   // Relative path within drop folder
-    val recipients: List<String> // Recipient node IDs for auto-store
+    val recipients: List<RecipientEntry> // RecipientEntrys for auto-store
 )
 ```
 
@@ -790,7 +792,7 @@ data class StoreFileTrigger(
 3. User places file in `/path/to/folder/sub1/file.txt`
 4. FileObserver detects new file
 5. matchTriggersForFile() finds trigger for "sub1"
-6. storeFile() called with recipients ["nodeA", "nodeB"]
+6. storeFile() called with recipients [RecipientEntry1, RecipientEntry2]
 7. File auto-synced to mesh with matched recipients
 8. `onFileAddedToDropFolder` callback invoked (if exists - Q7.1)
 
