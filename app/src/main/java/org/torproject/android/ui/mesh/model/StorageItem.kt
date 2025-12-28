@@ -26,8 +26,8 @@ data class StorageItem(
                 name = meshFile.fileName,
                 path = meshFile.fileId,
                 isDirectory = false,
-                size = meshFile.fileSize,
-                lastModified = meshFile.storedAt,
+                size = meshFile.sizeBytes,
+                lastModified = meshFile.createdAt,
                 isShared = false,
                 sharedWith = emptySet()
             )

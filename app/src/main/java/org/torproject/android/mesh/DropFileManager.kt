@@ -60,19 +60,19 @@ class DropFileManager private constructor(
      * Places the recomposed file in the drop folder or subfolder as indicated by relativePath.
      */
     fun retrieveFile(fileId: String, onComplete: (Boolean) -> Unit) {
-        MeshrabiyaApiImpl.getInstance().retrieveFile(fileId) { result ->
-            uiHandler.post {
-                result.onSuccess {
-                    uiCallback?.showFileStored(fileId)
-                    onComplete(true)
-                }
-                result.onFailure {
-                    uiCallback?.showTransferFailedAlert()
-                    onComplete(false)
-                }
+    CoroutineScope(Dispatchers.IO).launch {
+        val fileBytes = MeshrabiyaApiImpl.getInstance().retrieveFile(fileId)
+        withContext(Dispatchers.Main) {
+            if (fileBytes != null) {
+                uiCallback?.showFileStored(fileId)
+                onComplete(true)
+            } else {
+                uiCallback?.showTransferFailedAlert()
+                onComplete(false)
             }
         }
     }
+}
 }
 
 /**

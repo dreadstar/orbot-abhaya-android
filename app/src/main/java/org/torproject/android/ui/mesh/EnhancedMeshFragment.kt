@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.ustadmobile.meshrabiya.api.MeshrabiyaApi
 import com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl
+import com.ustadmobile.meshrabiya.api.DropFolderItemDto
 
 /**
  * EnhancedMeshFragment: Mesh UI fragment using MeshrabiyaApi for all mesh logic.
@@ -35,6 +36,7 @@ class EnhancedMeshFragment : Fragment() {
 		meshrabiyaApi = MeshrabiyaApiImpl.getInstance()
 		meshrabiyaApi.provideAppContext(requireContext().applicationContext)
 		meshrabiyaApi.initMesh(requireContext().applicationContext)
+		meshrabiyaApi.setOnDropFolderUpdate(onDropFolderUpdateHandler)
 
 		setupListeners()
 		updateUI()
@@ -156,5 +158,14 @@ class EnhancedMeshFragment : Fragment() {
 		// Mesh files
 		val meshFiles = meshrabiyaApi.getAllMeshFiles()
 		// TODO: Update folderContentsAdapter with meshFiles
+	}
+	// internal fun notifyDropFolderUpdate(changes: List<DropFolderItem>) {
+	// 	onDropFolderUpdateHandler?.invoke(changes)
+	// }
+	private val onDropFolderUpdateHandler: (List<DropFolderItemDto>) -> Unit = { changes ->
+		// Handle drop folder updates
+		// For example, refresh the RecyclerView adapter with new data
+		// val adapter = MeshUIBindings.folderContentsRecyclerView.adapter as DropFolderContentsAdapter
+		// adapter.updateItems(changes)
 	}
 }

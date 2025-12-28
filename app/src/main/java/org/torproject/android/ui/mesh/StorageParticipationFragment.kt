@@ -9,7 +9,9 @@ import androidx.fragment.app.Fragment
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import com.ustadmobile.meshrabiya.storage.*
-
+import com.ustadmobile.meshrabiya.api.StorageAllocationDto
+import com.ustadmobile.meshrabiya.api.StorageDeviceDto
+import com.ustadmobile.meshrabiya.api.getFormattedAvailableSpace
 /**
  * Android Fragment implementation of your excellent storage participation UI
  * Integrates with the distributed storage system and mesh role management
@@ -131,7 +133,7 @@ class StorageParticipationFragment : Fragment() {
         return card
     }
     
-    private fun createStorageDeviceCard(device: StorageDevice, allocation: StorageAllocation): View {
+    private fun createStorageDeviceCard(device: StorageDeviceDto, allocation: StorageAllocationDto): View {
         val context = requireContext()
         
         val card = LinearLayout(context).apply {
@@ -175,7 +177,7 @@ class StorageParticipationFragment : Fragment() {
         header.addView(deviceInfo)
         
         val deviceCheckbox = CheckBox(context).apply {
-            isChecked = allocation.enabled
+            isChecked = true // TODO refactor storage participationto elimnate device concept and enable per-allocation
             scaleX = 1.5f
             scaleY = 1.5f
             setOnCheckedChangeListener { _, isChecked ->
@@ -189,19 +191,19 @@ class StorageParticipationFragment : Fragment() {
         
         // Allocation controls
         val allocationControls = createAllocationControls(context, device, allocation)
-        allocationControls.visibility = if (allocation.enabled) View.VISIBLE else View.GONE
+        allocationControls.visibility = if (true) View.VISIBLE else View.GONE
         card.addView(allocationControls)
         
         // Update card appearance based on enabled state
-        updateCardAppearance(card, allocation.enabled)
+        updateCardAppearance(card,true)
         
         return card
     }
     
     private fun createAllocationControls(
         context: android.content.Context,
-        device: StorageDevice,
-        allocation: StorageAllocation
+        device: StorageDeviceDto,
+        allocation: StorageAllocationDto
     ): View {
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -303,15 +305,17 @@ class StorageParticipationFragment : Fragment() {
         updateSaveButtonState()
     }
     
-    private fun updateStorageDevicesUI(devices: List<StorageDevice>) {
+    private fun updateStorageDevicesUI(devices: List<StorageDeviceDto>) {
         storageDevicesContainer.removeAllViews()
         
         // In real implementation, get allocations from manager
-        val allocations = emptyList<StorageAllocation>() // storageParticipationManager.storageAllocations.value
+        val allocations = emptyList<StorageAllocationDto>() // storageParticipationManager.storageAllocations.value
         
         devices.forEach { device ->
             val allocation = allocations.find { it.deviceId == device.id } 
-                ?: StorageAllocation(device.id, device.name, device.path, 500L, false)
+                ?: StorageAllocationDto(device.id,  device.path, 500L, 
+                // false
+                )
             
             val deviceCard = createStorageDeviceCard(device, allocation)
             storageDevicesContainer.addView(deviceCard)
@@ -382,7 +386,7 @@ class StorageParticipationFragment : Fragment() {
         card.setBackgroundColor(backgroundColor)
     }
     
-    private fun updateUsageDisplay(view: View, device: StorageDevice, allocatedMB: Long) {
+    private fun updateUsageDisplay(view: View, device: StorageDeviceDto, allocatedMB: Long) {
         if (view is TextView) {
             val percentUsed = (allocatedMB.toFloat() / (device.availableSpaceGB * 1024)) * 100
             view.text = "Using ${percentUsed.toInt()}% of available space"
