@@ -13,6 +13,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.ustadmobile.meshrabiya.api.MeshrabiyaApi
 import com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl
 import java.io.File
+import com.ustadmobile.meshrabiya.api.RecipientEntryDto
+import com.ustadmobile.meshrabiya.api.RecipientTypeDto
 
 /**
  * OrbotMeshService - Handles mesh operations through MeshrabiyaApi.
@@ -109,11 +111,19 @@ class OrbotMeshService : Service() {
      * Returns the fileId via callback.
      */
     fun storeReceivedFile(file: File, onSuccess: (String) -> Unit, onFailure: (Exception) -> Unit) {
-        meshrabiyaApi.storeFile(file) { result ->
+        // TODO: Replace with actual recipient construction logic as needed
+        val recipients = listOf(
+            RecipientEntryDto(
+                publicKey = "demo-public-key", // Replace with actual public key
+                recipientType = RecipientTypeDto.USER,
+                recipientId = "demo-user-id" // Replace with actual user id
+            )
+        )
+        meshrabiyaApi.setOnFileStored { fileId, fileObj, result ->
             result.fold(
-                onSuccess = { fileId ->
-                    Log.i(TAG, "File stored successfully with fileId $fileId via MeshrabiyaApi")
-                    onSuccess(fileId)
+                onSuccess = { id ->
+                    Log.i(TAG, "File stored successfully with fileId $id via MeshrabiyaApi")
+                    onSuccess(id)
                 },
                 onFailure = { exception ->
                     Log.e(TAG, "Failed to store file ${file.absolutePath} via MeshrabiyaApi: ${exception.message}")
@@ -121,6 +131,7 @@ class OrbotMeshService : Service() {
                 }
             )
         }
+        meshrabiyaApi.storeFile(file, recipients)
     }
 
     /**
