@@ -15,7 +15,7 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 ./gradlew assembleDebug
 
 # Install on connected device
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH:$ANDROID_HOME/platform-tools" && truncate -s 0 ready_state_fix_deploy.log && adb install -r app/build/outputs/apk/fullperm/debug/app-fullperm-universal-debug.apk
 
 # Install on second device (connect it, then run again)
 adb install -r app/build/outputs/apk/debug/app-debug.apk
@@ -37,7 +37,11 @@ Your device ID: `30870044490006E`
 # Monitor mesh-specific logs from your connected device
 adb -s 30870044490006E logcat | grep -E "(Meshrabiya|VirtualNode|EmergentRole|MMCP|OriginatingMessage|AndroidVirtualNode)"
 ```
-
+```bash
+: > build_output.log && export JAVA_HOME=$(/usr/libexec/java_home -v 21) && ./gradlew assembleFullpermDebug  --console=plain 2>&1 | tee build_output.log
+ export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH:$ANDROID_HOME/platform-tools" && truncate -s 0 ready_state_fix_deploy.log && adb install -r app/build/outputs/apk/fullperm/debug/app-fullperm-universal-debug.apk | tee ready_state_fix_deploy.log
+adb logcat -c && truncate -s 0 ./phone_test.log &&  adb logcat | tee ./phone_test.log
+```
 ---
 
 ## Testing Procedure

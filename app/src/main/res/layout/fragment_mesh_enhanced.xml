@@ -11,26 +11,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:spacing="16dp">
-
-        <!-- Title Section -->
-        <TextView
-            android:id="@+id/meshTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/mesh_network_title"
-            android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
-            android:textAlignment="center"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:id="@+id/meshDescription"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/mesh_network_description"
-            android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
-            android:textAlignment="center"
-            android:layout_marginBottom="24dp" />
+        android:spacing="16dp"
+        android:paddingBottom="80dp">
 
         <!-- Network Overview Card -->
         <com.google.android.material.card.MaterialCardView
@@ -288,6 +270,9 @@
                 android:layout_height="wrap_content"
                 android:text="Start Mesh"
                 android:paddingHorizontal="32dp"
+                android:textColor="@android:color/white"
+                app:backgroundTint="#BB86FC"
+                app:cornerRadius="8dp"
                 style="@style/Widget.Material3.Button" />
 
         </LinearLayout>
@@ -319,6 +304,14 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Mesh network stopped"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/meshRolesText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Roles: --"
                     android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                     android:layout_marginBottom="8dp" />
 

@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 object MeshUIBindings {
     lateinit var meshStatusText: TextView
     lateinit var nodeInfoText: TextView
+    lateinit var meshRolesText: TextView
     lateinit var networkStatsText: TextView
     lateinit var lastUpdateText: TextView
     lateinit var gatewayToggle: SwitchMaterial
@@ -51,6 +52,7 @@ object MeshUIBindings {
     fun bindViews(view: View) {
         meshStatusText = view.findViewById(R.id.meshStatusText)
         nodeInfoText = view.findViewById(R.id.nodeInfoText)
+        meshRolesText = view.findViewById(R.id.meshRolesText)
         networkStatsText = view.findViewById(R.id.networkStatsText)
         lastUpdateText = view.findViewById(R.id.lastUpdateText)
         gatewayToggle = view.findViewById(R.id.gatewayToggle)

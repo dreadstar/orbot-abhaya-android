@@ -13,8 +13,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.ustadmobile.meshrabiya.api.MeshrabiyaApi
 import com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl
 import java.io.File
-import com.ustadmobile.meshrabiya.api.RecipientEntryDto
-import com.ustadmobile.meshrabiya.api.RecipientTypeDto
+import com.ustadmobile.meshrabiya.api.model.RecipientEntryDto
+import com.ustadmobile.meshrabiya.api.model.RecipientTypeDto
 
 /**
  * OrbotMeshService - Handles mesh operations through MeshrabiyaApi.
