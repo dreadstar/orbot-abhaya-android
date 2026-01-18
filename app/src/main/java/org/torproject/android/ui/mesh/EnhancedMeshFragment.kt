@@ -812,33 +812,48 @@ class EnhancedMeshFragment : Fragment() {
 	
 	/**
 	 * Update button states based on mesh status
+	 * Only displays Join or Merge button based on state (not both)
 	 */
 	private fun updateButtonStates(meshStatus: MeshStateDto) {
 		when (meshStatus) {
 			MeshStateDto.DISCONNECTED -> {
 				MeshUIBindings.meshToggleButton.text = "Start Mesh"
 				MeshUIBindings.meshToggleButton.isEnabled = true
-				MeshUIBindings.joinMeshButton.isEnabled = true  // Can join when disconnected
-				MeshUIBindings.mergeMeshButton.isEnabled = false // Cannot merge when not on mesh
+				// Show only Join button when disconnected
+				MeshUIBindings.joinMeshButton.visibility = View.VISIBLE
+				MeshUIBindings.joinMeshButton.isEnabled = true
+				MeshUIBindings.mergeMeshButton.visibility = View.GONE
+				// Hide expand indicator when disconnected
+				MeshUIBindings.expandCollapseIndicator.visibility = View.GONE
 			}
 			MeshStateDto.CONNECTING -> {
 				MeshUIBindings.meshToggleButton.text = "Stop Mesh"
 				MeshUIBindings.meshToggleButton.isEnabled = true
-				MeshUIBindings.joinMeshButton.isEnabled = false  // Busy connecting
-				MeshUIBindings.mergeMeshButton.isEnabled = false // Busy connecting
+				// Hide both buttons while connecting
+				MeshUIBindings.joinMeshButton.visibility = View.GONE
+				MeshUIBindings.mergeMeshButton.visibility = View.GONE
+				// Show expand indicator for QR code when connecting/connected
+				MeshUIBindings.expandCollapseIndicator.visibility = View.VISIBLE
 			}
 			MeshStateDto.CONNECTED -> {
 				MeshUIBindings.meshToggleButton.text = "Stop Mesh"
 				MeshUIBindings.meshToggleButton.isEnabled = true
-				MeshUIBindings.joinMeshButton.isEnabled = false  // Already on mesh
-				MeshUIBindings.mergeMeshButton.isEnabled = true  // Can merge with another mesh
+				// Show only Merge button when connected
+				MeshUIBindings.joinMeshButton.visibility = View.GONE
+				MeshUIBindings.mergeMeshButton.visibility = View.VISIBLE
+				MeshUIBindings.mergeMeshButton.isEnabled = true
+				// Show expand indicator for QR code when connected
+				MeshUIBindings.expandCollapseIndicator.visibility = View.VISIBLE
 			}
 			MeshStateDto.INITIALIZING,
 			MeshStateDto.ERROR,
 			MeshStateDto.UNKNOWN -> {
 				MeshUIBindings.meshToggleButton.isEnabled = false
-				MeshUIBindings.joinMeshButton.isEnabled = false
-				MeshUIBindings.mergeMeshButton.isEnabled = false
+				// Hide both buttons in error/unknown states
+				MeshUIBindings.joinMeshButton.visibility = View.GONE
+				MeshUIBindings.mergeMeshButton.visibility = View.GONE
+				// Hide expand indicator in error states
+				MeshUIBindings.expandCollapseIndicator.visibility = View.GONE
 			}
 		}
 	}
