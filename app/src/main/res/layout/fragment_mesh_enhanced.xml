@@ -256,26 +256,252 @@
 
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Mesh Control Button -->
-        <LinearLayout
+        <!-- Mesh Control Card with QR/Camera -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/meshControlCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="16dp"
-            android:gravity="center">
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            android:layout_marginBottom="16dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/meshToggleButton"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Start Mesh"
-                android:paddingHorizontal="32dp"
-                android:textColor="@android:color/white"
-                app:backgroundTint="#BB86FC"
-                app:cornerRadius="8dp"
-                style="@style/Widget.Material3.Button" />
+                android:orientation="vertical"
+                android:padding="16dp">
 
-        </LinearLayout>
+                <!-- Mesh Control Header with Buttons -->
+                <LinearLayout
+                    android:id="@+id/meshControlHeader"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <!-- Start/Stop Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/meshToggleButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Start Mesh"
+                        android:paddingVertical="12dp"
+                        app:cornerRadius="8dp"
+                        style="@style/Widget.Material3.Button" />
+
+                    <!-- Join Mesh Button (enabled when DISCONNECTED) -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/joinMeshButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="Join Mesh"
+                        android:enabled="false"
+                        android:paddingVertical="12dp"
+                        app:cornerRadius="8dp"
+                        app:strokeColor="?attr/colorPrimary"
+                        app:strokeWidth="1dp"
+                        style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                    <!-- Merge Mesh Button (enabled when CONNECTED) -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/mergeMeshButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="Merge Mesh"
+                        android:enabled="false"
+                        android:paddingVertical="12dp"
+                        app:cornerRadius="8dp"
+                        app:strokeColor="?attr/colorSecondary"
+                        app:strokeWidth="1dp"
+                        style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                    <!-- Expand/Collapse Indicator (initially hidden) -->
+                    <ImageView
+                        android:id="@+id/expandCollapseIndicator"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginStart="8dp"
+                        android:src="@android:drawable/arrow_down_float"
+                        android:contentDescription="Expand/Collapse"
+                        android:visibility="gone" />
+
+                </LinearLayout>
+
+                <!-- Expandable Content (QR Code and Camera Preview) -->
+                <LinearLayout
+                    android:id="@+id/meshExpandableContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:layout_marginTop="16dp">
+
+                    <!-- QR Code Container (shown when sharing network) -->
+                    <LinearLayout
+                        android:id="@+id/qrCodeContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/qrCodeTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Scan to Join Network"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                            android:textColor="?attr/colorOnSurface"
+                            android:layout_marginBottom="8dp" />
+
+                        <TextView
+                            android:id="@+id/qrCodeSubtitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Other devices can scan this code to join"
+                            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:layout_marginBottom="16dp" />
+
+                        <!-- QR Code Image -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:cardCornerRadius="12dp"
+                            app:cardElevation="2dp"
+                            app:cardBackgroundColor="@android:color/white">
+
+                            <ImageView
+                                android:id="@+id/qrCodeImageView"
+                                android:layout_width="280dp"
+                                android:layout_height="280dp"
+                                android:scaleType="fitCenter"
+                                android:padding="16dp"
+                                android:contentDescription="QR Code for mesh network" />
+
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <!-- Network Info -->
+                        <TextView
+                            android:id="@+id/qrCodeNetworkInfo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="SSID: --"
+                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                            android:textColor="?attr/colorOnSurface"
+                            android:layout_marginTop="16dp"
+                            android:fontFamily="monospace" />
+
+                        <!-- Copy Info Button -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/copyNetworkInfoButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="Copy Network Info"
+                            style="@style/Widget.Material3.Button.TextButton" />
+
+                    </LinearLayout>
+
+                    <!-- Camera Preview Container (shown when scanning) -->
+                    <LinearLayout
+                        android:id="@+id/cameraPreviewContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Scan QR Code to Join"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                            android:textColor="?attr/colorOnSurface"
+                            android:layout_marginBottom="8dp"
+                            android:layout_gravity="center" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Point camera at another device's QR code"
+                            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:layout_marginBottom="16dp"
+                            android:layout_gravity="center" />
+
+                        <!-- Camera Preview -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="match_parent"
+                            android:layout_height="300dp"
+                            app:cardCornerRadius="12dp"
+                            app:cardElevation="2dp"
+                            android:layout_gravity="center">
+
+                            <androidx.camera.view.PreviewView
+                                android:id="@+id/cameraPreviewView"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop" />
+
+                            <!-- Scanning Overlay -->
+                            <View
+                                android:id="@+id/scanningOverlay"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:visibility="gone" />
+
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <!-- Scanning Status -->
+                        <TextView
+                            android:id="@+id/scanningStatusText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="Ready to scan"
+                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:layout_gravity="center" />
+
+                        <!-- Action Buttons -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:layout_marginTop="16dp"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/cancelScanButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Cancel"
+                                style="@style/Widget.Material3.Button.TextButton" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/toggleFlashlightButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:text="Flashlight"
+                                style="@style/Widget.Material3.Button.TextButton" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- Network Status Information -->
         <com.google.android.material.card.MaterialCardView

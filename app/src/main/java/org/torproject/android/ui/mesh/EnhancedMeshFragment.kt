@@ -6,6 +6,8 @@ import org.torproject.android.R
 import android.Manifest
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import android.content.pm.PackageManager
 import android.os.Bundle
 import java.text.SimpleDateFormat
@@ -26,6 +28,28 @@ import android.net.Uri
 import androidx.activity.result.ActivityResultLauncher
 import androidx.documentfile.provider.DocumentFile
 
+// QR Code generation and Camera scanning
+import android.graphics.Bitmap
+import android.graphics.Color as AndroidColor
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.Preview
+import androidx.camera.core.ImageProxy
+import androidx.camera.lifecycle.ProcessCameraProvider
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.common.InputImage
+import kotlinx.coroutines.delay
+import org.json.JSONObject
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
+import java.io.ByteArrayOutputStream
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+
 
 /**
  * EnhancedMeshFragment: Mesh UI fragment using MeshrabiyaApi for all mesh logic.
@@ -43,10 +67,21 @@ class EnhancedMeshFragment : Fragment() {
 	private var isStorageToggleProgrammatic = false
 	private var isServiceToggleProgrammatic = false
 	
+	// QR code and camera support
+	private lateinit var cameraExecutor: ExecutorService
+	private var isCameraActive = false
+	private var isJoinMeshMode = false     // True when Join Mesh button clicked
+	private var isMergeMeshMode = false    // True when Merge Mesh button clicked
+	private var isFlashlightOn = false
+	private var currentCamera: androidx.camera.core.Camera? = null
+	private var lastScannedQRCode: String? = null
+	private var scanCooldownEndTime: Long = 0
+	
 	companion object {
 		private const val PREF_STORAGE_FOLDER_URI = "mesh_storage_folder_uri"
 		private const val PREF_STORAGE_QUOTA_BYTES = "mesh_storage_quota_bytes"
 		private const val DEFAULT_STORAGE_QUOTA = 100_000_000L // 100MB default
+		private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
 	}
 	
 	// Permission launcher for runtime location permission requests
@@ -76,6 +111,9 @@ class EnhancedMeshFragment : Fragment() {
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] ===== onCreate() called =====")
+		
+		// Initialize camera executor for QR scanning
+		cameraExecutor = Executors.newSingleThreadExecutor()
 		
 		// Initialize folder picker launcher
 		folderPickerLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
@@ -145,6 +183,18 @@ class EnhancedMeshFragment : Fragment() {
 		super.onResume()
 		// Refresh UI when fragment becomes visible (tab switches, screen rotation, etc.)
 		updateUI()
+	}
+	
+	override fun onDestroyView() {
+		super.onDestroyView()
+		
+		// Stop camera if active
+		if (isCameraActive) {
+			stopQRScanning()
+		}
+		
+		// Shutdown camera executor
+		cameraExecutor.shutdown()
 	}
 
 	private fun bindUI(view: View) {
@@ -380,6 +430,86 @@ class EnhancedMeshFragment : Fragment() {
 		MeshUIBindings.refreshButton.setOnClickListener {
 			updateUI()
 		}
+		
+		// ========================================
+		// JOIN MESH BUTTON HANDLER
+		// ========================================
+		MeshUIBindings.joinMeshButton.setOnClickListener {
+			android.util.Log.d("EnhancedMeshFragment", "Join Mesh button clicked")
+			
+			// Set mode: Join (not merge)
+			isJoinMeshMode = true
+			isMergeMeshMode = false
+			
+			// Expand pane and start camera for QR scanning
+			expandPane(showCamera = true)
+			startQRScanning()
+		}
+		
+		// ========================================
+		// MERGE MESH BUTTON HANDLER
+		// ========================================
+		MeshUIBindings.mergeMeshButton.setOnClickListener {
+			android.util.Log.d("EnhancedMeshFragment", "Merge Mesh button clicked")
+			
+			val meshStatus = meshrabiyaApi.getMeshStatus()
+			
+			// Safety check: Should only be enabled when CONNECTED, but verify
+			if (meshStatus != MeshStateDto.CONNECTED) {
+				android.util.Log.w("EnhancedMeshFragment", "Merge Mesh clicked but not CONNECTED (status=$meshStatus)")
+				view?.let { v ->
+					Snackbar.make(v, "Cannot merge - not connected to a mesh", Snackbar.LENGTH_SHORT).show()
+				}
+				return@setOnClickListener
+			}
+			
+			// Set mode: Merge (not join)
+			isJoinMeshMode = false
+			isMergeMeshMode = true
+			
+			// Expand pane and start camera for QR scanning
+			expandPane(showCamera = true)
+			startQRScanning()
+		}
+		
+		// ========================================
+		// CANCEL SCAN BUTTON HANDLER
+		// ========================================
+		MeshUIBindings.cancelScanButton.setOnClickListener {
+			android.util.Log.d("EnhancedMeshFragment", "Cancel scan button clicked")
+			collapsePane()
+		}
+		
+		// ========================================
+		// TOGGLE FLASHLIGHT BUTTON HANDLER
+		// ========================================
+		MeshUIBindings.toggleFlashlightButton.setOnClickListener {
+			toggleFlashlight()
+		}
+		
+		// ========================================
+		// COPY NETWORK INFO BUTTON HANDLER
+		// ========================================
+		MeshUIBindings.copyNetworkInfoButton.setOnClickListener {
+			copyNetworkInfoToClipboard()
+		}
+		
+		// ========================================
+		// HEADER CLICK TO TOGGLE EXPANSION
+		// ========================================
+		MeshUIBindings.meshControlHeader.setOnClickListener {
+			// Only allow expansion if mesh is CONNECTED or CONNECTING
+			val meshStatus = meshrabiyaApi.getMeshStatus()
+			if (meshStatus == MeshStateDto.CONNECTED || meshStatus == MeshStateDto.CONNECTING) {
+				if (MeshUIBindings.meshExpandableContent.visibility == View.VISIBLE) {
+					collapsePane()
+				} else {
+					// Show QR code (not camera)
+					expandPane(showCamera = false)
+					showCurrentNetworkQR()
+				}
+			}
+		}
 	}
 	
 	/**
@@ -456,6 +586,9 @@ class EnhancedMeshFragment : Fragment() {
 			val meshState = meshrabiyaApi.getMeshStatus()
 			android.util.Log.d("EnhancedMeshFragment", "Current mesh state: $meshState")
 			MeshUIBindings.meshStatusText.text = meshState.toString()
+			
+			// Update button states based on mesh status
+			updateButtonStates(meshState)
 			
 			// Update button text based on current mesh state
 			// Show "Stop Mesh" when mesh is active (CONNECTING or CONNECTED), "Start Mesh" when DISCONNECTED
@@ -623,7 +756,467 @@ class EnhancedMeshFragment : Fragment() {
 			Snackbar.make(requireView(), "Error: ${e.message}", Snackbar.LENGTH_LONG).show()
 		}
 	}
-	// internal fun notifyDropFolderUpdate(changes: List<DropFolderItem>) {
+	
+	// ========================================
+	// PANE CONTROL METHODS
+	// ========================================
+	
+	/**
+	 * Expand the mesh control pane to show QR code or camera
+	 * @param showCamera If true, show camera preview. If false, show QR code.
+	 */
+	private fun expandPane(showCamera: Boolean) {
+		android.util.Log.d("EnhancedMeshFragment", "expandPane(showCamera=$showCamera)")
+		
+		// Show expandable content
+		MeshUIBindings.meshExpandableContent.visibility = View.VISIBLE
+		
+		// Show appropriate container
+		if (showCamera) {
+			MeshUIBindings.qrCodeContainer.visibility = View.GONE
+			MeshUIBindings.cameraPreviewContainer.visibility = View.VISIBLE
+			MeshUIBindings.expandCollapseIndicator.rotation = 180f  // Point up
+		} else {
+			MeshUIBindings.cameraPreviewContainer.visibility = View.GONE
+			MeshUIBindings.qrCodeContainer.visibility = View.VISIBLE
+			MeshUIBindings.expandCollapseIndicator.rotation = 180f  // Point up
+		}
+		
+		// Show expand/collapse indicator
+		MeshUIBindings.expandCollapseIndicator.visibility = View.VISIBLE
+	}
+	
+	/**
+	 * Collapse the mesh control pane
+	 */
+	private fun collapsePane() {
+		android.util.Log.d("EnhancedMeshFragment", "collapsePane()")
+		
+		// Stop camera if active
+		if (isCameraActive) {
+			stopQRScanning()
+		}
+		
+		// Hide expandable content
+		MeshUIBindings.meshExpandableContent.visibility = View.GONE
+		MeshUIBindings.expandCollapseIndicator.rotation = 0f  // Point down
+		
+		// Reset mode flags
+		isJoinMeshMode = false
+		isMergeMeshMode = false
+	}
+	
+	// ========================================
+	// BUTTON STATE MANAGEMENT
+	// ========================================
+	
+	/**
+	 * Update button states based on mesh status
+	 */
+	private fun updateButtonStates(meshStatus: MeshStateDto) {
+		when (meshStatus) {
+			MeshStateDto.DISCONNECTED -> {
+				MeshUIBindings.meshToggleButton.text = "Start Mesh"
+				MeshUIBindings.meshToggleButton.isEnabled = true
+				MeshUIBindings.joinMeshButton.isEnabled = true  // Can join when disconnected
+				MeshUIBindings.mergeMeshButton.isEnabled = false // Cannot merge when not on mesh
+			}
+			MeshStateDto.CONNECTING -> {
+				MeshUIBindings.meshToggleButton.text = "Stop Mesh"
+				MeshUIBindings.meshToggleButton.isEnabled = true
+				MeshUIBindings.joinMeshButton.isEnabled = false  // Busy connecting
+				MeshUIBindings.mergeMeshButton.isEnabled = false // Busy connecting
+			}
+			MeshStateDto.CONNECTED -> {
+				MeshUIBindings.meshToggleButton.text = "Stop Mesh"
+				MeshUIBindings.meshToggleButton.isEnabled = true
+				MeshUIBindings.joinMeshButton.isEnabled = false  // Already on mesh
+				MeshUIBindings.mergeMeshButton.isEnabled = true  // Can merge with another mesh
+			}
+			MeshStateDto.INITIALIZING,
+			MeshStateDto.ERROR,
+			MeshStateDto.UNKNOWN -> {
+				MeshUIBindings.meshToggleButton.isEnabled = false
+				MeshUIBindings.joinMeshButton.isEnabled = false
+				MeshUIBindings.mergeMeshButton.isEnabled = false
+			}
+		}
+	}
+	
+	// ========================================
+	// QR CODE GENERATION METHODS
+	// ========================================
+	
+	/**
+	 * Show current network QR code
+	 */
+	private fun showCurrentNetworkQR() {
+		android.util.Log.d("EnhancedMeshFragment", "showCurrentNetworkQR() called")
+		
+		val hotspotInfo = meshrabiyaApi.getHotspotInfo()
+		if (hotspotInfo != null) {
+			generateAndDisplayQRCode(hotspotInfo.ssid, hotspotInfo.password)
+			// Update network info text
+			MeshUIBindings.qrCodeNetworkInfo.text = "Network: ${hotspotInfo.ssid}"
+		} else {
+			android.util.Log.w("EnhancedMeshFragment", "No hotspot info available")
+			Snackbar.make(
+				requireView(),
+				"No active mesh network to display",
+				Snackbar.LENGTH_SHORT
+			).show()
+			collapsePane()
+		}
+	}
+	
+	/**
+	 * Generate and display QR code
+	 */
+	private fun generateAndDisplayQRCode(ssid: String, password: String) {
+		android.util.Log.d("EnhancedMeshFragment", "generateAndDisplayQRCode(ssid=$ssid)")
+		
+		viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+			try {
+				// Create JSON format for mesh join
+				val qrJson = JSONObject().apply {
+					put("type", "mesh_join")
+					put("password", password)
+					put("ssidPattern", "meshr-*")
+					put("bootstrapSSID", ssid)
+				}
+				
+				// Generate QR code using ZXing library
+				val writer = QRCodeWriter()
+				val bitMatrix = writer.encode(qrJson.toString(), BarcodeFormat.QR_CODE, 512, 512)
+				val width = bitMatrix.width
+				val height = bitMatrix.height
+				val qrBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+				for (x in 0 until width) {
+					for (y in 0 until height) {
+						qrBitmap.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+					}
+				}
+				
+				// Display on UI thread
+				withContext(Dispatchers.Main) {
+					MeshUIBindings.qrCodeImageView.setImageBitmap(qrBitmap)
+					MeshUIBindings.qrCodeNetworkInfo.text = "Network: $ssid"
+					android.util.Log.d("EnhancedMeshFragment", "QR code displayed successfully")
+				}
+			} catch (e: Exception) {
+				android.util.Log.e("EnhancedMeshFragment", "Failed to generate QR code", e)
+				withContext(Dispatchers.Main) {
+					Snackbar.make(
+						requireView(),
+						"Failed to generate QR code: ${e.message}",
+						Snackbar.LENGTH_SHORT
+					).show()
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Copy network info to clipboard
+	 */
+	private fun copyNetworkInfoToClipboard() {
+		android.util.Log.d("EnhancedMeshFragment", "copyNetworkInfoToClipboard() called")
+		
+		val hotspotInfo = meshrabiyaApi.getHotspotInfo()
+		if (hotspotInfo != null) {
+			val networkInfo = "Mesh Network\nSSID: ${hotspotInfo.ssid}\nPassword: ${hotspotInfo.password}"
+			
+			val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+			val clip = ClipData.newPlainText("Mesh Network Info", networkInfo)
+			clipboard.setPrimaryClip(clip)
+			
+			android.util.Log.d("EnhancedMeshFragment", "Network info copied to clipboard")
+			Snackbar.make(
+				requireView(),
+				"Network info copied to clipboard",
+				Snackbar.LENGTH_SHORT
+			).show()
+		} else {
+			android.util.Log.w("EnhancedMeshFragment", "No hotspot info available to copy")
+			Snackbar.make(
+				requireView(),
+				"No active mesh network",
+				Snackbar.LENGTH_SHORT
+			).show()
+		}
+	}
+	
+	// ========================================
+	// CAMERA SCANNING METHODS
+	// ========================================
+	
+	/**
+	 * Start QR code scanning with camera
+	 */
+	private fun startQRScanning() {
+		android.util.Log.d("EnhancedMeshFragment", "startQRScanning() called")
+		
+		// Check camera permission
+		if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) 
+			!= PackageManager.PERMISSION_GRANTED) {
+			android.util.Log.w("EnhancedMeshFragment", "Camera permission not granted")
+			requestPermissions(arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_REQUEST_CODE)
+			return
+		}
+		
+		// Setup CameraX with ML Kit barcode scanning
+		val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
+		cameraProviderFuture.addListener({
+			try {
+				val cameraProvider = cameraProviderFuture.get()
+				
+				// Preview use case
+				val preview = Preview.Builder().build().also {
+					it.setSurfaceProvider(MeshUIBindings.cameraPreviewView.surfaceProvider)
+				}
+				
+				// Image analysis use case for barcode scanning
+				val imageAnalysis = ImageAnalysis.Builder()
+					.setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+					.build()
+				
+				// ML Kit barcode scanner
+				val barcodeScanner = BarcodeScanning.getClient()
+				
+				imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+					val mediaImage = imageProxy.image
+					if (mediaImage != null) {
+						val inputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+						
+						barcodeScanner.process(inputImage)
+							.addOnSuccessListener { barcodes ->
+								for (barcode in barcodes) {
+									barcode.rawValue?.let { qrData ->
+										android.util.Log.d("EnhancedMeshFragment", "QR code scanned: $qrData")
+										viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+											processQRCode(qrData)
+										}
+									}
+								}
+							}
+							.addOnFailureListener { e ->
+								android.util.Log.e("EnhancedMeshFragment", "Barcode scanning failed", e)
+							}
+							.addOnCompleteListener {
+								imageProxy.close()
+							}
+					}
+				}
+				
+				// Camera selector (back camera)
+				val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+				
+				// Unbind all use cases before rebinding
+				cameraProvider.unbindAll()
+				
+				// Bind use cases to camera
+				currentCamera = cameraProvider.bindToLifecycle(
+					viewLifecycleOwner,
+					cameraSelector,
+					preview,
+					imageAnalysis
+				)
+				
+				isCameraActive = true
+				MeshUIBindings.scanningStatusText.text = "Scanning for QR codes..."
+				android.util.Log.d("EnhancedMeshFragment", "Camera started successfully")
+				
+			} catch (e: Exception) {
+				android.util.Log.e("EnhancedMeshFragment", "Failed to start camera", e)
+				Snackbar.make(
+					requireView(),
+					"Failed to start camera: ${e.message}",
+					Snackbar.LENGTH_SHORT
+				).show()
+			}
+		}, ContextCompat.getMainExecutor(requireContext()))
+	}
+	
+	/**
+	 * Stop QR code scanning
+	 */
+	private fun stopQRScanning() {
+		android.util.Log.d("EnhancedMeshFragment", "stopQRScanning() called")
+		
+		// Turn off flashlight if active
+		if (isFlashlightOn) {
+			currentCamera?.cameraControl?.enableTorch(false)
+			isFlashlightOn = false
+		}
+		
+		// Unbind camera
+		try {
+			val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
+			val cameraProvider = cameraProviderFuture.get()
+			cameraProvider.unbindAll()
+			android.util.Log.d("EnhancedMeshFragment", "Camera stopped successfully")
+		} catch (e: Exception) {
+			android.util.Log.e("EnhancedMeshFragment", "Failed to stop camera", e)
+		}
+		
+		isCameraActive = false
+		currentCamera = null
+		MeshUIBindings.scanningStatusText.text = ""
+	}
+	
+	/**
+	 * Toggle flashlight on/off
+	 */
+	private fun toggleFlashlight() {
+		android.util.Log.d("EnhancedMeshFragment", "toggleFlashlight() called")
+		
+		if (currentCamera != null && isCameraActive) {
+			isFlashlightOn = !isFlashlightOn
+			currentCamera?.cameraControl?.enableTorch(isFlashlightOn)
+			android.util.Log.d("EnhancedMeshFragment", "Flashlight ${if (isFlashlightOn) "ON" else "OFF"}")
+			
+			// Update button icon/text if needed
+			MeshUIBindings.toggleFlashlightButton.text = if (isFlashlightOn) "Flash: ON" else "Flash: OFF"
+		} else {
+			android.util.Log.w("EnhancedMeshFragment", "Cannot toggle flashlight - camera not active")
+			Snackbar.make(
+				requireView(),
+				"Camera must be active to use flashlight",
+				Snackbar.LENGTH_SHORT
+			).show()
+		}
+	}
+	
+	/**
+	 * Process scanned QR code data
+	 */
+	private fun processQRCode(qrData: String) {
+		android.util.Log.d("EnhancedMeshFragment", "processQRCode() - data=$qrData")
+		
+		// Cooldown check (prevent duplicate scans)
+		val currentTime = System.currentTimeMillis()
+		if (currentTime < scanCooldownEndTime && qrData == lastScannedQRCode) {
+			android.util.Log.d("EnhancedMeshFragment", "QR code in cooldown period, ignoring")
+			return
+		}
+		
+		// Update last scanned QR and set cooldown (2 seconds)
+		lastScannedQRCode = qrData
+		scanCooldownEndTime = currentTime + 2000
+		
+		// Stop camera to prevent additional scans
+		stopQRScanning()
+		collapsePane()
+		
+		try {
+			// Parse JSON QR code data
+			val qrJson = JSONObject(qrData)
+			val type = qrJson.optString("type", "")
+			
+			if (type != "mesh_join") {
+				android.util.Log.w("EnhancedMeshFragment", "Invalid QR code type: $type")
+				Snackbar.make(
+					requireView(),
+					"Invalid mesh QR code",
+					Snackbar.LENGTH_SHORT
+				).show()
+				return
+			}
+			
+			// Show progress
+			MeshUIBindings.scanningStatusText.text = "Connecting to mesh..."
+			
+			// Determine which API to call based on current mesh state
+			val meshState = meshrabiyaApi.getMeshStatus()
+			
+			if (isJoinMeshMode) {
+				// Join Mesh mode - call joinMesh()
+				android.util.Log.d("EnhancedMeshFragment", "Calling joinMesh() with QR data")
+				meshrabiyaApi.joinMesh(qrData) { result ->
+					viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+						if (result.isSuccess) {
+							android.util.Log.d("EnhancedMeshFragment", "joinMesh() succeeded")
+							Snackbar.make(
+								requireView(),
+								"Successfully joined mesh network",
+								Snackbar.LENGTH_LONG
+							).show()
+							isJoinMeshMode = false
+						} else {
+							android.util.Log.e("EnhancedMeshFragment", "joinMesh() failed: ${result.exceptionOrNull()?.message}")
+							Snackbar.make(
+								requireView(),
+								"Failed to join mesh: ${result.exceptionOrNull()?.message}",
+								Snackbar.LENGTH_LONG
+							).show()
+						}
+						MeshUIBindings.scanningStatusText.text = ""
+					}
+				}
+			} else if (isMergeMeshMode) {
+				// Merge Mesh mode - call mergeMesh()
+				android.util.Log.d("EnhancedMeshFragment", "Calling mergeMesh() with QR data")
+				meshrabiyaApi.mergeMesh(qrData) { result ->
+					viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+						if (result.isSuccess) {
+							android.util.Log.d("EnhancedMeshFragment", "mergeMesh() succeeded")
+							Snackbar.make(
+								requireView(),
+								"Successfully merged with mesh network",
+								Snackbar.LENGTH_LONG
+							).show()
+							isMergeMeshMode = false
+						} else {
+							android.util.Log.e("EnhancedMeshFragment", "mergeMesh() failed: ${result.exceptionOrNull()?.message}")
+							Snackbar.make(
+								requireView(),
+								"Failed to merge mesh: ${result.exceptionOrNull()?.message}",
+								Snackbar.LENGTH_LONG
+							).show()
+						}
+						MeshUIBindings.scanningStatusText.text = ""
+					}
+				}
+			}
+			
+		} catch (e: Exception) {
+			android.util.Log.e("EnhancedMeshFragment", "Failed to process QR code", e)
+			Snackbar.make(
+				requireView(),
+				"Failed to process QR code: ${e.message}",
+				Snackbar.LENGTH_SHORT
+			).show()
+			MeshUIBindings.scanningStatusText.text = ""
+		}
+	}
+	
+	/**
+	 * Handle camera permission result for QR scanning
+	 */
+	override fun onRequestPermissionsResult(
+		requestCode: Int,
+		permissions: Array<out String>,
+		grantResults: IntArray
+	) {
+		super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+		
+		if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
+			if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+				android.util.Log.d("EnhancedMeshFragment", "Camera permission granted, starting QR scanning")
+				startQRScanning()
+			} else {
+				android.util.Log.w("EnhancedMeshFragment", "Camera permission denied")
+				Snackbar.make(
+					requireView(),
+					"Camera permission is required to scan QR codes",
+					Snackbar.LENGTH_LONG
+				).setAction("Settings") {
+					// Could open app settings here
+				}.show()
+			}
+		}
+	}
+	
 	// 	onDropFolderUpdateHandler?.invoke(changes)
 	// }
 	private val onDropFolderUpdateHandler: (List<DropFolderItemDto>) -> Unit = { changes ->

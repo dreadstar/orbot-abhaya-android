@@ -5,11 +5,13 @@ import org.torproject.android.R
 
 import android.view.View
 import android.widget.TextView
+import android.widget.ImageView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.slider.Slider
 import androidx.recyclerview.widget.RecyclerView
+import android.widget.LinearLayout
 // import org.torproject.android.ui.mesh.adapter.FolderContentsAdapter
 
 object MeshUIBindings {
@@ -22,6 +24,33 @@ object MeshUIBindings {
     lateinit var internetGatewayToggle: SwitchMaterial
     lateinit var refreshButton: MaterialButton
     lateinit var meshToggleButton: MaterialButton
+    
+    // Mesh control card and new buttons
+    lateinit var meshControlCard: MaterialCardView
+    lateinit var meshControlHeader: LinearLayout
+    lateinit var joinMeshButton: MaterialButton
+    lateinit var mergeMeshButton: MaterialButton
+    lateinit var expandCollapseIndicator: ImageView
+    
+    // Expandable content
+    lateinit var meshExpandableContent: LinearLayout
+    
+    // QR code container
+    lateinit var qrCodeContainer: LinearLayout
+    lateinit var qrCodeTitle: TextView
+    lateinit var qrCodeSubtitle: TextView
+    lateinit var qrCodeImageView: ImageView
+    lateinit var qrCodeNetworkInfo: TextView
+    lateinit var copyNetworkInfoButton: MaterialButton
+    
+    // Camera preview container
+    lateinit var cameraPreviewContainer: LinearLayout
+    lateinit var cameraPreviewView: androidx.camera.view.PreviewView
+    lateinit var scanningOverlay: View
+    lateinit var scanningStatusText: TextView
+    lateinit var cancelScanButton: MaterialButton
+    lateinit var toggleFlashlightButton: MaterialButton
+    
     lateinit var torGatewayCard: MaterialCardView
     lateinit var internetGatewayCard: MaterialCardView
     lateinit var networkOverviewCard: MaterialCardView
@@ -59,6 +88,33 @@ object MeshUIBindings {
         internetGatewayToggle = view.findViewById(R.id.internetGatewayToggle)
         refreshButton = view.findViewById(R.id.refreshButton)
         meshToggleButton = view.findViewById(R.id.meshToggleButton)
+        
+        // Mesh control card and new buttons
+        meshControlCard = view.findViewById(R.id.meshControlCard)
+        meshControlHeader = view.findViewById(R.id.meshControlHeader)
+        joinMeshButton = view.findViewById(R.id.joinMeshButton)
+        mergeMeshButton = view.findViewById(R.id.mergeMeshButton)
+        expandCollapseIndicator = view.findViewById(R.id.expandCollapseIndicator)
+        
+        // Expandable content
+        meshExpandableContent = view.findViewById(R.id.meshExpandableContent)
+        
+        // QR code container
+        qrCodeContainer = view.findViewById(R.id.qrCodeContainer)
+        qrCodeTitle = view.findViewById(R.id.qrCodeTitle)
+        qrCodeSubtitle = view.findViewById(R.id.qrCodeSubtitle)
+        qrCodeImageView = view.findViewById(R.id.qrCodeImageView)
+        qrCodeNetworkInfo = view.findViewById(R.id.qrCodeNetworkInfo)
+        copyNetworkInfoButton = view.findViewById(R.id.copyNetworkInfoButton)
+        
+        // Camera preview container
+        cameraPreviewContainer = view.findViewById(R.id.cameraPreviewContainer)
+        cameraPreviewView = view.findViewById(R.id.cameraPreviewView)
+        scanningOverlay = view.findViewById(R.id.scanningOverlay)
+        scanningStatusText = view.findViewById(R.id.scanningStatusText)
+        cancelScanButton = view.findViewById(R.id.cancelScanButton)
+        toggleFlashlightButton = view.findViewById(R.id.toggleFlashlightButton)
+        
         torGatewayCard = view.findViewById(R.id.torGatewayCard)
         internetGatewayCard = view.findViewById(R.id.internetGatewayCard)
         networkOverviewCard = view.findViewById(R.id.networkOverviewCard)

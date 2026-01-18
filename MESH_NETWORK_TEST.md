@@ -15,10 +15,10 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 ./gradlew assembleDebug
 
 # Install on connected device
-export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH:$ANDROID_HOME/platform-tools" && truncate -s 0 ready_state_fix_deploy.log && adb install -r app/build/outputs/apk/fullperm/debug/app-fullperm-universal-debug.apk
+export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH:$ANDROID_HOME/platform-tools" && truncate -s 0 ready_state_fix_deploy.log && adb  -s 30870044490006E   install -r app/build/outputs/apk/fullperm/debug/app-fullperm-universal-debug.apk
 
 # Install on second device (connect it, then run again)
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH:$ANDROID_HOME/platform-tools" && truncate -s 0 ready_state_fix_deploy.log && adb  -s LML211BL3f1c96e3   install -r app/build/outputs/apk/fullperm/debug/app-fullperm-universal-debug.apk
 ```
 
 ### 2. Keep One Device Connected for Monitoring

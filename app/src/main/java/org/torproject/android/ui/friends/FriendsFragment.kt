@@ -25,9 +25,8 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
-
-// QR Code generation (QRCode-kotlin - lightweight)
-import qrcode.QRCode
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
 
 // ML Kit for scanning (strategic computer vision capabilities)
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -369,20 +368,21 @@ class FriendsFragment : Fragment() {
     }
 
     /**
-     * Generate QR code bitmap from text using QRCode-kotlin
+     * Generate QR code bitmap from text using ZXing
      */
     private fun generateQRCode(text: String): Bitmap {
         return try {
-            // Use QRCode-kotlin for generation (lightweight) - correct API from v4+
-            val qrCodeRenderer = QRCode.ofSquares()
-                .withSize(25) // Default size
-                .build(text)
-            
-            // Render to PNG bytes
-            val pngBytes = qrCodeRenderer.render().getBytes()
-            
-            // Convert PNG bytes to Bitmap
-            BitmapFactory.decodeByteArray(pngBytes, 0, pngBytes.size)
+            val writer = QRCodeWriter()
+            val bitMatrix = writer.encode(text, BarcodeFormat.QR_CODE, 512, 512)
+            val width = bitMatrix.width
+            val height = bitMatrix.height
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+            for (x in 0 until width) {
+                for (y in 0 until height) {
+                    bitmap.setPixel(x, y, if (bitMatrix[x, y]) Color.BLACK else Color.WHITE)
+                }
+            }
+            bitmap
         } catch (e: Exception) {
             e.printStackTrace()
             // Fallback to empty bitmap
