@@ -78,14 +78,11 @@ object MeshUIBindings {
     lateinit var networkLoadText: TextView
     lateinit var stabilityText: TextView
 
-    fun bindViews(view: View) {
+    fun bindImmediateViews(view: View) {
+        // Cards 1-3: Always present in initial layout
         meshStatusText = view.findViewById(R.id.meshStatusText)
-        nodeInfoText = view.findViewById(R.id.nodeInfoText)
         meshRolesText = view.findViewById(R.id.meshRolesText)
-        networkStatsText = view.findViewById(R.id.networkStatsText)
         lastUpdateText = view.findViewById(R.id.lastUpdateText)
-        gatewayToggle = view.findViewById(R.id.gatewayToggle)
-        internetGatewayToggle = view.findViewById(R.id.internetGatewayToggle)
         refreshButton = view.findViewById(R.id.refreshButton)
         meshToggleButton = view.findViewById(R.id.meshToggleButton)
         
@@ -115,19 +112,38 @@ object MeshUIBindings {
         cancelScanButton = view.findViewById(R.id.cancelScanButton)
         toggleFlashlightButton = view.findViewById(R.id.toggleFlashlightButton)
         
-        torGatewayCard = view.findViewById(R.id.torGatewayCard)
-        internetGatewayCard = view.findViewById(R.id.internetGatewayCard)
+        // Network overview card (Card 3 - always immediate)
         networkOverviewCard = view.findViewById(R.id.networkOverviewCard)
+        activeNodesText = view.findViewById(R.id.activeNodesText)
+        networkLoadText = view.findViewById(R.id.networkLoadText)
+        stabilityText = view.findViewById(R.id.stabilityText)
+    }
+    
+    fun bindDeferredViews(view: View) {
+        // Cards 4-9: Loaded from ViewStub after 300ms
+        nodeInfoText = view.findViewById(R.id.nodeInfoText)
+        networkStatsText = view.findViewById(R.id.networkStatsText)
+        
+        torGatewayCard = view.findViewById(R.id.torGatewayCard)
+        gatewayToggle = view.findViewById(R.id.gatewayToggle)
+        torGatewayStatus = view.findViewById(R.id.torGatewayStatus)
+        
+        internetGatewayCard = view.findViewById(R.id.internetGatewayCard)
+        internetGatewayToggle = view.findViewById(R.id.internetGatewayToggle)
+        internetGatewayStatus = view.findViewById(R.id.internetGatewayStatus)
+        
         storageParticipationCard = view.findViewById(R.id.storageParticipationCard)
         storageParticipationToggle = view.findViewById(R.id.storageParticipationToggle)
         storageAllocationSlider = view.findViewById(R.id.storageAllocationSlider)
         storageStatusText = view.findViewById(R.id.storageStatusText)
         storageAllocationText = view.findViewById(R.id.storageAllocationText)
+        
         storageDropFolderCard = view.findViewById(R.id.storageDropFolderCard)
         selectFolderButton = view.findViewById(R.id.selectFolderButton)
         createFolderButton = view.findViewById(R.id.createFolderButton)
         selectedFolderText = view.findViewById(R.id.selectedFolderText)
         folderContentsRecyclerView = view.findViewById(R.id.folderContentsRecyclerView)
+        
         distributedServiceLayerCard = view.findViewById(R.id.distributedServiceLayerCard)
         serviceLayerParticipationSwitch = view.findViewById(R.id.serviceLayerParticipationSwitch)
         serviceLayerStatusText = view.findViewById(R.id.serviceLayerStatusText)
@@ -135,10 +151,5 @@ object MeshUIBindings {
         mlInferenceServiceStatus = view.findViewById(R.id.mlInferenceServiceStatus)
         distributedStorageServiceStatus = view.findViewById(R.id.distributedStorageServiceStatus)
         taskSchedulerServiceStatus = view.findViewById(R.id.taskSchedulerServiceStatus)
-        torGatewayStatus = view.findViewById(R.id.torGatewayStatus)
-        internetGatewayStatus = view.findViewById(R.id.internetGatewayStatus)
-        activeNodesText = view.findViewById(R.id.activeNodesText)
-        networkLoadText = view.findViewById(R.id.networkLoadText)
-        stabilityText = view.findViewById(R.id.stabilityText)
     }
 }

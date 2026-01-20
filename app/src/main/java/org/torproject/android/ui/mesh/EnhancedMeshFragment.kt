@@ -59,6 +59,9 @@ class EnhancedMeshFragment : Fragment() {
 
 	private lateinit var meshrabiyaApi: MeshrabiyaApi
 	
+	// Track whether deferred views (cards 4-9) have been initialized via ViewStub
+	private var deferredViewsInitialized = false
+	
 	// Folder picker for storage allocation
 	private lateinit var folderPickerLauncher: ActivityResultLauncher<Uri?>
 	private var selectedFolderUri: Uri? = null
@@ -149,7 +152,8 @@ class EnhancedMeshFragment : Fragment() {
 		savedInstanceState: Bundle?
 	): View? {
 		val view = inflater.inflate(R.layout.fragment_mesh_enhanced, container, false)
-		bindUI(view)
+		// Only bind immediate views (cards 1-3), deferred views bound after ViewStub inflation
+		MeshUIBindings.bindImmediateViews(view)
 		return view
 	}
 
@@ -177,6 +181,37 @@ class EnhancedMeshFragment : Fragment() {
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Calling updateUI()...")
 		updateUI()
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] ===== onViewCreated() COMPLETE =====")
+		
+		// Defer inflation of cards 4-9 to prevent UI thread blocking (async after 300ms)
+		android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Scheduling deferred card inflation...")
+		viewLifecycleOwner.lifecycleScope.launch {
+			delay(300) // Allow initial UI to render first
+			try {
+				val stub = view.findViewById<android.view.ViewStub>(R.id.deferredCardsStub)
+				if (stub != null) {
+					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Inflating deferred cards...")
+					stub.inflate()
+					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Deferred cards inflated successfully")
+					// Bind newly inflated deferred views (cards 4-9)
+					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Binding deferred views...")
+					MeshUIBindings.bindDeferredViews(view)
+					// Mark deferred views as initialized
+					deferredViewsInitialized = true
+					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Deferred views bound, flag set to true")
+					// Setup listeners for deferred cards
+					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Setting up deferred card listeners...")
+					setupDeferredCardListeners()
+					// Update UI for deferred cards
+					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Updating deferred card UI...")
+					updateDeferredCardUI()
+					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Deferred card initialization complete")
+				} else {
+					android.util.Log.w("EnhancedMeshFragment", "[LIFECYCLE] ViewStub not found!")
+				}
+			} catch (e: Exception) {
+				android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Failed to inflate deferred cards", e)
+			}
+		}
 	}
 
 	override fun onResume() {
@@ -196,16 +231,12 @@ class EnhancedMeshFragment : Fragment() {
 		// Shutdown camera executor
 		cameraExecutor.shutdown()
 	}
-
-	private fun bindUI(view: View) {
-		// Use MeshUIBindings.bindViews() to ensure all views are bound correctly
-		MeshUIBindings.bindViews(view)
-	}
 	
 	/**
 	 * Setup observer for mesh roles StateFlow to automatically update UI when roles change
 	 */
 	private fun setupRoleObserver() {
+		android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Setting up role observer")
 		viewLifecycleOwner.lifecycleScope.launch {
 			(meshrabiyaApi as? MeshrabiyaApiImpl)?.currentMeshRolesFlow?.collect { roles ->
 				android.util.Log.e("EnhancedMeshFragment", "[ROLE_OBSERVER] Roles changed: $roles")
@@ -214,6 +245,7 @@ class EnhancedMeshFragment : Fragment() {
 					val meshState = meshrabiyaApi.getMeshStatus()
 					val meshStarted = meshState == MeshStateDto.CONNECTED || meshState == MeshStateDto.CONNECTING
 					
+					android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Updating meshRolesText")
 					MeshUIBindings.meshRolesText.text = if (!meshStarted) {
 						"Roles: --" // Show label with placeholder when mesh not started
 					} else if (roles.isNotEmpty()) {
@@ -222,148 +254,27 @@ class EnhancedMeshFragment : Fragment() {
 						"Roles: --" // Show label with placeholder when no roles determined yet
 					}
 					
-					// Also update gateway status texts to reflect current persisted settings
-					val torGatewayEnabled = meshrabiyaApi.getTorGatewayStatus()
-					MeshUIBindings.torGatewayStatus.text = if (torGatewayEnabled) "Enabled" else "Disabled"
+					// Only update deferred views if they're initialized (after ViewStub inflation)
+					if (deferredViewsInitialized) {
+						android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Updating deferred gateway status texts")
+						val torGatewayEnabled = meshrabiyaApi.getTorGatewayStatus()
+						MeshUIBindings.torGatewayStatus.text = if (torGatewayEnabled) "Enabled" else "Disabled"
+						
+						val internetGatewayEnabled = meshrabiyaApi.getInternetGatewayStatus()
+						MeshUIBindings.internetGatewayStatus.text = if (internetGatewayEnabled) "Enabled" else "Disabled"
+						
+						android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Deferred UI updated - Tor: $torGatewayEnabled, Internet: $internetGatewayEnabled")
+					} else {
+						android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Skipping deferred view updates - not yet initialized")
+					}
 					
-					val internetGatewayEnabled = meshrabiyaApi.getInternetGatewayStatus()
-					MeshUIBindings.internetGatewayStatus.text = if (internetGatewayEnabled) "Enabled" else "Disabled"
-					
-					android.util.Log.e("EnhancedMeshFragment", "[ROLE_OBSERVER] UI updated - meshStarted: $meshStarted, roles: ${roles.joinToString(", ")}, Tor: $torGatewayEnabled, Internet: $internetGatewayEnabled")
+					android.util.Log.e("EnhancedMeshFragment", "[ROLE_OBSERVER] UI updated - meshStarted: $meshStarted, roles: ${roles.joinToString(", ")}")
 				}
 			}
 		}
 	}
 
 	private fun setupListeners() {
-		// Example: Service Layer Participation Toggle
-		MeshUIBindings.serviceLayerParticipationSwitch.setOnCheckedChangeListener { _, isChecked ->
-			android.util.Log.e("EnhancedMeshFragment", "[SERVICE_TOGGLE] Service Layer toggle changed to: $isChecked (programmatic: $isServiceToggleProgrammatic)")
-			if (isServiceToggleProgrammatic) {
-				android.util.Log.e("EnhancedMeshFragment", "[SERVICE_TOGGLE] Skipping programmatic toggle update")
-				return@setOnCheckedChangeListener
-			}
-			meshrabiyaApi.setServiceParticipationEnabled("compute_node", isChecked) { result ->
-				activity?.runOnUiThread {
-					result.onSuccess {
-						MeshUIBindings.serviceLayerStatusText.text = if (isChecked) "Service Layer active..." else "Service Layer inactive..."
-						android.util.Log.e("EnhancedMeshFragment", "[SERVICE_TOGGLE] Service Participation successfully set to: $isChecked")
-					}
-					result.onFailure { error ->
-						android.util.Log.e("EnhancedMeshFragment", "[SERVICE_TOGGLE] Error setting Service Participation: ${error.message}", error)
-						// Revert toggle on error
-						isServiceToggleProgrammatic = true
-						MeshUIBindings.serviceLayerParticipationSwitch.isChecked = !isChecked
-						isServiceToggleProgrammatic = false
-					}
-				}
-			}
-		}
-
-		// Gateway toggles
-		MeshUIBindings.gatewayToggle.setOnCheckedChangeListener { _, isChecked ->
-			android.util.Log.d("EnhancedMeshFragment", "Tor Gateway toggle changed to: $isChecked")
-			meshrabiyaApi.setTorGatewayEnabled(isChecked) { result ->
-				activity?.runOnUiThread {
-					result.onSuccess {
-						MeshUIBindings.torGatewayStatus.text = if (isChecked) "Enabled" else "Disabled"
-						android.util.Log.d("EnhancedMeshFragment", "Tor Gateway status updated to: ${if (isChecked) "Enabled" else "Disabled"}")
-					}
-					result.onFailure { error ->
-						android.util.Log.e("EnhancedMeshFragment", "Error setting Tor Gateway: ${error.message}", error)
-					}
-				}
-			}
-		}
-		MeshUIBindings.internetGatewayToggle.setOnCheckedChangeListener { _, isChecked ->
-			android.util.Log.d("EnhancedMeshFragment", "Internet Gateway toggle changed to: $isChecked")
-			meshrabiyaApi.setInternetGatewayEnabled(isChecked) { result ->
-				activity?.runOnUiThread {
-					result.onSuccess {
-						MeshUIBindings.internetGatewayStatus.text = if (isChecked) "Enabled" else "Disabled"
-						android.util.Log.d("EnhancedMeshFragment", "Internet Gateway status updated to: ${if (isChecked) "Enabled" else "Disabled"}")
-					}
-					result.onFailure { error ->
-						android.util.Log.e("EnhancedMeshFragment", "Error setting Internet Gateway: ${error.message}", error)
-					}
-				}
-			}
-		}
-
-		// Storage participation toggle with role update
-		MeshUIBindings.storageParticipationToggle.setOnCheckedChangeListener { _, isChecked ->
-			android.util.Log.e("EnhancedMeshFragment", "[STORAGE_TOGGLE] Storage Participation toggle changed to: $isChecked (programmatic: $isStorageToggleProgrammatic)")
-			if (isStorageToggleProgrammatic) {
-				android.util.Log.e("EnhancedMeshFragment", "[STORAGE_TOGGLE] Skipping programmatic toggle update")
-				return@setOnCheckedChangeListener
-			}
-			meshrabiyaApi.setStorageParticipationEnabled(isChecked) { result ->
-				activity?.runOnUiThread {
-					result.onSuccess {
-						MeshUIBindings.storageStatusText.text = if (isChecked) "Storage participation is enabled" else "Storage participation is disabled"
-						android.util.Log.e("EnhancedMeshFragment", "[STORAGE_TOGGLE] Storage Participation successfully set to: $isChecked")
-					}
-					result.onFailure { error ->
-						android.util.Log.e("EnhancedMeshFragment", "[STORAGE_TOGGLE] Error setting Storage Participation: ${error.message}", error)
-						// Revert toggle on error
-						isStorageToggleProgrammatic = true
-						MeshUIBindings.storageParticipationToggle.isChecked = !isChecked
-						isStorageToggleProgrammatic = false
-					}
-				}
-			}
-		}
-
-		// Storage allocation slider - save value when changed
-		MeshUIBindings.storageAllocationSlider.addOnChangeListener { _, value, fromUser ->
-			if (fromUser) {
-				val quotaBytes = (value * 1024 * 1024 * 1024).toLong() // Convert GB to bytes
-				requireActivity().getPreferences(android.content.Context.MODE_PRIVATE).edit()
-					.putLong(PREF_STORAGE_QUOTA_BYTES, quotaBytes)
-					.apply()
-				android.util.Log.d("EnhancedMeshFragment", "Storage quota updated to: ${value}GB ($quotaBytes bytes)")
-				
-				// Update the allocation text
-				MeshUIBindings.storageAllocationText.text = "${value.toInt()} GB"
-				
-				// If storage participation is enabled, refresh the configuration
-				if (meshrabiyaApi.getStorageParticipationStatus()) {
-					meshrabiyaApi.setStorageParticipationEnabled(true) { _ ->
-						android.util.Log.i("EnhancedMeshFragment", "Storage participation refreshed with new quota: ${value}GB")
-					}
-				}
-			}
-		}
-		
-		// Drop folder selection - open folder picker
-		MeshUIBindings.selectFolderButton.setOnClickListener {
-			android.util.Log.d("EnhancedMeshFragment", "Select folder button clicked")
-			try {
-				folderPickerLauncher.launch(null)
-			} catch (e: Exception) {
-				android.util.Log.e("EnhancedMeshFragment", "Error launching folder picker", e)
-				Snackbar.make(requireView(), "Error opening folder picker: ${e.message}", Snackbar.LENGTH_LONG).show()
-			}
-		}
-		
-		MeshUIBindings.createFolderButton.setOnClickListener {
-			android.util.Log.d("EnhancedMeshFragment", "Create folder button clicked")
-			// Show dialog to create folder (simplified implementation)
-			val builder = androidx.appcompat.app.AlertDialog.Builder(requireContext())
-			val input = android.widget.EditText(requireContext())
-			input.hint = "Folder name"
-			builder.setView(input)
-			builder.setTitle("Create Storage Folder")
-			builder.setPositiveButton("Create") { _, _ ->
-				val folderName = input.text.toString()
-				if (folderName.isNotBlank()) {
-					createStorageFolder(folderName)
-				}
-			}
-			builder.setNegativeButton("Cancel", null)
-			builder.show()
-		}
-
 		// Mesh toggle button with debouncing and permission checks
 		var meshOperationInProgress = false
 		MeshUIBindings.meshToggleButton.setOnClickListener {
@@ -578,13 +489,13 @@ class EnhancedMeshFragment : Fragment() {
 	}
 
 	private fun updateUI() {
-		android.util.Log.d("EnhancedMeshFragment", "updateUI() called")
+		android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Called (deferredViewsInitialized=$deferredViewsInitialized)")
 		
 		// Ensure all UI updates happen on the main thread
 		activity?.runOnUiThread {
 			// Mesh status
 			val meshState = meshrabiyaApi.getMeshStatus()
-			android.util.Log.d("EnhancedMeshFragment", "Current mesh state: $meshState")
+			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Current mesh state: $meshState")
 			MeshUIBindings.meshStatusText.text = meshState.toString()
 			
 			// Update button states based on mesh status
@@ -594,18 +505,9 @@ class EnhancedMeshFragment : Fragment() {
 			// Show "Stop Mesh" when mesh is active (CONNECTING or CONNECTED), "Start Mesh" when DISCONNECTED
 			val meshActive = meshState == MeshStateDto.CONNECTED || meshState == MeshStateDto.CONNECTING
 			MeshUIBindings.meshToggleButton.text = if (meshActive) "Stop Mesh" else "Start Mesh"
-			android.util.Log.d("EnhancedMeshFragment", "Button text updated to: ${MeshUIBindings.meshToggleButton.text}")
+			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Button text updated to: ${MeshUIBindings.meshToggleButton.text}")
 
-			// Network Status - show local node IP address
-			val networkInfo = meshrabiyaApi.getNetworkInfo()
-			MeshUIBindings.nodeInfoText.text = if (networkInfo != null) {
-				"IP: ${networkInfo.ipAddress}"
-			} else {
-				"Mesh not initialized"
-			}
-
-			// Mesh Roles - show current node roles with label
-			// meshActive already declared above
+			// Mesh Roles - show current node roles with label (immediate view)
 			val roles = meshrabiyaApi.getNodeRoleNames()
 			MeshUIBindings.meshRolesText.text = if (!meshActive) {
 				"Roles: --" // Show label with placeholder when mesh not started
@@ -615,52 +517,64 @@ class EnhancedMeshFragment : Fragment() {
 				"Roles: --" // Show label with placeholder when no roles determined yet
 			}
 
-			// Network Information - show detailed network stats
-			MeshUIBindings.networkStatsText.text = if (networkInfo != null) {
-				"Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
-			} else {
-				"No network data"
-			}
-
 			// Last update
 			val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.getDefault())
 			MeshUIBindings.lastUpdateText.text = "Last Updated: ${dateFormat.format(Date())}"
 
-			// Gateway status text (read from dataStore, not active roles)
-			val torGatewayEnabled = meshrabiyaApi.getTorGatewayStatus()
-			// Only update toggle if it doesn't match (avoid triggering listener)
-			if (MeshUIBindings.gatewayToggle.isChecked != torGatewayEnabled) {
-				MeshUIBindings.gatewayToggle.isChecked = torGatewayEnabled
-			}
-			MeshUIBindings.torGatewayStatus.text = if (torGatewayEnabled) "Enabled" else "Disabled"
-			
-			val internetGatewayEnabled = meshrabiyaApi.getInternetGatewayStatus()
-			if (MeshUIBindings.internetGatewayToggle.isChecked != internetGatewayEnabled) {
-				MeshUIBindings.internetGatewayToggle.isChecked = internetGatewayEnabled
-			}
-			MeshUIBindings.internetGatewayStatus.text = if (internetGatewayEnabled) "Enabled" else "Disabled"
+			// Only update deferred views if they're initialized
+			if (deferredViewsInitialized) {
+				android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Updating deferred views...")
+				
+				// Network Status - show local node IP address (deferred view)
+				val networkInfo = meshrabiyaApi.getNetworkInfo()
+				MeshUIBindings.nodeInfoText.text = if (networkInfo != null) {
+					"IP: ${networkInfo.ipAddress}"
+				} else {
+					"Mesh not initialized"
+				}
 
-			// Storage participation toggle (read from persisted dataStore)
-			val storageEnabled = meshrabiyaApi.getStorageParticipationStatus()
-			if (MeshUIBindings.storageParticipationToggle.isChecked != storageEnabled) {
-				isStorageToggleProgrammatic = true
-				MeshUIBindings.storageParticipationToggle.isChecked = storageEnabled
-				isStorageToggleProgrammatic = false
-				android.util.Log.e("EnhancedMeshFragment", "[UI_UPDATE] Storage toggle loaded from dataStore: $storageEnabled")
-			}
-			MeshUIBindings.storageStatusText.text = if (storageEnabled) "Storage participation is enabled" else "Storage participation is disabled"
-			
-			// Service participation toggle (read from persisted dataStore)
-			val serviceEnabled = meshrabiyaApi.getServiceParticipationStatus("compute_node")
-			if (MeshUIBindings.serviceLayerParticipationSwitch.isChecked != serviceEnabled) {
-				isServiceToggleProgrammatic = true
-				MeshUIBindings.serviceLayerParticipationSwitch.isChecked = serviceEnabled
-				isServiceToggleProgrammatic = false
-				android.util.Log.e("EnhancedMeshFragment", "[UI_UPDATE] Service toggle loaded from dataStore: $serviceEnabled")
-			}
-			MeshUIBindings.serviceLayerStatusText.text = if (serviceEnabled) "Service Layer active..." else "Service Layer inactive..."
-			
-			// Storage allocation slider and folder path (load from persisted values)
+				// Network Information - show detailed network stats (deferred view)
+				MeshUIBindings.networkStatsText.text = if (networkInfo != null) {
+					"Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
+				} else {
+					"No network data"
+				}
+
+				// Gateway status text (read from dataStore, not active roles)
+				val torGatewayEnabled = meshrabiyaApi.getTorGatewayStatus()
+				// Only update toggle if it doesn't match (avoid triggering listener)
+				if (MeshUIBindings.gatewayToggle.isChecked != torGatewayEnabled) {
+					MeshUIBindings.gatewayToggle.isChecked = torGatewayEnabled
+				}
+				MeshUIBindings.torGatewayStatus.text = if (torGatewayEnabled) "Enabled" else "Disabled"
+				
+				val internetGatewayEnabled = meshrabiyaApi.getInternetGatewayStatus()
+				if (MeshUIBindings.internetGatewayToggle.isChecked != internetGatewayEnabled) {
+					MeshUIBindings.internetGatewayToggle.isChecked = internetGatewayEnabled
+				}
+				MeshUIBindings.internetGatewayStatus.text = if (internetGatewayEnabled) "Enabled" else "Disabled"
+
+				// Storage participation toggle (read from persisted dataStore)
+				val storageEnabled = meshrabiyaApi.getStorageParticipationStatus()
+				if (MeshUIBindings.storageParticipationToggle.isChecked != storageEnabled) {
+					isStorageToggleProgrammatic = true
+					MeshUIBindings.storageParticipationToggle.isChecked = storageEnabled
+					isStorageToggleProgrammatic = false
+					android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Storage toggle loaded from dataStore: $storageEnabled")
+				}
+				MeshUIBindings.storageStatusText.text = if (storageEnabled) "Storage participation is enabled" else "Storage participation is disabled"
+				
+				// Service participation toggle (read from persisted dataStore)
+				val serviceEnabled = meshrabiyaApi.getServiceParticipationStatus("compute_node")
+				if (MeshUIBindings.serviceLayerParticipationSwitch.isChecked != serviceEnabled) {
+					isServiceToggleProgrammatic = true
+					MeshUIBindings.serviceLayerParticipationSwitch.isChecked = serviceEnabled
+					isServiceToggleProgrammatic = false
+					android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Service toggle loaded from dataStore: $serviceEnabled")
+				}
+				MeshUIBindings.serviceLayerStatusText.text = if (serviceEnabled) "Service Layer active..." else "Service Layer inactive..."
+				
+				// Storage allocation slider and folder path (load from persisted values)
 			val prefs = requireActivity().getPreferences(android.content.Context.MODE_PRIVATE)
 			val quotaBytes = prefs.getLong(PREF_STORAGE_QUOTA_BYTES, DEFAULT_STORAGE_QUOTA)
 			val quotaGB = quotaBytes / (1024.0 * 1024.0 * 1024.0)
@@ -668,7 +582,7 @@ class EnhancedMeshFragment : Fragment() {
 			val clampedQuotaGB = quotaGB.toFloat().coerceIn(1.0f, 50.0f)
 			MeshUIBindings.storageAllocationSlider.value = clampedQuotaGB
 			MeshUIBindings.storageAllocationText.text = "${clampedQuotaGB.toInt()} GB"
-			android.util.Log.d("EnhancedMeshFragment", "Loaded storage quota from preferences: ${quotaGB}GB (clamped to ${clampedQuotaGB}GB)")
+			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Loaded storage quota from preferences: ${quotaGB}GB (clamped to ${clampedQuotaGB}GB)")
 
 			// Drop folder
 			val dropFolder = meshrabiyaApi.getDropFolder()
@@ -687,11 +601,16 @@ class EnhancedMeshFragment : Fragment() {
 			} else {
 				MeshUIBindings.selectedFolderText.text = "No folder selected"
 			}
+			
+			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Deferred views updated successfully")
+		} else {
+			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Skipping deferred view updates - not yet initialized")
 		}
-	}
+		} // End runOnUiThread
+	} // End updateUI
 	
 	/**
-	 * Update storage allocation after folder selection
+	 * Update storage allocation for the selected folder URI
 	 */
 	private fun updateStorageAllocation(folderUri: Uri) {
 		try {
@@ -718,7 +637,6 @@ class EnhancedMeshFragment : Fragment() {
 			android.util.Log.e("EnhancedMeshFragment", "Error updating storage allocation", e)
 		}
 	}
-	
 	/**
 	 * Create a new storage folder in app-specific storage
 	 */
@@ -979,10 +897,11 @@ class EnhancedMeshFragment : Fragment() {
 			return
 		}
 		
-		// Setup CameraX with ML Kit barcode scanning
+		// Setup CameraX with ML Kit barcode scanning (ASYNC to avoid blocking UI thread)
 		val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
 		cameraProviderFuture.addListener({
 			try {
+				// Use async listener result instead of blocking .get()
 				val cameraProvider = cameraProviderFuture.get()
 				
 				// Preview use case
@@ -1053,7 +972,7 @@ class EnhancedMeshFragment : Fragment() {
 	}
 	
 	/**
-	 * Stop QR code scanning
+	 * Stop QR code scanning (async to avoid blocking UI thread)
 	 */
 	private fun stopQRScanning() {
 		android.util.Log.d("EnhancedMeshFragment", "stopQRScanning() called")
@@ -1064,14 +983,23 @@ class EnhancedMeshFragment : Fragment() {
 			isFlashlightOn = false
 		}
 		
-		// Unbind camera
-		try {
-			val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
-			val cameraProvider = cameraProviderFuture.get()
-			cameraProvider.unbindAll()
-			android.util.Log.d("EnhancedMeshFragment", "Camera stopped successfully")
-		} catch (e: Exception) {
-			android.util.Log.e("EnhancedMeshFragment", "Failed to stop camera", e)
+		// Unbind camera asynchronously
+		viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+			try {
+				val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
+				// Use addListener for async unbinding instead of blocking .get()
+				cameraProviderFuture.addListener({
+					try {
+						val cameraProvider = cameraProviderFuture.get()
+						cameraProvider.unbindAll()
+						android.util.Log.d("EnhancedMeshFragment", "Camera stopped successfully")
+					} catch (e: Exception) {
+						android.util.Log.e("EnhancedMeshFragment", "Failed to unbind camera", e)
+					}
+				}, ContextCompat.getMainExecutor(requireContext()))
+			} catch (e: Exception) {
+				android.util.Log.e("EnhancedMeshFragment", "Failed to stop camera", e)
+			}
 		}
 		
 		isCameraActive = false
@@ -1119,6 +1047,10 @@ class EnhancedMeshFragment : Fragment() {
 		lastScannedQRCode = qrData
 		scanCooldownEndTime = currentTime + 2000
 		
+		// **CRITICAL**: Save mode flags BEFORE collapsePane resets them
+		val wasJoinMode = isJoinMeshMode
+		val wasMergeMode = isMergeMeshMode
+		
 		// Stop camera to prevent additional scans
 		stopQRScanning()
 		collapsePane()
@@ -1144,7 +1076,7 @@ class EnhancedMeshFragment : Fragment() {
 			// Determine which API to call based on current mesh state
 			val meshState = meshrabiyaApi.getMeshStatus()
 			
-			if (isJoinMeshMode) {
+			if (wasJoinMode) {
 				// Join Mesh mode - call joinMesh()
 				android.util.Log.d("EnhancedMeshFragment", "Calling joinMesh() with QR data")
 				meshrabiyaApi.joinMesh(qrData) { result ->
@@ -1168,7 +1100,7 @@ class EnhancedMeshFragment : Fragment() {
 						MeshUIBindings.scanningStatusText.text = ""
 					}
 				}
-			} else if (isMergeMeshMode) {
+			} else if (wasMergeMode) {
 				// Merge Mesh mode - call mergeMesh()
 				android.util.Log.d("EnhancedMeshFragment", "Calling mergeMesh() with QR data")
 				meshrabiyaApi.mergeMesh(qrData) { result ->
@@ -1229,6 +1161,189 @@ class EnhancedMeshFragment : Fragment() {
 					// Could open app settings here
 				}.show()
 			}
+		}
+	}
+	
+	/**
+	 * Setup listeners for deferred cards (4-9) after ViewStub inflation
+	 */
+	private fun setupDeferredCardListeners() {
+		android.util.Log.d("EnhancedMeshFragment", "[DEFERRED] Setting up deferred card listeners...")
+		
+		try {
+			// Service Layer Participation Toggle
+			MeshUIBindings.serviceLayerParticipationSwitch.setOnCheckedChangeListener { _, isChecked ->
+				android.util.Log.e("EnhancedMeshFragment", "[SERVICE_TOGGLE] Service Layer toggle changed to: $isChecked (programmatic: $isServiceToggleProgrammatic)")
+				if (isServiceToggleProgrammatic) {
+					android.util.Log.e("EnhancedMeshFragment", "[SERVICE_TOGGLE] Skipping programmatic toggle update")
+					return@setOnCheckedChangeListener
+				}
+				meshrabiyaApi.setServiceParticipationEnabled("compute_node", isChecked) { result ->
+					activity?.runOnUiThread {
+						result.onSuccess {
+							MeshUIBindings.serviceLayerStatusText.text = if (isChecked) "Service Layer active..." else "Service Layer inactive..."
+							android.util.Log.e("EnhancedMeshFragment", "[SERVICE_TOGGLE] Service Participation successfully set to: $isChecked")
+						}
+						result.onFailure { error ->
+							android.util.Log.e("EnhancedMeshFragment", "[SERVICE_TOGGLE] Error setting Service Participation: ${error.message}", error)
+							isServiceToggleProgrammatic = true
+							MeshUIBindings.serviceLayerParticipationSwitch.isChecked = !isChecked
+							isServiceToggleProgrammatic = false
+						}
+					}
+				}
+			}
+
+			// Gateway toggles
+			MeshUIBindings.gatewayToggle.setOnCheckedChangeListener { _, isChecked ->
+				android.util.Log.d("EnhancedMeshFragment", "Tor Gateway toggle changed to: $isChecked")
+				meshrabiyaApi.setTorGatewayEnabled(isChecked) { result ->
+					activity?.runOnUiThread {
+						result.onSuccess {
+							MeshUIBindings.torGatewayStatus.text = if (isChecked) "Enabled" else "Disabled"
+							android.util.Log.d("EnhancedMeshFragment", "Tor Gateway status updated to: ${if (isChecked) "Enabled" else "Disabled"}")
+						}
+						result.onFailure { error ->
+							android.util.Log.e("EnhancedMeshFragment", "Error setting Tor Gateway: ${error.message}", error)
+						}
+					}
+				}
+			}
+			
+			MeshUIBindings.internetGatewayToggle.setOnCheckedChangeListener { _, isChecked ->
+				android.util.Log.d("EnhancedMeshFragment", "Internet Gateway toggle changed to: $isChecked")
+				meshrabiyaApi.setInternetGatewayEnabled(isChecked) { result ->
+					activity?.runOnUiThread {
+						result.onSuccess {
+							MeshUIBindings.internetGatewayStatus.text = if (isChecked) "Enabled" else "Disabled"
+							android.util.Log.d("EnhancedMeshFragment", "Internet Gateway status updated to: ${if (isChecked) "Enabled" else "Disabled"}")
+						}
+						result.onFailure { error ->
+							android.util.Log.e("EnhancedMeshFragment", "Error setting Internet Gateway: ${error.message}", error)
+						}
+					}
+				}
+			}
+
+			// Storage participation toggle
+			MeshUIBindings.storageParticipationToggle.setOnCheckedChangeListener { _, isChecked ->
+				android.util.Log.e("EnhancedMeshFragment", "[STORAGE_TOGGLE] Storage Participation toggle changed to: $isChecked (programmatic: $isStorageToggleProgrammatic)")
+				if (isStorageToggleProgrammatic) {
+					android.util.Log.e("EnhancedMeshFragment", "[STORAGE_TOGGLE] Skipping programmatic toggle update")
+					return@setOnCheckedChangeListener
+				}
+				meshrabiyaApi.setStorageParticipationEnabled(isChecked) { result ->
+					activity?.runOnUiThread {
+						result.onSuccess {
+							MeshUIBindings.storageStatusText.text = if (isChecked) "Storage participation is enabled" else "Storage participation is disabled"
+							android.util.Log.e("EnhancedMeshFragment", "[STORAGE_TOGGLE] Storage Participation successfully set to: $isChecked")
+						}
+						result.onFailure { error ->
+							android.util.Log.e("EnhancedMeshFragment", "[STORAGE_TOGGLE] Error setting Storage Participation: ${error.message}", error)
+							isStorageToggleProgrammatic = true
+							MeshUIBindings.storageParticipationToggle.isChecked = !isChecked
+							isStorageToggleProgrammatic = false
+						}
+					}
+				}
+			}
+
+			// Storage allocation slider
+			MeshUIBindings.storageAllocationSlider.addOnChangeListener { _, value, fromUser ->
+				if (fromUser) {
+					val quotaBytes = (value * 1024 * 1024 * 1024).toLong()
+					requireActivity().getPreferences(android.content.Context.MODE_PRIVATE).edit()
+						.putLong(PREF_STORAGE_QUOTA_BYTES, quotaBytes)
+						.apply()
+					android.util.Log.d("EnhancedMeshFragment", "Storage quota updated to: ${value}GB ($quotaBytes bytes)")
+					MeshUIBindings.storageAllocationText.text = "${value.toInt()} GB"
+					if (meshrabiyaApi.getStorageParticipationStatus()) {
+						meshrabiyaApi.setStorageParticipationEnabled(true) { _ ->
+							android.util.Log.i("EnhancedMeshFragment", "Storage participation refreshed with new quota: ${value}GB")
+						}
+					}
+				}
+			}
+			
+			// Drop folder buttons
+			MeshUIBindings.selectFolderButton.setOnClickListener {
+				android.util.Log.d("EnhancedMeshFragment", "Select folder button clicked")
+				try {
+					folderPickerLauncher.launch(null)
+				} catch (e: Exception) {
+					android.util.Log.e("EnhancedMeshFragment", "Error launching folder picker", e)
+					Snackbar.make(requireView(), "Error opening folder picker: ${e.message}", Snackbar.LENGTH_LONG).show()
+				}
+			}
+			
+			MeshUIBindings.createFolderButton.setOnClickListener {
+				android.util.Log.d("EnhancedMeshFragment", "Create folder button clicked")
+				val builder = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+				val input = android.widget.EditText(requireContext())
+				input.hint = "Folder name"
+				builder.setView(input)
+				builder.setTitle("Create Storage Folder")
+				builder.setPositiveButton("Create") { _, _ ->
+					val folderName = input.text.toString()
+					if (folderName.isNotBlank()) {
+						createStorageFolder(folderName)
+					}
+				}
+				builder.setNegativeButton("Cancel", null)
+				builder.show()
+			}
+			
+			android.util.Log.d("EnhancedMeshFragment", "[DEFERRED] Deferred card listeners setup complete")
+		} catch (e: Exception) {
+			android.util.Log.e("EnhancedMeshFragment", "[DEFERRED] Error setting up deferred card listeners", e)
+		}
+	}
+	
+	/**
+	 * Update UI for deferred cards after ViewStub inflation
+	 */
+	private fun updateDeferredCardUI() {
+		android.util.Log.d("EnhancedMeshFragment", "[DEFERRED] Updating deferred card UI...")
+		
+		try {
+			// Update gateway toggles
+			val torGatewayEnabled = meshrabiyaApi.getTorGatewayStatus()
+			val internetGatewayEnabled = meshrabiyaApi.getInternetGatewayStatus()
+			if (MeshUIBindings.gatewayToggle.isChecked != torGatewayEnabled) {
+				MeshUIBindings.gatewayToggle.isChecked = torGatewayEnabled
+			}
+			if (MeshUIBindings.internetGatewayToggle.isChecked != internetGatewayEnabled) {
+				MeshUIBindings.internetGatewayToggle.isChecked = internetGatewayEnabled
+			}
+			
+			// Update storage toggle
+			val storageEnabled = meshrabiyaApi.getStorageParticipationStatus()
+			if (MeshUIBindings.storageParticipationToggle.isChecked != storageEnabled) {
+				isStorageToggleProgrammatic = true
+				MeshUIBindings.storageParticipationToggle.isChecked = storageEnabled
+				isStorageToggleProgrammatic = false
+			}
+			
+			// Update service layer toggle
+			val serviceEnabled = meshrabiyaApi.getServiceParticipationStatus("compute_node")
+			if (MeshUIBindings.serviceLayerParticipationSwitch.isChecked != serviceEnabled) {
+				isServiceToggleProgrammatic = true
+				MeshUIBindings.serviceLayerParticipationSwitch.isChecked = serviceEnabled
+				isServiceToggleProgrammatic = false
+			}
+			
+			// Load storage quota from preferences
+			val prefs = requireActivity().getPreferences(android.content.Context.MODE_PRIVATE)
+			val quotaBytes = prefs.getLong(PREF_STORAGE_QUOTA_BYTES, DEFAULT_STORAGE_QUOTA)
+			val quotaGB = quotaBytes / (1024f * 1024f * 1024f)
+			val clampedGB = quotaGB.coerceIn(1f, 50f)
+			android.util.Log.d("EnhancedMeshFragment", "Loaded storage quota from preferences: ${quotaGB}GB (clamped to ${clampedGB}GB)")
+			MeshUIBindings.storageAllocationSlider.value = clampedGB
+			MeshUIBindings.storageAllocationText.text = "${clampedGB.toInt()} GB"
+			
+			android.util.Log.d("EnhancedMeshFragment", "[DEFERRED] Deferred card UI update complete")
+		} catch (e: Exception) {
+			android.util.Log.e("EnhancedMeshFragment", "[DEFERRED] Error updating deferred card UI", e)
 		}
 	}
 	
