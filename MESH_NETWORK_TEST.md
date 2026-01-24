@@ -19,6 +19,14 @@ export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH
 
 # Install on second device (connect it, then run again)
 export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH:$ANDROID_HOME/platform-tools" && truncate -s 0 ready_state_fix_deploy.log && adb  -s LML211BL3f1c96e3   install -r app/build/outputs/apk/fullperm/debug/app-fullperm-universal-debug.apk
+
+# Phone 2 - Line-buffered tee (flushes every line)
+truncate -s 0 phone_test2.log && adb -s LML211BL3f1c96e3 logcat -v time *:V | stdbuf -oL tee phone_test2.log
+
+# OR truncate first, then run
+truncate -s 0 phone_test2.log
+adb -s LML211BL3f1c96e3 logcat -c
+adb -s LML211BL3f1c96e3 logcat -v time *:V 2>&1 | tee -a phone_test2.log
 ```
 
 ### 2. Keep One Device Connected for Monitoring
@@ -159,3 +167,10 @@ adb -s 30870044490006E logcat | grep "Current roles"
 - Watch logcat for "neighbor" and "topology"
 
 If you see "New neighbor connection" and "Topology updated: 2 nodes" in logcat within 15 seconds, **mesh networking is fully operational**. ✅
+
+adb -s LML211BL3f1c96e3 logcat -c
+adb -s 30870044490006E logcat -c
+
+adb -s LML211BL3f1c96e3 logcat -d -v time '*:V' | grep -E "VirtualNodeDatagramSocket|OriginatingMessageManager|addNeighbor|MeshrabiyaApiImpl|JOIN|RECEIVED|SENDING|📦|⬇️|⬆️|🔗|📡|📥|🤝" > phone2_complete.log
+
+adb -s 30870044490006E logcat -d -v time '*:V' | grep -E "VirtualNodeDatagramSocket|OriginatingMessageManager|addNeighbor|MeshrabiyaApiImpl|JOIN|RECEIVED|SENDING|📦|⬇️|⬆️|🔗|📡|📥|🤝" > phone1_complete.log

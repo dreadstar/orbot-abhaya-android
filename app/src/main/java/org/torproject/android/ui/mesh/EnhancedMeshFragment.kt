@@ -77,6 +77,7 @@ class EnhancedMeshFragment : Fragment() {
 	private var isMergeMeshMode = false    // True when Merge Mesh button clicked
 	private var isFlashlightOn = false
 	private var currentCamera: androidx.camera.core.Camera? = null
+	private var currentBarcodeScanner: com.google.mlkit.vision.barcode.BarcodeScanner? = null
 	private var lastScannedQRCode: String? = null
 	private var scanCooldownEndTime: Long = 0
 	
@@ -177,6 +178,11 @@ class EnhancedMeshFragment : Fragment() {
 		setupRoleObserver()
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Role observer setup complete")
 		
+		// Setup observer for network info StateFlow - auto-updates peer count and network stats
+		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Setting up network info observer...")
+		setupNetworkInfoObserver()
+		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Network info observer setup complete")
+		
 		// Initial UI update to show current mesh state
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Calling updateUI()...")
 		updateUI()
@@ -198,6 +204,15 @@ class EnhancedMeshFragment : Fragment() {
 					// Mark deferred views as initialized
 					deferredViewsInitialized = true
 					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Deferred views bound, flag set to true")
+					
+					// Update network info UI with cached value if available
+					latestNetworkInfo?.let { networkInfo ->
+						android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Updating network info UI with cached value: connectedPeers=${networkInfo.connectedPeers}")
+						MeshUIBindings.nodeInfoText.text = "IP: ${networkInfo.ipAddress}"
+						MeshUIBindings.networkStatsText.text = 
+							"Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
+					}
+					
 					// Setup listeners for deferred cards
 					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Setting up deferred card listeners...")
 					setupDeferredCardListeners()
@@ -218,6 +233,14 @@ class EnhancedMeshFragment : Fragment() {
 		super.onResume()
 		// Refresh UI when fragment becomes visible (tab switches, screen rotation, etc.)
 		updateUI()
+		
+		// Start periodic UI updates (every 2 seconds) to refresh peer count and network stats
+		viewLifecycleOwner.lifecycleScope.launch {
+			while (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
+				kotlinx.coroutines.delay(2000) // Update every 2 seconds
+				updateUI()
+			}
+		}
 	}
 	
 	override fun onDestroyView() {
@@ -227,6 +250,10 @@ class EnhancedMeshFragment : Fragment() {
 		if (isCameraActive) {
 			stopQRScanning()
 		}
+		
+		// Close barcode scanner to prevent memory leaks
+		currentBarcodeScanner?.close()
+		currentBarcodeScanner = null
 		
 		// Shutdown camera executor
 		cameraExecutor.shutdown()
@@ -274,11 +301,46 @@ class EnhancedMeshFragment : Fragment() {
 		}
 	}
 
+	/**
+	 * Setup observer for network info StateFlow to automatically update UI when network state changes
+	 */
+	private var latestNetworkInfo: NetworkInfoDto? = null
+	
+	private fun setupNetworkInfoObserver() {
+		android.util.Log.d("EnhancedMeshFragment", "[NETWORK_INFO_OBSERVER] Setting up network info observer")
+		viewLifecycleOwner.lifecycleScope.launch {
+			(meshrabiyaApi as? MeshrabiyaApiImpl)?.networkInfoFlow?.collect { networkInfo ->
+				android.util.Log.d("EnhancedMeshFragment", "[NETWORK_INFO_OBSERVER] Network info changed: connectedPeers=${networkInfo?.connectedPeers}, deferredViewsInitialized=$deferredViewsInitialized")
+				
+				// Store latest value for when deferred views are initialized
+				latestNetworkInfo = networkInfo
+				
+				// Update UI if deferred views are ready
+				if (deferredViewsInitialized && networkInfo != null) {
+					activity?.runOnUiThread {
+						android.util.Log.d("EnhancedMeshFragment", "[NETWORK_INFO_OBSERVER] Updating UI with connectedPeers=${networkInfo.connectedPeers}")
+						MeshUIBindings.nodeInfoText.text = "IP: ${networkInfo.ipAddress}"
+						MeshUIBindings.networkStatsText.text = 
+							"Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
+					}
+				}
+			}
+		}
+	}
+
 	private fun setupListeners() {
 		// Mesh toggle button with debouncing and permission checks
 		var meshOperationInProgress = false
+		
+		// Add touch listener to detect ALL touch events
+		MeshUIBindings.meshToggleButton.setOnTouchListener { v, event ->
+			android.util.Log.d("EnhancedMeshFragment", "[TOUCH] meshToggleButton touched: action=${event.action}, enabled=${v.isEnabled}, clickable=${v.isClickable}")
+			false // Return false to allow click listener to also fire
+		}
+		
 		MeshUIBindings.meshToggleButton.setOnClickListener {
-			android.util.Log.d("EnhancedMeshFragment", "Mesh toggle button clicked")
+			android.util.Log.d("EnhancedMeshFragment", "[CLICK] Mesh toggle button clicked")
+			android.util.Log.d("EnhancedMeshFragment", "[CLICK] Button state: enabled=${MeshUIBindings.meshToggleButton.isEnabled}, clickable=${MeshUIBindings.meshToggleButton.isClickable}, meshOpInProgress=$meshOperationInProgress")
 			
 			// Prevent multiple concurrent operations
 			if (meshOperationInProgress) {
@@ -309,8 +371,10 @@ class EnhancedMeshFragment : Fragment() {
 				}
 			} else {
 				// Starting mesh requires location permissions - check first
+				android.util.Log.e("EnhancedMeshFragment", "========== START MESH BUTTON CLICKED ==========")
+				android.util.Log.e("EnhancedMeshFragment", "This log MUST appear when Start Mesh is pressed")
 				if (checkLocationPermissions()) {
-					android.util.Log.d("EnhancedMeshFragment", "Permissions already granted, calling startMesh()")
+					android.util.Log.e("EnhancedMeshFragment", "Permissions granted, calling meshrabiyaApi.startMesh()")
 					meshrabiyaApi.startMesh { result ->
 						// Callback runs on background thread - must switch to main thread for UI updates
 						activity?.runOnUiThread {
@@ -318,7 +382,26 @@ class EnhancedMeshFragment : Fragment() {
 							if (result.isFailure) {
 								android.util.Log.e("EnhancedMeshFragment", "startMesh failed", result.exceptionOrNull())
 								view?.let { v ->
-									Snackbar.make(v, "Failed to start mesh: ${result.exceptionOrNull()?.message}", Snackbar.LENGTH_LONG).show()
+									val errorMessage = result.exceptionOrNull()?.message ?: "Unknown error"
+									
+									// Show AlertDialog for WiFi-related errors (more prominent)
+									if (errorMessage.contains("WiFi") || errorMessage.contains("wifi")) {
+										androidx.appcompat.app.AlertDialog.Builder(requireContext())
+											.setTitle("⚠️ WiFi Must Be Disabled")
+											.setMessage(errorMessage)
+											.setPositiveButton("Open WiFi Settings") { _, _ ->
+												try {
+													startActivity(android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS))
+												} catch (e: Exception) {
+													Snackbar.make(v, "Could not open WiFi settings", Snackbar.LENGTH_SHORT).show()
+												}
+											}
+											.setNegativeButton("Cancel", null)
+											.show()
+									} else {
+										// Show Snackbar for other errors
+										Snackbar.make(v, "Failed to start mesh: $errorMessage", Snackbar.LENGTH_LONG).show()
+									}
 								}
 							}
 							meshOperationInProgress = false
@@ -477,7 +560,26 @@ class EnhancedMeshFragment : Fragment() {
 				if (result.isFailure) {
 					android.util.Log.e("EnhancedMeshFragment", "startMesh failed", result.exceptionOrNull())
 					view?.let { v ->
-						Snackbar.make(v, "Failed to start mesh: ${result.exceptionOrNull()?.message}", Snackbar.LENGTH_LONG).show()
+						val errorMessage = result.exceptionOrNull()?.message ?: "Unknown error"
+						
+						// Show AlertDialog for WiFi-related errors (more prominent)
+						if (errorMessage.contains("WiFi") || errorMessage.contains("wifi")) {
+							androidx.appcompat.app.AlertDialog.Builder(requireContext())
+								.setTitle("⚠️ WiFi Must Be Disabled")
+								.setMessage(errorMessage)
+								.setPositiveButton("Open WiFi Settings") { _, _ ->
+									try {
+										startActivity(android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS))
+									} catch (e: Exception) {
+										Snackbar.make(v, "Could not open WiFi settings", Snackbar.LENGTH_SHORT).show()
+									}
+								}
+								.setNegativeButton("Cancel", null)
+								.show()
+						} else {
+							// Show Snackbar for other errors
+							Snackbar.make(v, "Failed to start mesh: $errorMessage", Snackbar.LENGTH_LONG).show()
+						}
 					}
 				}
 				meshOperationInProgress = false
@@ -733,10 +835,12 @@ class EnhancedMeshFragment : Fragment() {
 	 * Only displays Join or Merge button based on state (not both)
 	 */
 	private fun updateButtonStates(meshStatus: MeshStateDto) {
+		android.util.Log.d("EnhancedMeshFragment", "[BUTTON_STATE] updateButtonStates called with status: $meshStatus")
 		when (meshStatus) {
 			MeshStateDto.DISCONNECTED -> {
 				MeshUIBindings.meshToggleButton.text = "Start Mesh"
 				MeshUIBindings.meshToggleButton.isEnabled = true
+				android.util.Log.d("EnhancedMeshFragment", "[BUTTON_STATE] DISCONNECTED - button enabled, text='Start Mesh'")
 				// Show only Join button when disconnected
 				MeshUIBindings.joinMeshButton.visibility = View.VISIBLE
 				MeshUIBindings.joinMeshButton.isEnabled = true
@@ -747,6 +851,7 @@ class EnhancedMeshFragment : Fragment() {
 			MeshStateDto.CONNECTING -> {
 				MeshUIBindings.meshToggleButton.text = "Stop Mesh"
 				MeshUIBindings.meshToggleButton.isEnabled = true
+				android.util.Log.d("EnhancedMeshFragment", "[BUTTON_STATE] CONNECTING - button enabled, text='Stop Mesh', clickable=${MeshUIBindings.meshToggleButton.isClickable}")
 				// Hide both buttons while connecting
 				MeshUIBindings.joinMeshButton.visibility = View.GONE
 				MeshUIBindings.mergeMeshButton.visibility = View.GONE
@@ -756,6 +861,7 @@ class EnhancedMeshFragment : Fragment() {
 			MeshStateDto.CONNECTED -> {
 				MeshUIBindings.meshToggleButton.text = "Stop Mesh"
 				MeshUIBindings.meshToggleButton.isEnabled = true
+				android.util.Log.d("EnhancedMeshFragment", "[BUTTON_STATE] CONNECTED - button enabled, text='Stop Mesh'")
 				// Show only Merge button when connected
 				MeshUIBindings.joinMeshButton.visibility = View.GONE
 				MeshUIBindings.mergeMeshButton.visibility = View.VISIBLE
@@ -767,6 +873,7 @@ class EnhancedMeshFragment : Fragment() {
 			MeshStateDto.ERROR,
 			MeshStateDto.UNKNOWN -> {
 				MeshUIBindings.meshToggleButton.isEnabled = false
+				android.util.Log.d("EnhancedMeshFragment", "[BUTTON_STATE] ${meshStatus} - button DISABLED")
 				// Hide both buttons in error/unknown states
 				MeshUIBindings.joinMeshButton.visibility = View.GONE
 				MeshUIBindings.mergeMeshButton.visibility = View.GONE
@@ -788,7 +895,7 @@ class EnhancedMeshFragment : Fragment() {
 		
 		val hotspotInfo = meshrabiyaApi.getHotspotInfo()
 		if (hotspotInfo != null) {
-			generateAndDisplayQRCode(hotspotInfo.ssid, hotspotInfo.password)
+			generateAndDisplayQRCode(hotspotInfo.ssid, hotspotInfo.password, hotspotInfo.port)
 			// Update network info text
 			MeshUIBindings.qrCodeNetworkInfo.text = "Network: ${hotspotInfo.ssid}"
 		} else {
@@ -805,8 +912,8 @@ class EnhancedMeshFragment : Fragment() {
 	/**
 	 * Generate and display QR code
 	 */
-	private fun generateAndDisplayQRCode(ssid: String, password: String) {
-		android.util.Log.d("EnhancedMeshFragment", "generateAndDisplayQRCode(ssid=$ssid)")
+	private fun generateAndDisplayQRCode(ssid: String, password: String, port: Int) {
+		android.util.Log.d("EnhancedMeshFragment", "generateAndDisplayQRCode(ssid=$ssid, port=$port)")
 		
 		viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
 			try {
@@ -816,6 +923,7 @@ class EnhancedMeshFragment : Fragment() {
 					put("password", password)
 					put("ssidPattern", "meshr-*")
 					put("bootstrapSSID", ssid)
+					put("port", port)
 				}
 				
 				// Generate QR code using ZXing library
@@ -914,8 +1022,13 @@ class EnhancedMeshFragment : Fragment() {
 					.setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
 					.build()
 				
-				// ML Kit barcode scanner
-				val barcodeScanner = BarcodeScanning.getClient()
+				// ML Kit barcode scanner - Create NEW instance to prevent cached results
+				// Close any existing scanner first
+				currentBarcodeScanner?.close()
+				currentBarcodeScanner = BarcodeScanning.getClient()
+				val barcodeScanner = currentBarcodeScanner!!
+				
+				android.util.Log.d("EnhancedMeshFragment", "Created fresh BarcodeScanner instance")
 				
 				imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
 					val mediaImage = imageProxy.image
@@ -982,6 +1095,11 @@ class EnhancedMeshFragment : Fragment() {
 			currentCamera?.cameraControl?.enableTorch(false)
 			isFlashlightOn = false
 		}
+		
+		// Close barcode scanner to clear any cached results
+		currentBarcodeScanner?.close()
+		currentBarcodeScanner = null
+		android.util.Log.d("EnhancedMeshFragment", "Closed BarcodeScanner instance")
 		
 		// Unbind camera asynchronously
 		viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
