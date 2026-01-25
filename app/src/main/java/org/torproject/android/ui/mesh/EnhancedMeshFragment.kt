@@ -24,6 +24,7 @@ import com.ustadmobile.meshrabiya.api.MeshrabiyaApi
 import com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl
 import com.ustadmobile.meshrabiya.api.model.MeshStateDto
 import com.ustadmobile.meshrabiya.api.model.DropFolderItemDto
+import com.ustadmobile.meshrabiya.api.model.NetworkInfoDto
 import android.net.Uri
 import androidx.activity.result.ActivityResultLauncher
 import androidx.documentfile.provider.DocumentFile
@@ -206,10 +207,10 @@ class EnhancedMeshFragment : Fragment() {
 					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Deferred views bound, flag set to true")
 					
 					// Update network info UI with cached value if available
-					latestNetworkInfo?.let { networkInfo ->
+					latestNetworkInfo?.let { networkInfo: NetworkInfoDto ->
 						android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Updating network info UI with cached value: connectedPeers=${networkInfo.connectedPeers}")
 						MeshUIBindings.nodeInfoText.text = "IP: ${networkInfo.ipAddress}"
-						MeshUIBindings.networkStatsText.text = 
+						MeshUIBindings.networkStatsText.text =
 							"Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
 					}
 					
