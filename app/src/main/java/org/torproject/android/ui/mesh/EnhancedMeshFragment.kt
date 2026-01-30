@@ -50,6 +50,8 @@ import com.google.zxing.qrcode.QRCodeWriter
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlinx.coroutines.Job
+
 
 
 /**
@@ -81,6 +83,7 @@ class EnhancedMeshFragment : Fragment() {
 	private var currentBarcodeScanner: com.google.mlkit.vision.barcode.BarcodeScanner? = null
 	private var lastScannedQRCode: String? = null
 	private var scanCooldownEndTime: Long = 0
+	private lateinit var networkOverviewMetricsJob: Job
 	
 	companion object {
 		private const val PREF_STORAGE_FOLDER_URI = "mesh_storage_folder_uri"
@@ -177,7 +180,20 @@ class EnhancedMeshFragment : Fragment() {
 		// Setup observer for mesh roles StateFlow - auto-updates UI when roles change
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Setting up role observer...")
 		setupRoleObserver()
-		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Role observer setup complete")
+		// android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Role observer setup complete")
+
+		// Setup observer for mesh status StateFlow - auto-updates UI when status changes
+		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Setting up mesh status observer...")
+		viewLifecycleOwner.lifecycleScope.launch {
+			meshrabiyaApi.meshStatusFlow.collect { status ->
+				activity?.runOnUiThread {
+					MeshUIBindings.meshStatusText.text = status.toString()
+					updateButtonStates(status)
+					// Optionally update other UI elements as needed
+				}
+			}
+		}
+		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Mesh status observer setup complete")
 		
 		// Setup observer for network info StateFlow - auto-updates peer count and network stats
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Setting up network info observer...")
@@ -188,6 +204,13 @@ class EnhancedMeshFragment : Fragment() {
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Calling updateUI()...")
 		updateUI()
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] ===== onViewCreated() COMPLETE =====")
+
+		// Observe network overview metrics
+		networkOverviewMetricsJob = viewLifecycleOwner.lifecycleScope.launch {
+			(meshrabiyaApi as? com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl)?.networkOverviewMetricsFlow?.collect { metrics ->
+				updateNetworkOverviewUI(metrics)
+			}
+		}
 		
 		// Defer inflation of cards 4-9 to prevent UI thread blocking (async after 300ms)
 		android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Scheduling deferred card inflation...")
@@ -258,8 +281,20 @@ class EnhancedMeshFragment : Fragment() {
 		
 		// Shutdown camera executor
 		cameraExecutor.shutdown()
+
+		// Cancel metrics observer job
+		if (this::networkOverviewMetricsJob.isInitialized) {
+			networkOverviewMetricsJob.cancel()
+		}
+		
 	}
-	
+
+	private fun updateNetworkOverviewUI(metrics: com.ustadmobile.meshrabiya.api.model.NetworkOverviewMetricsDto) {
+		MeshUIBindings.textUploadBitrate.text = "${metrics.uploadBps} Bps"
+		MeshUIBindings.textDownloadBitrate.text = "${metrics.downloadBps} Bps"
+		MeshUIBindings.textActiveNodeCount.text = "${metrics.activeNodeCount} nodes"
+	}
+
 	/**
 	 * Setup observer for mesh roles StateFlow to automatically update UI when roles change
 	 */

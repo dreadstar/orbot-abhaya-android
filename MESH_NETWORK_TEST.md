@@ -12,7 +12,7 @@ This document describes a practical, device-based strategy to verify that the Me
 ```bash
 # From orbot-android root
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
-./gradlew assembleDebug
+: > build_output.log && export JAVA_HOME=$(/usr/libexec/java_home -v 21) && ./gradlew assembleDebug --console=plain 2>&1 | tee build_output.log
 
 # Install on connected device
 export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH:$ANDROID_HOME/platform-tools" && truncate -s 0 ready_state_fix_deploy.log && adb  -s 30870044490006E   install -r app/build/outputs/apk/fullperm/debug/app-fullperm-universal-debug.apk

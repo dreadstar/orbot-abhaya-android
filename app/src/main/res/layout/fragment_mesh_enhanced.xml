@@ -348,6 +348,7 @@
                     android:orientation="horizontal"
                     android:weightSum="3">
 
+
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -356,7 +357,7 @@
                         android:gravity="center">
 
                         <TextView
-                            android:id="@+id/activeNodesText"
+                            android:id="@+id/text_active_node_count"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="0 nodes"
@@ -379,17 +380,17 @@
                         android:gravity="center">
 
                         <TextView
-                            android:id="@+id/networkLoadText"
+                            android:id="@+id/text_upload_bitrate"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="0% load"
+                            android:text="0 Bps"
                             android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Network Load"
+                            android:text="Upload Rate"
                             android:textAppearance="@style/TextAppearance.Material3.LabelSmall" />
 
                     </LinearLayout>
@@ -402,18 +403,38 @@
                         android:gravity="center">
 
                         <TextView
-                            android:id="@+id/stabilityText"
+                            android:id="@+id/text_download_bitrate"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="0% stable"
+                            android:text="0 Bps"
                             android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Stability"
+                            android:text="Download Rate"
                             android:textAppearance="@style/TextAppearance.Material3.LabelSmall" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
 
                     </LinearLayout>
 

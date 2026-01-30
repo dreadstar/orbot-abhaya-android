@@ -1,3 +1,19 @@
+## DETAILED PLAN SPECIFICATION RULE (2026-01-25)
+
+**RULE: All agents must provide plans with exhaustive, codebase-driven research and code-level specification whenever the user requests a plan.**
+
+- When the user requests a plan (for code, refactoring, or architecture), the agent must:
+  1. **Perform exhaustive, codebase-driven research** to verify the existence, location, and signature of every class, method, property, and integration point referenced in the plan.
+  2. **Enumerate every file, field, and method** to be created or modified, specifying exact file paths and code snippets or signatures.
+  3. **Describe all wiring and propagation steps** (e.g., DTO conversion, StateFlow updates, UI observer changes) with concrete, code-level details.
+  4. **Explicitly state any assumptions** and verify them with codebase evidence before including them in the plan.
+  5. **Never omit or generalize steps**—all logic, data flow, and integration must be described at the level of actual code changes, not just high-level intent.
+  6. **Append new plans** to existing documentation without erasing or replacing prior content, unless explicitly instructed.
+  7. **Cite verification steps** for every referenced symbol, showing that each has been checked for existence and correctness.
+- This rule applies to all planning, design, and implementation requests, and supersedes any prior shortcut or summary-based planning protocols.
+
+**Intent:**  
+Guarantee that every plan is actionable, codebase-verified, and ready for direct implementation, eliminating ambiguity and ensuring agent outputs are always production-ready.
 ## NEVER ASSUME USER ERROR - CRITICAL RULE (2026-01-23)
 
 **RULE: NEVER assume the user made a testing error (not rebuilding, not deploying, cached build, wrong QR code, improper procedure, etc.)**

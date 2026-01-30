@@ -15,6 +15,9 @@ import android.widget.LinearLayout
 // import org.torproject.android.ui.mesh.adapter.FolderContentsAdapter
 
 object MeshUIBindings {
+        lateinit var textUploadBitrate: TextView
+        lateinit var textDownloadBitrate: TextView
+        lateinit var textActiveNodeCount: TextView
     lateinit var meshStatusText: TextView
     lateinit var nodeInfoText: TextView
     lateinit var meshRolesText: TextView
@@ -75,8 +78,8 @@ object MeshUIBindings {
     lateinit var torGatewayStatus: TextView
     lateinit var internetGatewayStatus: TextView
     lateinit var activeNodesText: TextView
-    lateinit var networkLoadText: TextView
-    lateinit var stabilityText: TextView
+    // lateinit var networkLoadText: TextView
+    // lateinit var stabilityText: TextView
 
     fun bindImmediateViews(view: View) {
         // Cards 1-3: Always present in initial layout
@@ -114,9 +117,11 @@ object MeshUIBindings {
         
         // Network overview card (Card 3 - always immediate)
         networkOverviewCard = view.findViewById(R.id.networkOverviewCard)
-        activeNodesText = view.findViewById(R.id.activeNodesText)
-        networkLoadText = view.findViewById(R.id.networkLoadText)
-        stabilityText = view.findViewById(R.id.stabilityText)
+        textUploadBitrate = view.findViewById(R.id.text_upload_bitrate)
+        textDownloadBitrate = view.findViewById(R.id.text_download_bitrate)
+        textActiveNodeCount = view.findViewById(R.id.text_active_node_count)
+        // networkLoadText = view.findViewById(R.id.networkLoadText)
+        // stabilityText = view.findViewById(R.id.stabilityText)
     }
     
     fun bindDeferredViews(view: View) {
