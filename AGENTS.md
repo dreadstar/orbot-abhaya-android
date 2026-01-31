@@ -1,3 +1,54 @@
+## DETAILED PLAN SPECIFICATION RULE (2026-01-25)
+
+**RULE: All agents must provide plans with exhaustive, codebase-driven research and code-level specification whenever the user requests a plan.**
+
+- When the user requests a plan (for code, refactoring, or architecture), the agent must:
+  1. **Perform exhaustive, codebase-driven research** to verify the existence, location, and signature of every class, method, property, and integration point referenced in the plan.
+  2. **Enumerate every file, field, and method** to be created or modified, specifying exact file paths and code snippets or signatures.
+  3. **Describe all wiring and propagation steps** (e.g., DTO conversion, StateFlow updates, UI observer changes) with concrete, code-level details.
+  4. **Explicitly state any assumptions** and verify them with codebase evidence before including them in the plan.
+  5. **Never omit or generalize steps**—all logic, data flow, and integration must be described at the level of actual code changes, not just high-level intent.
+  6. **Append new plans** to existing documentation without erasing or replacing prior content, unless explicitly instructed.
+  7. **Cite verification steps** for every referenced symbol, showing that each has been checked for existence and correctness.
+- This rule applies to all planning, design, and implementation requests, and supersedes any prior shortcut or summary-based planning protocols.
+
+**Intent:**  
+Guarantee that every plan is actionable, codebase-verified, and ready for direct implementation, eliminating ambiguity and ensuring agent outputs are always production-ready.
+## NEVER ASSUME USER ERROR - CRITICAL RULE (2026-01-23)
+
+**RULE: NEVER assume the user made a testing error (not rebuilding, not deploying, cached build, wrong QR code, improper procedure, etc.)**
+
+- If you think the user may not have rebuilt/deployed correctly, perform a DEEPER ANALYSIS of the actual issue instead of asking
+- If you think there may be cached build objects, check the actual code logic more carefully instead of suggesting a rebuild
+- If you think the user scanned the wrong QR code, trust their statement and analyze why the logs don't match expectations
+- When the user reports unexpected behavior, assume YOUR IMPLEMENTATION has a bug, not their testing procedure
+- Expand your analysis context wider (more files, more code paths, more state checks) before concluding
+- **The user knows how to build, deploy, force quit, and test properly - do not waste their time questioning this**
+
+**When to break this rule:** NEVER. If absolutely necessary to confirm build status, check timestamps in logs or ask ONCE with specific evidence.
+
+**Date Added:** 2026-01-23  
+**Trigger:** Agent wasted user's time asking "did you rebuild?" when the actual issue was incomplete logic in getMeshStatus() not checking for active connections.
+
+---
+## PHONE 2 CLOCK INCORRECT - LOG CORRELATION RULE (2026-01-21)
+
+**RULE: Phone 2 (LML211BL3f1c96e3) has an incorrect system clock. Logs from Phone 2 will have incorrect timestamps.**
+
+- Never correlate logs by timestamp between Phone 1 and Phone 2
+- Always correlate logs by EVENTS (QR scan, connection attempts, packet sequences)
+- User always scans QR code from Phone 1's screen - there are no "old QR codes"
+- User force quits both apps before each test
+- User verifies QR displayed on Phone 1 matches network info before scanning
+- Trust user's observations of Android WiFi settings over log statements
+- **DO NOT QUESTION IF USER IS TESTING CORRECTLY - EVER**
+- User does not have "extra QR codes laying around" - Phone 2 always scans from Phone 1's current display
+- When user says "network was AndroidShare_XXXX", that is the ACTUAL network displayed, not an assumption
+
+**Date Added:** 2026-01-21
+**Trigger:** Agent repeatedly questioned test methodology despite user confirming proper procedure.
+
+---
 
 ## PATCH ANCHORING AND IMPORT PLACEMENT RULE (2025-12-100)
 

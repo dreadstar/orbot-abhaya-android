@@ -23,6 +23,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.Executors
+import com.ustadmobile.meshrabiya.api.MeshrabiyaApi
+import com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl
 
 // DataStore extension property
 private val Context.meshDataStore: DataStore<Preferences> by preferencesDataStore(name = "mesh_settings")
@@ -84,32 +86,16 @@ class OrbotApp : Application() {
             try {
                 android.util.Log.d("OrbotApp", "onCreate() - Starting Meshrabiya integration")
                 
-                android.util.Log.d("OrbotApp", "onCreate() - Creating mesh logger")
-                meshLogger = MNetLoggerStdout() // Use concrete implementation
-                android.util.Log.d("OrbotApp", "onCreate() - Mesh logger created")
+                // Get MeshrabiyaApi singleton
+                val meshApi = MeshrabiyaApiImpl.getInstance()
+                meshApi.provideAppContext(applicationContext)
                 
-                android.util.Log.d("OrbotApp", "onCreate() - Creating mesh JSON")
-                meshJson = Json { encodeDefaults = true }
-                android.util.Log.d("OrbotApp", "onCreate() - Mesh JSON created")
+                // Initialize mesh infrastructure (creates VirtualNode, managers, etc.)
+                // NOTE: This is the ONLY place in the entire app where initMesh() should be called
+                android.util.Log.d("OrbotApp", "onCreate() - Calling initMesh()")
+                meshApi.initMesh(applicationContext)
+                android.util.Log.d("OrbotApp", "onCreate() - Mesh initialization completed")
                 
-                android.util.Log.d("OrbotApp", "onCreate() - Creating mesh DataStore")
-                // Create DataStore for mesh preferences  
-                val meshDataStore = applicationContext.meshDataStore
-                android.util.Log.d("OrbotApp", "onCreate() - Mesh DataStore created")
-                
-                android.util.Log.d("OrbotApp", "onCreate() - Creating mesh executor")
-                // Create executor service for mesh operations
-                val meshExecutor = Executors.newScheduledThreadPool(2)
-                android.util.Log.d("OrbotApp", "onCreate() - Mesh executor created")
-                
-                android.util.Log.d("OrbotApp", "onCreate() - Creating AndroidVirtualNode")
-                virtualNode = AndroidVirtualNode(
-                    appContext = applicationContext,
-                    logger = meshLogger,
-                    json = meshJson,
-                    dataStore = meshDataStore
-                )
-                android.util.Log.d("OrbotApp", "onCreate() - AndroidVirtualNode created successfully")
             } catch (e: Exception) {
                 android.util.Log.e("OrbotApp", "onCreate() - Exception in Meshrabiya integration", e)
                 // Don't let mesh setup failure crash the app

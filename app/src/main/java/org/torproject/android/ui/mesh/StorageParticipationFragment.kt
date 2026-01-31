@@ -9,9 +9,9 @@ import androidx.fragment.app.Fragment
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import com.ustadmobile.meshrabiya.storage.*
-import com.ustadmobile.meshrabiya.api.StorageAllocationDto
-import com.ustadmobile.meshrabiya.api.StorageDeviceDto
-import com.ustadmobile.meshrabiya.api.getFormattedAvailableSpace
+import com.ustadmobile.meshrabiya.api.model.StorageAllocationDto
+import com.ustadmobile.meshrabiya.api.model.StorageDeviceDto
+import com.ustadmobile.meshrabiya.api.model.getFormattedAvailableSpace
 /**
  * Android Fragment implementation of your excellent storage participation UI
  * Integrates with the distributed storage system and mesh role management

@@ -12,13 +12,22 @@ This document describes a practical, device-based strategy to verify that the Me
 ```bash
 # From orbot-android root
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
-./gradlew assembleDebug
+: > build_output.log && export JAVA_HOME=$(/usr/libexec/java_home -v 21) && ./gradlew assembleDebug --console=plain 2>&1 | tee build_output.log
 
 # Install on connected device
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH:$ANDROID_HOME/platform-tools" && truncate -s 0 ready_state_fix_deploy.log && adb  -s 30870044490006E   install -r app/build/outputs/apk/fullperm/debug/app-fullperm-universal-debug.apk
 
 # Install on second device (connect it, then run again)
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH:$ANDROID_HOME/platform-tools" && truncate -s 0 ready_state_fix_deploy.log && adb  -s LML211BL3f1c96e3   install -r app/build/outputs/apk/fullperm/debug/app-fullperm-universal-debug.apk
+
+truncate -s 0 phone_test.log && adb -s 30870044490006E logcat -v time *:V | stdbuf -oL tee phone_test.log
+# Phone 2 - Line-buffered tee (flushes every line)
+truncate -s 0 phone_test2.log && adb -s LML211BL3f1c96e3 logcat -v time *:V | stdbuf -oL tee phone_test2.log
+
+# OR truncate first, then run
+truncate -s 0 phone_test2.log
+adb -s LML211BL3f1c96e3 logcat -c
+adb -s LML211BL3f1c96e3 logcat -v time *:V 2>&1 | tee -a phone_test2.log
 ```
 
 ### 2. Keep One Device Connected for Monitoring
@@ -37,7 +46,14 @@ Your device ID: `30870044490006E`
 # Monitor mesh-specific logs from your connected device
 adb -s 30870044490006E logcat | grep -E "(Meshrabiya|VirtualNode|EmergentRole|MMCP|OriginatingMessage|AndroidVirtualNode)"
 ```
+```bash
+: > build_output.log && export JAVA_HOME=$(/usr/libexec/java_home -v 21) && ./gradlew assembleFullpermDebug  --console=plain 2>&1 | tee build_output.log
+ export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH:$ANDROID_HOME/platform-tools" && truncate -s 0 ready_state_fix_deploy.log && adb install -r app/build/outputs/apk/fullperm/debug/app-fullperm-universal-debug.apk | tee ready_state_fix_deploy.log
+adb logcat -c && truncate -s 0 ./phone_test.log &&  adb logcat | tee ./phone_test.log
+```
+truncate -s 0 ./phone_test.log &&  adb  -s 30870044490006E logcat -c &&  adb  -s 30870044490006E logcat -v time *:V | tee phone_test.log
 
+truncate -s 0 ./phone_test2.log &&  adb  -s LML211BL3f1c96e3 logcat -c &&  adb  -s LML211BL3f1c96e3 logcat -v time *:V | tee phone_test2.log
 ---
 
 ## Testing Procedure
@@ -152,3 +168,10 @@ adb -s 30870044490006E logcat | grep "Current roles"
 - Watch logcat for "neighbor" and "topology"
 
 If you see "New neighbor connection" and "Topology updated: 2 nodes" in logcat within 15 seconds, **mesh networking is fully operational**. ✅
+
+adb -s LML211BL3f1c96e3 logcat -c
+adb -s 30870044490006E logcat -c
+
+adb -s LML211BL3f1c96e3 logcat -d -v time '*:V' | grep -E "VirtualNodeDatagramSocket|OriginatingMessageManager|addNeighbor|MeshrabiyaApiImpl|JOIN|RECEIVED|SENDING|📦|⬇️|⬆️|🔗|📡|📥|🤝" > phone2_complete.log
+
+adb -s 30870044490006E logcat -d -v time '*:V' | grep -E "VirtualNodeDatagramSocket|OriginatingMessageManager|addNeighbor|MeshrabiyaApiImpl|JOIN|RECEIVED|SENDING|📦|⬇️|⬆️|🔗|📡|📥|🤝" > phone1_complete.log
