@@ -25,9 +25,13 @@ import com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl
 import com.ustadmobile.meshrabiya.api.model.MeshStateDto
 import com.ustadmobile.meshrabiya.api.model.DropFolderItemDto
 import com.ustadmobile.meshrabiya.api.model.NetworkInfoDto
+import com.ustadmobile.meshrabiya.api.model.BroadcastReceivedDto
 import android.net.Uri
 import androidx.activity.result.ActivityResultLauncher
 import androidx.documentfile.provider.DocumentFile
+import android.widget.TextView
+import android.widget.Toast
+import android.util.Log
 
 // QR Code generation and Camera scanning
 import android.graphics.Bitmap
@@ -61,6 +65,7 @@ import kotlinx.coroutines.Job
 class EnhancedMeshFragment : Fragment() {
 
 	private lateinit var meshrabiyaApi: MeshrabiyaApi
+	private lateinit var broadcastListener: (com.ustadmobile.meshrabiya.api.model.BroadcastReceivedDto) -> Unit
 	
 	// Track whether deferred views (cards 4-9) have been initialized via ViewStub
 	private var deferredViewsInitialized = false
@@ -68,6 +73,22 @@ class EnhancedMeshFragment : Fragment() {
 	// Folder picker for storage allocation
 	private lateinit var folderPickerLauncher: ActivityResultLauncher<Uri?>
 	private var selectedFolderUri: Uri? = null
+	
+	// File picker for broadcast attachments (must be registered before onCreate)
+	private val broadcastFilePicker = registerForActivityResult(
+		ActivityResultContracts.OpenDocument()
+	) { uri: Uri? ->
+		uri?.let {
+			handleBroadcastFileSelected(it)
+		}
+	}
+	
+	private var pendingFileCallback: ((Uri) -> Unit)? = null
+	
+	private fun handleBroadcastFileSelected(uri: Uri) {
+		pendingFileCallback?.invoke(uri)
+		pendingFileCallback = null
+	}
 	
 	// Flags to prevent recursive toggle updates from programmatic changes
 	private var isStorageToggleProgrammatic = false
@@ -91,6 +112,57 @@ class EnhancedMeshFragment : Fragment() {
 		private const val DEFAULT_STORAGE_QUOTA = 100_000_000L // 100MB default
 		private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
 	}
+
+	    /**
+     * Convert content:// URI to file system path
+     * Required for configuring drop folder with meshrabiya API
+     */
+    private fun getFilePathFromUri(uri: Uri): String? {
+        return try {
+            // For DocumentTree URIs (from folder picker), use the tree document ID
+            val docId = android.provider.DocumentsContract.getTreeDocumentId(uri)
+            
+            // Try to get real path from document provider
+            val contentResolver = requireContext().contentResolver
+            val cursor = contentResolver.query(
+                android.provider.DocumentsContract.buildDocumentUriUsingTree(uri, docId),
+                arrayOf(android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+                null, null, null
+            )
+            
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    // For now, use the app's external files directory + folder name
+                    // This is a workaround since content:// URIs don't map directly to filesystem paths
+                    val folderName = it.getString(0)
+                    val appFolder = requireContext().getExternalFilesDir(null)
+                    val broadcastFolder = java.io.File(appFolder, "broadcasts")
+                    if (!broadcastFolder.exists()) {
+                        broadcastFolder.mkdirs()
+                    }
+                    android.util.Log.d("EnhancedMeshFragment", "Using broadcast folder: ${broadcastFolder.absolutePath}")
+                    return broadcastFolder.absolutePath
+                }
+            }
+            
+            // Fallback: use app's external files directory
+            val fallbackFolder = java.io.File(requireContext().getExternalFilesDir(null), "broadcasts")
+            if (!fallbackFolder.exists()) {
+                fallbackFolder.mkdirs()
+            }
+            android.util.Log.d("EnhancedMeshFragment", "Using fallback broadcast folder: ${fallbackFolder.absolutePath}")
+            fallbackFolder.absolutePath
+            
+        } catch (e: Exception) {
+            android.util.Log.e("EnhancedMeshFragment", "Error converting URI to path: ${e.message}")
+            // Last resort fallback
+            val fallbackFolder = java.io.File(requireContext().getExternalFilesDir(null), "broadcasts")
+            if (!fallbackFolder.exists()) {
+                fallbackFolder.mkdirs()
+            }
+            fallbackFolder.absolutePath
+        }
+    }
 	
 	// Permission launcher for runtime location permission requests
 	private val requestLocationPermissionLauncher = registerForActivityResult(
@@ -142,6 +214,23 @@ class EnhancedMeshFragment : Fragment() {
 				
 				android.util.Log.d("EnhancedMeshFragment", "Folder selected: $it")
 				
+				// Configure drop folder for broadcast file reception
+                try {
+                    val folderPath = getFilePathFromUri(it)
+                    if (folderPath != null) {
+                        meshrabiyaApi.selectDropFolder(folderPath) { result ->
+                            result.onSuccess {
+                                android.util.Log.i("EnhancedMeshFragment", "Drop folder configured for broadcasts: $folderPath")
+                            }.onFailure { error ->
+                                android.util.Log.e("EnhancedMeshFragment", "Failed to configure drop folder: ${error.message}")
+                            }
+                        }
+                    } else {
+                        android.util.Log.w("EnhancedMeshFragment", "Could not convert URI to file path for drop folder")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("EnhancedMeshFragment", "Error configuring drop folder: ${e.message}")
+                }
 				// Update storage allocation
 				updateStorageAllocation(it)
 				
@@ -209,6 +298,76 @@ class EnhancedMeshFragment : Fragment() {
 		networkOverviewMetricsJob = viewLifecycleOwner.lifecycleScope.launch {
 			(meshrabiyaApi as? com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl)?.networkOverviewMetricsFlow?.collect { metrics ->
 				updateNetworkOverviewUI(metrics)
+			}
+		}
+		
+		// Broadcast listener - receives broadcasts from the mesh network
+        broadcastListener = { broadcast: BroadcastReceivedDto ->
+            lifecycleScope.launch(Dispatchers.Main) {
+                // Check for receive error (drop folder not set)
+                if (broadcast.hasError) {
+                    val errorMessage = broadcast.errorMessage ?: "Failed to receive file"
+                    Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
+                    
+                    // Log error to console
+                    android.util.Log.e("EnhancedMeshFragment", "Broadcast error: ${broadcast.errorMessage}")
+                    
+                    // Show error snackbar with action to go to drop folder settings
+                    view?.let { fragmentView ->
+                        Snackbar.make(
+                            fragmentView,
+                            "File broadcast failed: $errorMessage",
+                            Snackbar.LENGTH_LONG
+                        ).setAction("Set Folder") {
+                            folderPickerLauncher.launch(null)
+                        }.show()
+                    }
+                } else {
+                    // Success case
+                    val message = if (broadcast.fileName.isNotBlank() && broadcast.filePath.isNotBlank()) {
+                        "Message from node ${broadcast.senderNodeId}: ${broadcast.messageText}\n" +
+                                "File: ${broadcast.fileName} saved to ${broadcast.filePath}"
+                    } else {
+                        "Message from node ${broadcast.senderNodeId}: ${broadcast.messageText}"
+                    }
+                    
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                    
+                    // Log the broadcast notification to console
+                    android.util.Log.e("EnhancedMeshFragment", "Broadcast ${broadcast.broadcastId}: file saved to ${broadcast.filePath}")
+            
+                    
+                    // Show snackbar
+                    view?.let { fragmentView ->
+                        Snackbar.make(
+                            fragmentView,
+                            message,
+                            Snackbar.LENGTH_LONG
+                        ).setAction("View") {
+                            // Could navigate to received file or show details
+                            Toast.makeText(requireContext(), "Viewing broadcast details", Toast.LENGTH_SHORT).show()
+                        }.show()
+                    }
+                }
+			}
+            
+        }
+		meshrabiyaApi.registerBroadcastListener(broadcastListener)
+		
+		// Register broadcast success handler
+		meshrabiyaApi.setOnBroadcastSent { result ->
+			activity?.runOnUiThread {
+				android.util.Log.d("EnhancedMeshFragment", "Broadcast sent: ${result.broadcastId}, ${result.successNodeIds.size} nodes reached")
+			}
+		}
+		
+		// Register broadcast failure handler
+		meshrabiyaApi.setOnBroadcastFailed { broadcastId, error ->
+			activity?.runOnUiThread {
+				android.util.Log.e("EnhancedMeshFragment", "Broadcast failed: $broadcastId", error)
+				view?.let { v ->
+					Snackbar.make(v, "Broadcast failed: ${error.message}", Snackbar.LENGTH_LONG).show()
+				}
 			}
 		}
 		
@@ -285,6 +444,11 @@ class EnhancedMeshFragment : Fragment() {
 		// Cancel metrics observer job
 		if (this::networkOverviewMetricsJob.isInitialized) {
 			networkOverviewMetricsJob.cancel()
+		}
+		
+		// Unregister broadcast listener
+		if (this::broadcastListener.isInitialized) {
+			meshrabiyaApi.unregisterBroadcastListener(broadcastListener)
 		}
 		
 	}
@@ -459,6 +623,11 @@ class EnhancedMeshFragment : Fragment() {
 		// Refresh button
 		MeshUIBindings.refreshButton.setOnClickListener {
 			updateUI()
+		}
+		
+		// Send Broadcast button
+		MeshUIBindings.sendBroadcastButton.setOnClickListener {
+			showBroadcastDialog()
 		}
 		
 		// ========================================
@@ -883,6 +1052,8 @@ class EnhancedMeshFragment : Fragment() {
 				MeshUIBindings.mergeMeshButton.visibility = View.GONE
 				// Hide expand indicator when disconnected
 				MeshUIBindings.expandCollapseIndicator.visibility = View.GONE
+				// Disable broadcast button when disconnected
+				MeshUIBindings.sendBroadcastButton.isEnabled = false
 			}
 			MeshStateDto.CONNECTING -> {
 				MeshUIBindings.meshToggleButton.text = "Stop Mesh"
@@ -893,6 +1064,8 @@ class EnhancedMeshFragment : Fragment() {
 				MeshUIBindings.mergeMeshButton.visibility = View.GONE
 				// Show expand indicator for QR code when connecting/connected
 				MeshUIBindings.expandCollapseIndicator.visibility = View.VISIBLE
+				// Disable broadcast button while connecting
+				MeshUIBindings.sendBroadcastButton.isEnabled = false
 			}
 			MeshStateDto.CONNECTED -> {
 				MeshUIBindings.meshToggleButton.text = "Stop Mesh"
@@ -904,6 +1077,8 @@ class EnhancedMeshFragment : Fragment() {
 				MeshUIBindings.mergeMeshButton.isEnabled = true
 				// Show expand indicator for QR code when connected
 				MeshUIBindings.expandCollapseIndicator.visibility = View.VISIBLE
+				// Enable broadcast button when CONNECTED
+				MeshUIBindings.sendBroadcastButton.isEnabled = true
 			}
 			MeshStateDto.INITIALIZING,
 			MeshStateDto.ERROR,
@@ -915,17 +1090,181 @@ class EnhancedMeshFragment : Fragment() {
 				MeshUIBindings.mergeMeshButton.visibility = View.GONE
 				// Hide expand indicator in error states
 				MeshUIBindings.expandCollapseIndicator.visibility = View.GONE
+				// Disable broadcast button in error states
+				MeshUIBindings.sendBroadcastButton.isEnabled = false
 			}
 		}
 	}
 	
-	// ========================================
-	// QR CODE GENERATION METHODS
-	// ========================================
-	
 	/**
-	 * Show current network QR code
+	 * Show broadcast message+file dialog
 	 */
+	private fun showBroadcastDialog() {
+		val dialogView = layoutInflater.inflate(R.layout.dialog_broadcast, null)
+		
+		// Find views
+		val messageInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.broadcastMessageInput)
+		val messageCounterText = dialogView.findViewById<TextView>(R.id.messageCharacterCounter)
+		val fileNameText = dialogView.findViewById<TextView>(R.id.selectedFileNameText)
+		 val selectFileButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.selectFileButton)
+        val clearFileButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.clearFileButton)
+        val selectedFileContainer = dialogView.findViewById<android.view.ViewGroup>(R.id.selectedFileContainer)
+        val sendButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.sendBroadcastDialogButton)
+		val progressBar = dialogView.findViewById<com.google.android.material.progressindicator.CircularProgressIndicator>(R.id.sendProgressIndicator)
+		val errorText = dialogView.findViewById<TextView>(R.id.errorMessageText)
+		
+		// Track selected file
+		var selectedFileUri: Uri? = null
+		
+		// Local function to update send button state
+		fun updateSendButtonState() {
+			val messageLength = messageInput.text?.length ?: 0
+			val hasMessage = messageLength > 0 && messageLength <= 500
+			val hasFile = selectedFileUri != null
+			sendButton.isEnabled = hasMessage || hasFile
+		}
+		
+		// Set up file selection callback for pre-registered launcher
+		pendingFileCallback = { uri ->
+            android.util.Log.d("EnhancedMeshFragment", "File selection callback invoked, URI: $uri")
+            selectedFileUri = uri
+            // Get file name from URI
+            val docFile = DocumentFile.fromSingleUri(requireContext(), uri)
+            android.util.Log.d("EnhancedMeshFragment", "DocumentFile: $docFile, name: ${docFile?.name}")
+            val fileName = docFile?.name ?: "Unknown file"
+            android.util.Log.d("EnhancedMeshFragment", "Setting fileName text to: $fileName")
+            fileNameText.text = fileName
+            selectedFileContainer.visibility = View.VISIBLE  // Show parent container
+            android.util.Log.d("EnhancedMeshFragment", "File name display updated, container visibility: ${selectedFileContainer.visibility}")
+            updateSendButtonState()
+        }
+		
+		// Character counter update
+		messageInput.addTextChangedListener(object : android.text.TextWatcher {
+			override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+			override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+			override fun afterTextChanged(s: android.text.Editable?) {
+				val length = s?.length ?: 0
+				messageCounterText.text = "$length / 500"
+				
+				// Show red if exceeds limit
+				if (length > 500) {
+					messageCounterText.setTextColor(android.graphics.Color.RED)
+				} else {
+					messageCounterText.setTextColor(
+						android.content.res.Resources.getSystem()
+							.getColor(android.R.color.darker_gray, null)
+					)
+				}
+				
+				updateSendButtonState()
+			}
+		})
+		
+		// Select file button - use pre-registered launcher
+		selectFileButton.setOnClickListener {
+			// Launch file picker with all MIME types
+			broadcastFilePicker.launch(arrayOf("*/*"))
+		}
+		
+		// Clear file button
+		clearFileButton.setOnClickListener {
+            selectedFileUri = null
+            selectedFileContainer.visibility = View.GONE  // Hide parent container
+            updateSendButtonState()
+        }
+		
+		
+		
+		// Create dialog
+		        // Create dialog
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Send Broadcast")
+            .setView(dialogView)
+            .setPositiveButton("Cancel", null)
+            .create()
+
+		// Clean up callback when dialog is dismissed
+        dialog.setOnDismissListener {
+            pendingFileCallback = null
+        }
+		
+		// Send button
+		sendButton.setOnClickListener {
+			val messageText = messageInput.text?.toString() ?: ""
+			
+			// Validate input
+			if (messageText.isEmpty() && selectedFileUri == null) {
+				errorText.text = "Please enter a message or select a file"
+				errorText.visibility = View.VISIBLE
+				return@setOnClickListener
+			}
+			
+			if (messageText.length > 500) {
+				errorText.text = "Message exceeds 500 character limit"
+				errorText.visibility = View.VISIBLE
+				return@setOnClickListener
+			}
+			
+			// Get file path from URI (if file selected)
+			var filePath = ""
+			selectedFileUri?.let { uri ->
+				try {
+					// Copy file to cache directory to get absolute path
+					val inputStream = requireContext().contentResolver.openInputStream(uri)
+					val fileName = DocumentFile.fromSingleUri(requireContext(), uri)?.name ?: "broadcast_file"
+					val cacheFile = java.io.File(requireContext().cacheDir, fileName)
+					inputStream?.use { input ->
+						cacheFile.outputStream().use { output ->
+							input.copyTo(output)
+						}
+					}
+					filePath = cacheFile.absolutePath
+				} catch (e: Exception) {
+					errorText.text = "Failed to access file: ${e.message}"
+					errorText.visibility = View.VISIBLE
+					return@setOnClickListener
+				}
+			}
+			
+			// Show progress indicator
+			progressBar.visibility = View.VISIBLE
+			sendButton.isEnabled = false
+			errorText.visibility = View.GONE
+			
+			// Call API (using lifecycle scope to launch coroutine)
+			viewLifecycleOwner.lifecycleScope.launch {
+				try {
+					meshrabiyaApi.broadcastMessageAndFile(messageText, filePath)
+					// Success - close dialog (handler will show notification)
+					activity?.runOnUiThread {
+						dialog.dismiss()
+						view?.let { v ->
+							Snackbar.make(v, "Broadcast sent successfully", Snackbar.LENGTH_SHORT).show()
+						}
+					}
+				} catch (e: Exception) {
+					// Error - show in dialog (stay open)
+					activity?.runOnUiThread {
+						progressBar.visibility = View.GONE
+						sendButton.isEnabled = true
+						errorText.text = "Failed to send: ${e.message}"
+						errorText.visibility = View.VISIBLE
+					}
+				}
+			}
+		}
+		
+		
+		// Initial button state
+		updateSendButtonState()
+		
+		// Show dialog
+		dialog.show()
+	}
+	
+	
+	
 	private fun showCurrentNetworkQR() {
 		android.util.Log.d("EnhancedMeshFragment", "showCurrentNetworkQR() called")
 		

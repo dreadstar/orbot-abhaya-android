@@ -22,7 +22,7 @@ export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH
 
 truncate -s 0 phone_test.log && adb -s 30870044490006E logcat -v time *:V | stdbuf -oL tee phone_test.log
 # Phone 2 - Line-buffered tee (flushes every line)
-truncate -s 0 phone_test2.log && adb -s LML211BL3f1c96e3 logcat -v time *:V | stdbuf -oL tee phone_test2.log
+export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH:$ANDROID_HOME/platform-tools" && truncate -s 0 phone_test2.log && adb -s LML211BL3f1c96e3 logcat -v time *:V | stdbuf -oL tee phone_test2.log
 
 # OR truncate first, then run
 truncate -s 0 phone_test2.log

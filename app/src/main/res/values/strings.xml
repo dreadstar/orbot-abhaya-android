@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">Orbot</string>
     <string name="app_description">Orbot is a free proxy app that empowers other apps to use the internet more securely. Orbot uses Tor to encrypt your Internet traffic and then hides it by bouncing through a series of computers around the world. Tor is free software and an open network that helps you defend against a form of network surveillance that threatens personal freedom and privacy, confidential business activities and relationships, and state security known as traffic analysis.</string>
+    <string name="notifications">Notifications</string>
     <string name="menu_settings">Orbot Settings</string>
     <string name="system_vpn_settings">Android VPN Settings</string>
     <string name="menu_log">Log</string>
@@ -236,6 +237,7 @@
     <string name="mesh_peers_none">No peers connected</string>
     <string name="mesh_peers_count">Connected to %d peers</string>
     <string name="refresh_mesh_status">Refresh Status</string>
+    <string name="send_broadcast">Send Broadcast</string>
     <string name="pref_detect_root_title">Root Detection</string>
 
     <!-- Storage Drop Folder Strings -->

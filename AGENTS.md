@@ -1,3 +1,45 @@
+## LARGE FILE MANUAL EDIT RULE (2026-02-02)
+
+**RULE: For any file exceeding 800 lines, agents must NOT attempt direct edits using replace_string_in_file or multi_replace_string_in_file tools.**
+
+When a file is longer than 800 lines and requires modification, agents must:
+
+1. **Present the change as a code snippet** with BEFORE and AFTER sections
+2. **Include sufficient context** (minimum 5 lines before and after the change location)
+3. **Specify exact line numbers** where the change should be made
+4. **Include the full file path** (absolute path)
+5. **Explain what the change accomplishes** and why it's needed
+6. **Wait for user to implement** the change manually
+
+**Rationale:**
+- Large files have complex formatting, indentation, and whitespace patterns that are difficult for agents to match exactly
+- Tab vs. space mismatches cause repeated tool failures
+- Manual implementation is faster and more reliable than multiple failed tool attempts
+- User can verify context and formatting while making the change
+- Reduces token waste on failed replacement attempts
+
+**Exceptions:**
+- None. This rule is absolute for files > 800 lines.
+
+**Format for presenting changes:**
+```
+**File:** [absolute path]
+**Location:** Lines X-Y
+
+**BEFORE (Lines X-Y):**
+[exact code with context]
+
+**AFTER (Lines X-Y):**
+[exact code with modification and context]
+
+**Purpose:** [explanation of what this fixes/implements]
+```
+
+**Date Added:** 2026-02-02  
+**Trigger:** Multiple failed attempts to edit EnhancedMeshFragment.kt (1752 lines) due to whitespace matching issues, wasting significant token budget and user time.
+
+---
+
 ## DETAILED PLAN SPECIFICATION RULE (2026-01-25)
 
 **RULE: All agents must provide plans with exhaustive, codebase-driven research and code-level specification whenever the user requests a plan.**
@@ -14,6 +56,9 @@
 
 **Intent:**  
 Guarantee that every plan is actionable, codebase-verified, and ready for direct implementation, eliminating ambiguity and ensuring agent outputs are always production-ready.
+
+---
+
 ## NEVER ASSUME USER ERROR - CRITICAL RULE (2026-01-23)
 
 **RULE: NEVER assume the user made a testing error (not rebuilding, not deploying, cached build, wrong QR code, improper procedure, etc.)**

@@ -458,4 +458,20 @@ class OrbotActivity : BaseActivity() {
             logBottomSheet.show(supportFragmentManager, OrbotActivity::class.java.simpleName)
         }
     }
+
+    override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
+        menuInflater.inflate(R.menu.main_toolbar, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_notifications -> {
+                // TODO: Open notifications panel/activity
+                showToast("Notifications feature coming soon")
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
 }
