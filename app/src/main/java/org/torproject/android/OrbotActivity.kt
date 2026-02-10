@@ -38,6 +38,8 @@ import org.torproject.android.ui.more.LogBottomSheet
 import org.torproject.android.ui.connect.ConnectViewModel
 import org.torproject.android.ui.core.DeviceAuthenticationPrompt
 import java.util.Locale
+import org.torproject.android.ui.mesh.EnhancedMeshFragment
+import org.torproject.android.ui.mesh.NotificationsAdapter
 
 class OrbotActivity : BaseActivity() {
 
@@ -58,6 +60,9 @@ class OrbotActivity : BaseActivity() {
 
     private val connectViewModel: ConnectViewModel by viewModels()
 
+    // Notification badge for broadcast notifications
+    private var notificationBadge: android.widget.TextView? = null
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         android.util.Log.d("OrbotActivity", "onCreate() - START")
         
@@ -461,17 +466,59 @@ class OrbotActivity : BaseActivity() {
 
     override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
         menuInflater.inflate(R.menu.main_toolbar, menu)
+        // Initialize notification badge reference from custom action view
+        val actionView = menu?.findItem(R.id.action_notifications)?.actionView
+        notificationBadge = actionView?.findViewById(R.id.notification_badge)
+        
+        // Set click listener on the action view to show notifications dialog
+        actionView?.setOnClickListener {
+            showNotificationsDialog()
+        }
         return true
     }
 
-    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_notifications -> {
-                // TODO: Open notifications panel/activity
-                showToast("Notifications feature coming soon")
-                true
+    /**
+     * Show dialog with list of received broadcast notifications
+     */
+    private fun showNotificationsDialog() {
+        val fragment = supportFragmentManager.findFragmentByTag("MESH_FRAGMENT") as? EnhancedMeshFragment
+        val notifications = fragment?.getReceivedBroadcasts() ?: emptyList()
+        
+        if (notifications.isEmpty()) {
+            showToast("No notifications yet")
+            return
+        }
+        
+        // Create dialog with RecyclerView showing notifications
+        val dialogView = layoutInflater.inflate(R.layout.dialog_notifications, null)
+        val recyclerView = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.notificationsRecyclerView)
+        recyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        recyclerView.adapter = NotificationsAdapter(notifications)
+        
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Broadcast Notifications (${notifications.size})")
+            .setView(dialogView)
+            .setPositiveButton("Clear All") { _, _ ->
+                fragment?.clearNotifications()
+                updateNotificationBadge(0)
             }
-            else -> super.onOptionsItemSelected(item)
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    /**
+     * Update notification badge count in toolbar
+     * Shows red badge with count when notifications > 0
+     */
+    fun updateNotificationBadge(count: Int) {
+        notificationBadge?.apply {
+            if (count > 0) {
+                text = if (count > 99) "99+" else count.toString()
+                visibility = View.VISIBLE
+            } else {
+                text = ""
+                visibility = View.GONE
+            }
         }
     }
 }

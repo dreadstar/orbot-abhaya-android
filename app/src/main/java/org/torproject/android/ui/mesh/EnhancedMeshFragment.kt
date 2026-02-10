@@ -66,6 +66,10 @@ class EnhancedMeshFragment : Fragment() {
 
 	private lateinit var meshrabiyaApi: MeshrabiyaApi
 	private lateinit var broadcastListener: (com.ustadmobile.meshrabiya.api.model.BroadcastReceivedDto) -> Unit
+
+	// Notification storage for broadcast messages (NEW)
+    private val receivedBroadcasts = mutableListOf<BroadcastNotification>()
+    
 	
 	// Track whether deferred views (cards 4-9) have been initialized via ViewStub
 	private var deferredViewsInitialized = false
@@ -280,6 +284,12 @@ class EnhancedMeshFragment : Fragment() {
 					updateButtonStates(status)
 					// Optionally update other UI elements as needed
 				}
+
+				if (status == MeshStateDto.CONNECTED) {
+					Log.d("EnhancedMeshFragment", "[MESH_STATUS] Connected, requesting role update")
+					delay(2000) // Allow network stabilization
+					(meshrabiyaApi as? MeshrabiyaApiImpl)?.myNode?.emergentRoleManager?.updateRoles(userInitiated = false)
+				}
 			}
 		}
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Mesh status observer setup complete")
@@ -304,6 +314,21 @@ class EnhancedMeshFragment : Fragment() {
 		// Broadcast listener - receives broadcasts from the mesh network
         broadcastListener = { broadcast: BroadcastReceivedDto ->
             lifecycleScope.launch(Dispatchers.Main) {
+                // Store notification first
+                receivedBroadcasts.add(0, BroadcastNotification(
+                    broadcastId = broadcast.broadcastId,
+                    senderNodeId = broadcast.senderNodeId.toString(),
+                    messageText = broadcast.messageText,
+                    fileName = broadcast.fileName,
+                    filePath = broadcast.filePath,
+                    timestamp = System.currentTimeMillis(),
+                    hasError = broadcast.hasError,
+                    errorMessage = broadcast.errorMessage
+                ))
+                
+                // Update notification badge
+                (activity as? org.torproject.android.OrbotActivity)?.updateNotificationBadge(receivedBroadcasts.size)
+                
                 // Check for receive error (drop folder not set)
                 if (broadcast.hasError) {
                     val errorMessage = broadcast.errorMessage ?: "Failed to receive file"
@@ -422,6 +447,17 @@ class EnhancedMeshFragment : Fragment() {
 			while (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
 				kotlinx.coroutines.delay(2000) // Update every 2 seconds
 				updateUI()
+			}
+		}
+
+		viewLifecycleOwner.lifecycleScope.launch {
+			while (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
+				val status = meshrabiyaApi.getMeshStatus()
+				if (status == MeshStateDto.CONNECTED || status == MeshStateDto.STARTING) {
+					Log.d("EnhancedMeshFragment", "[PERIODIC] Requesting role update")
+					(meshrabiyaApi as? MeshrabiyaApiImpl)?.myNode?.emergentRoleManager?.updateRoles(userInitiated = false)
+				}
+				kotlinx.coroutines.delay(10_000) // Every 10 seconds
 			}
 		}
 	}
@@ -1118,14 +1154,17 @@ class EnhancedMeshFragment : Fragment() {
 		
 		// Local function to update send button state
 		fun updateSendButtonState() {
-			val messageLength = messageInput.text?.length ?: 0
-			val hasMessage = messageLength > 0 && messageLength <= 500
-			val hasFile = selectedFileUri != null
-			sendButton.isEnabled = hasMessage || hasFile
-		}
-		
-		// Set up file selection callback for pre-registered launcher
-		pendingFileCallback = { uri ->
+            val messageLength = messageInput.text?.length ?: 0
+            val hasMessage = messageLength > 0 && messageLength <= 500
+            val hasFile = selectedFileUri != null
+            sendButton.isEnabled = hasMessage || hasFile
+        }
+        
+        // Initialize button state immediately
+        updateSendButtonState()
+        
+        // Set up file selection callback for pre-registered launcher
+        pendingFileCallback = { uri ->
             android.util.Log.d("EnhancedMeshFragment", "File selection callback invoked, URI: $uri")
             selectedFileUri = uri
             // Get file name from URI
@@ -1848,4 +1887,17 @@ class EnhancedMeshFragment : Fragment() {
 		// val adapter = MeshUIBindings.folderContentsRecyclerView.adapter as DropFolderContentsAdapter
 		// adapter.updateItems(changes)
 	}
+
+	/**
+     * Get list of received broadcast notifications
+     */
+    fun getReceivedBroadcasts(): List<BroadcastNotification> = receivedBroadcasts.toList()
+    
+    /**
+     * Clear all broadcast notifications
+     */
+    fun clearNotifications() {
+        receivedBroadcasts.clear()
+        (activity as? org.torproject.android.OrbotActivity)?.updateNotificationBadge(0)
+    }
 }

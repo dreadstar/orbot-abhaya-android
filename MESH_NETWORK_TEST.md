@@ -20,9 +20,9 @@ export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH
 # Install on second device (connect it, then run again)
 export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH:$ANDROID_HOME/platform-tools" && truncate -s 0 ready_state_fix_deploy.log && adb  -s LML211BL3f1c96e3   install -r app/build/outputs/apk/fullperm/debug/app-fullperm-universal-debug.apk
 
-truncate -s 0 phone_test.log && adb -s 30870044490006E logcat -v time *:V | stdbuf -oL tee phone_test.log
+truncate -s 0 phone_test.log &&adb -s LML211BL3f1c96e3 logcat -c &&  adb -s 30870044490006E logcat -v time *:V | stdbuf -oL tee phone_test.log
 # Phone 2 - Line-buffered tee (flushes every line)
-export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH:$ANDROID_HOME/platform-tools" && truncate -s 0 phone_test2.log && adb -s LML211BL3f1c96e3 logcat -v time *:V | stdbuf -oL tee phone_test2.log
+export ANDROID_HOME="/Users/dreadstar/Library/Android/sdk" && export PATH="$PATH:$ANDROID_HOME/platform-tools" && truncate -s 0 phone_test2.log && adb -s LML211BL3f1c96e3 logcat -c && adb -s LML211BL3f1c96e3 logcat -v time *:V | stdbuf -oL tee phone_test2.log
 
 # OR truncate first, then run
 truncate -s 0 phone_test2.log
