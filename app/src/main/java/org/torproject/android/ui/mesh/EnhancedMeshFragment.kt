@@ -286,13 +286,13 @@ class EnhancedMeshFragment : Fragment() {
 				}
 
 				if (status == MeshStateDto.CONNECTED) {
-					Log.d("EnhancedMeshFragment", "[MESH_STATUS] Connected, requesting role update")
-					delay(2000) // Allow network stabilization
-					(meshrabiyaApi as? MeshrabiyaApiImpl)?.myNode?.emergentRoleManager?.updateRoles(userInitiated = false)
+					Log.d("EnhancedMeshFragment", "[MESH_STATUS] Connected - role updates now automatic")
+					// Role updates happen automatically via EmergentRoleManager.startWifiStateMonitoring()
 				}
 			}
 		}
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Mesh status observer setup complete")
+		
 		
 		// Setup observer for network info StateFlow - auto-updates peer count and network stats
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Setting up network info observer...")
@@ -453,10 +453,7 @@ class EnhancedMeshFragment : Fragment() {
 		viewLifecycleOwner.lifecycleScope.launch {
 			while (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
 				val status = meshrabiyaApi.getMeshStatus()
-				if (status == MeshStateDto.CONNECTED || status == MeshStateDto.STARTING) {
-					Log.d("EnhancedMeshFragment", "[PERIODIC] Requesting role update")
-					(meshrabiyaApi as? MeshrabiyaApiImpl)?.myNode?.emergentRoleManager?.updateRoles(userInitiated = false)
-				}
+				
 				kotlinx.coroutines.delay(10_000) // Every 10 seconds
 			}
 		}
