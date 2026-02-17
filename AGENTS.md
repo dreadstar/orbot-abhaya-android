@@ -40,6 +40,60 @@ When a file is longer than 800 lines and requires modification, agents must:
 
 ---
 
+## 🚨 MANDATORY CODE VERIFICATION BEFORE GENERATION (2026-02-13)
+
+**CRITICAL RULE: NEVER write code fixes or proposals WITHOUT reading the actual current code first.**
+
+This rule has been violated REPEATEDLY. Each violation wastes user time and breaks trust.
+
+### Violation Tracking
+
+**Violation #1 (2025-12-06):** V4 implementation had significant discrepancies between plan assumptions and actual API signatures  
+**Violation #2 (2026-02-13):** Issue #5 (Message-Only Broadcast) - Proposed code changes WITHOUT reading MeshrabiyaApi.kt, MeshrabiyaApiImpl.kt, or BroadcastMessageHandler.kt
+
+### The Rule
+
+**BEFORE writing ANY code that modifies existing functionality, agents MUST:**
+
+1. ✅ **Read the ACTUAL current state** of ALL files to be modified (use `read_file`)
+2. ✅ **Verify ACTUAL signatures** of every method/property to be called (use `grep_search` + `read_file`)
+3. ✅ **Verify ACTUAL data structures** - property names, types, nullability (use `read_file`)
+4. ✅ **Document discrepancies** between assumptions and reality
+5. ✅ **Only then write code** based on verified reality
+
+**DO NOT:**
+- ❌ Assume code structure based on error messages
+- ❌ Guess API signatures based on "how it probably works"
+- ❌ Write code based on documentation or plans without verification
+- ❌ Skip verification because it "seems obvious"
+
+### Enforcement
+
+**A checklist file has been created:** `.copilot-verification-checklist.md`
+
+**Agents must consult this checklist BEFORE writing ANY code fix.**
+
+### Why This Rule Exists
+
+**Root Cause of Violations:**
+- Agent sees error/symptom
+- Pattern matching suggests "this is probably how the code looks"
+- Agent generates code based on assumptions
+- Agent skips verification because it feels "obvious"
+- **Result:** Code doesn't match reality, wastes time, breaks user trust
+
+**The Fix:**
+- ALWAYS verify before coding
+- Use grep_search to find definitions
+- Use read_file to read actual signatures
+- Document what you found
+- Then write code that matches reality
+
+**Date Added:** 2026-02-13  
+**Trigger:** Issue #5 analysis proposed API changes without reading actual code, discovered API already supports empty filePath but handler doesn't check for it
+
+---
+
 ## DETAILED PLAN SPECIFICATION RULE (2026-01-25)
 
 **RULE: All agents must provide plans with exhaustive, codebase-driven research and code-level specification whenever the user requests a plan.**
@@ -346,6 +400,98 @@ This document defines the effective operational rules and protocols for all AI a
 
 
 ## 🚨 CRITICAL AGENT PROTOCOLS (HIGHEST PRIORITY)
+
+### 0. MINIMIZE TERMINAL INTERACTIONS - USE INTERNAL TOOLS FIRST (2026-02-16)
+
+**RULE: Agents MUST prefer internal file manipulation tools over terminal commands whenever functionally equivalent.**
+
+**Rationale:**
+- Terminal commands are slower and less reliable than internal tools
+- Terminal output can be corrupted or truncated
+- Internal tools provide atomic operations with better error handling
+- Reduces system load and context switching
+
+**Required Actions:**
+
+**File Creation/Writing:**
+- ✅ USE: `create_file` tool for new files
+- ❌ AVOID: `cat > file.txt << EOF`, `echo >> file.txt`, heredocs, shell redirects
+
+**File Reading:**
+- ✅ USE: `read_file` tool with line ranges
+- ❌ AVOID: `cat`, `head`, `tail`, `sed -n` (unless specific formatting needed)
+
+**File Editing:**
+- ✅ USE: `replace_string_in_file`, `multi_replace_string_in_file`
+- ❌ AVOID: `sed -i`, `awk`, `perl`, shell text manipulation
+
+**File Management:**
+- ✅ USE: `create_directory` for directory creation
+- ⚠️ ACCEPTABLE: `rm`, `mv` for deletion/renaming (no internal tool exists)
+
+**Code Analysis:**
+- ✅ USE: `grep_search`, `semantic_search`, `file_search`
+- ❌ AVOID: `grep`, `find`, `ag`, `rg` (unless complex regex required)
+
+**File Information:**
+- ✅ USE: `read_file` with line range 1-1 to get total line count (shows "Lines 1 to 1 (XXX lines total)")
+- ✅ USE: `list_dir` to list directory contents
+- ✅ USE: `file_search` to find files by pattern
+- ❌ AVOID: `wc -l`, `ls`, `find`, `stat` for information that internal tools provide
+
+**Build/Test/Deploy Commands:**
+- ✅ USE: `run_in_terminal` ONLY for commands with no internal equivalent (Gradle, ADB, compilation)
+- ❌ AVOID: Using terminal for file operations that have internal tools
+
+**Exceptions (Terminal Required):**
+- Build commands (Gradle, Maven, make)
+- Deployment (ADB, device interaction)
+- Git operations (commit, push, status)
+- System commands (environment setup, process management)
+- Complex shell pipelines where internal tools insufficient
+
+**Enforcement:**
+Before using `run_in_terminal` for ANY file operation, agent must:
+1. Check if equivalent internal tool exists
+2. Document why terminal is necessary (if used)
+3. Prefer internal tool unless impossible
+
+**Example Violations:**
+```bash
+# ❌ WRONG - using terminal for file creation
+run_in_terminal: cat > file.txt << 'EOF'
+
+# ❌ WRONG - using terminal to count lines
+run_in_terminal: wc -l /path/to/file.kt
+
+# ❌ WRONG - using terminal to list directory
+run_in_terminal: ls /path/to/dir
+
+# ✅ CORRECT - using internal tool
+create_file: filePath=file.txt, content=...
+
+# ✅ CORRECT - using internal tool to get line count
+read_file: filePath=/path/to/file.kt, startLine=1, endLine=1
+# (Output shows: "Lines 1 to 1 (489 lines total)")
+
+# ✅ CORRECT - using internal tool to list directory
+list_dir: path=/path/to/dir
+```
+
+**Example Correct Usage:**
+```bash
+# ✅ CORRECT - terminal required for build
+run_in_terminal: ./gradlew assembleDebug
+
+# ✅ CORRECT - internal tool for file creation
+create_file: filePath=ANALYSIS.md, content=...
+```
+
+**Date Added:** 2026-02-16  
+**Trigger:** Agent used `cat >> file.md << EOF` causing terminal corruption, then deleted and recreated file. User mandate: "ALWAYS MINIMIZE THE AMOUNT OF TERMINAL INTERACTIONS."
+
+---
+
 ### 6. CANONICAL COMMAND FORMATS & STANDARD STATEMENTS
 - Always use canonical build, test, and deployment command formats:
     - **Gradle Build:**

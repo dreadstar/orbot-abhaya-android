@@ -111,8 +111,8 @@ class EnhancedMeshFragment : Fragment() {
 	private lateinit var networkOverviewMetricsJob: Job
 	
 	companion object {
-		private const val PREF_STORAGE_FOLDER_URI = "mesh_storage_folder_uri"
-		private const val PREF_STORAGE_QUOTA_BYTES = "mesh_storage_quota_bytes"
+		
+		
 		private const val DEFAULT_STORAGE_QUOTA = 100_000_000L // 100MB default
 		private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
 	}
@@ -212,29 +212,11 @@ class EnhancedMeshFragment : Fragment() {
 				selectedFolderUri = it
 				
 				// Save to preferences
-				requireActivity().getPreferences(android.content.Context.MODE_PRIVATE).edit()
-					.putString(PREF_STORAGE_FOLDER_URI, it.toString())
-					.apply()
+				// Save to library-managed preferences via API
+				meshrabiyaApi.setDropFolderUri(it.toString())
 				
 				android.util.Log.d("EnhancedMeshFragment", "Folder selected: $it")
 				
-				// Configure drop folder for broadcast file reception
-                try {
-                    val folderPath = getFilePathFromUri(it)
-                    if (folderPath != null) {
-                        meshrabiyaApi.selectDropFolder(folderPath) { result ->
-                            result.onSuccess {
-                                android.util.Log.i("EnhancedMeshFragment", "Drop folder configured for broadcasts: $folderPath")
-                            }.onFailure { error ->
-                                android.util.Log.e("EnhancedMeshFragment", "Failed to configure drop folder: ${error.message}")
-                            }
-                        }
-                    } else {
-                        android.util.Log.w("EnhancedMeshFragment", "Could not convert URI to file path for drop folder")
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("EnhancedMeshFragment", "Error configuring drop folder: ${e.message}")
-                }
 				// Update storage allocation
 				updateStorageAllocation(it)
 				
@@ -313,21 +295,34 @@ class EnhancedMeshFragment : Fragment() {
 		
 		// Broadcast listener - receives broadcasts from the mesh network
         broadcastListener = { broadcast: BroadcastReceivedDto ->
-            lifecycleScope.launch(Dispatchers.Main) {
-                // Store notification first
-                receivedBroadcasts.add(0, BroadcastNotification(
-                    broadcastId = broadcast.broadcastId,
-                    senderNodeId = broadcast.senderNodeId.toString(),
-                    messageText = broadcast.messageText,
-                    fileName = broadcast.fileName,
-                    filePath = broadcast.filePath,
-                    timestamp = System.currentTimeMillis(),
-                    hasError = broadcast.hasError,
-                    errorMessage = broadcast.errorMessage
-                ))
-                
-                // Update notification badge
-                (activity as? org.torproject.android.OrbotActivity)?.updateNotificationBadge(receivedBroadcasts.size)
+			android.util.Log.e("EnhancedMeshFragment", 
+				"[BROADCAST_LISTENER] ⚡ Callback invoked: id=${broadcast.broadcastId}, " +
+				"sender=${broadcast.senderNodeId}, message='${broadcast.messageText}', " +
+				"fileName='${broadcast.fileName}', filePath='${broadcast.filePath}', hasError=${broadcast.hasError}")
+			
+			lifecycleScope.launch(Dispatchers.Main) {
+				android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] Adding to receivedBroadcasts list")
+				
+				// Store notification first
+				receivedBroadcasts.add(0, BroadcastNotification(
+					broadcastId = broadcast.broadcastId,
+					senderNodeId = broadcast.senderNodeId.toString(),
+					messageText = broadcast.messageText,
+					fileName = broadcast.fileName,
+					filePath = broadcast.filePath,
+					timestamp = System.currentTimeMillis(),
+					hasError = broadcast.hasError,
+					errorMessage = broadcast.errorMessage
+				))
+				
+				android.util.Log.d("EnhancedMeshFragment", 
+					"[BROADCAST_LISTENER] List updated - size=${receivedBroadcasts.size}")
+				
+				// Update notification badge
+				val badgeCount = receivedBroadcasts.size
+				(activity as? org.torproject.android.OrbotActivity)?.updateNotificationBadge(badgeCount)
+				android.util.Log.d("EnhancedMeshFragment", 
+					"[BROADCAST_LISTENER] Badge updated: count=$badgeCount")
                 
                 // Check for receive error (drop folder not set)
                 if (broadcast.hasError) {
@@ -349,29 +344,54 @@ class EnhancedMeshFragment : Fragment() {
                     }
                 } else {
                     // Success case
-                    val message = if (broadcast.fileName.isNotBlank() && broadcast.filePath.isNotBlank()) {
-                        "Message from node ${broadcast.senderNodeId}: ${broadcast.messageText}\n" +
-                                "File: ${broadcast.fileName} saved to ${broadcast.filePath}"
-                    } else {
-                        "Message from node ${broadcast.senderNodeId}: ${broadcast.messageText}"
-                    }
+                    android.util.Log.d("EnhancedMeshFragment", 
+						"[BROADCAST_LISTENER] Constructing message - fileName='${broadcast.fileName}', filePath='${broadcast.filePath}'")
+
+					val message = if (broadcast.fileName.isNotBlank() && broadcast.filePath.isNotBlank()) {
+						"Message from node ${broadcast.senderNodeId}: ${broadcast.messageText}\n" +
+								"File: ${broadcast.fileName} saved to ${broadcast.filePath}"
+					} else {
+						"Message from node ${broadcast.senderNodeId}: ${broadcast.messageText}"
+					}
+
+					android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] Final message: '$message'")
                     
-                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                    android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] Showing Toast: message='$message'")
+					try {
+						Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+						android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] ✅ Toast shown successfully")
+					} catch (e: Exception) {
+						android.util.Log.e("EnhancedMeshFragment", "[BROADCAST_LISTENER] ❌ Toast failed", e)
+						// Fallback: Try with activity context
+						try {
+							Toast.makeText(requireActivity(), message, Toast.LENGTH_SHORT).show()
+						} catch (e2: Exception) {
+							android.util.Log.e("EnhancedMeshFragment", "[BROADCAST_LISTENER] ❌ Activity Toast also failed", e2)
+						}
+					}
                     
                     // Log the broadcast notification to console
                     android.util.Log.e("EnhancedMeshFragment", "Broadcast ${broadcast.broadcastId}: file saved to ${broadcast.filePath}")
             
                     
                     // Show snackbar
+                    android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] Attempting to show Snackbar")
+                    android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] view=$view, isAdded=$isAdded, isVisible=$isVisible")
+
+                    // Show snackbar using view?.let pattern
                     view?.let { fragmentView ->
-                        Snackbar.make(
-                            fragmentView,
-                            message,
-                            Snackbar.LENGTH_LONG
-                        ).setAction("View") {
-                            // Could navigate to received file or show details
-                            Toast.makeText(requireContext(), "Viewing broadcast details", Toast.LENGTH_SHORT).show()
-                        }.show()
+                        try {
+                            Snackbar.make(
+                                fragmentView,
+                                message,
+                                Snackbar.LENGTH_LONG
+                            ).setAction("View") {
+                                Toast.makeText(requireContext(), "Viewing broadcast details", Toast.LENGTH_SHORT).show()
+                            }.show()
+                            android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] ✅ Snackbar shown successfully")
+                        } catch (e: Exception) {
+                            android.util.Log.e("EnhancedMeshFragment", "[BROADCAST_LISTENER] ❌ Failed to show Snackbar", e)
+                        }
                     }
                 }
 			}
@@ -497,15 +517,26 @@ class EnhancedMeshFragment : Fragment() {
 	 */
 	private fun setupRoleObserver() {
 		android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Setting up role observer")
+		var lastRoleUpdate = 0L
+		var roleUpdateCount = 0
+		
 		viewLifecycleOwner.lifecycleScope.launch {
 			(meshrabiyaApi as? MeshrabiyaApiImpl)?.currentMeshRolesFlow?.collect { roles ->
-				android.util.Log.e("EnhancedMeshFragment", "[ROLE_OBSERVER] Roles changed: $roles")
+				val now = System.currentTimeMillis()
+				val timeSinceLastUpdate = if (lastRoleUpdate > 0) now - lastRoleUpdate else 0
+				roleUpdateCount++
+				
+				android.util.Log.e("EnhancedMeshFragment", "[ROLE_OBSERVER] ⚡ ROLE UPDATE #$roleUpdateCount: roles=$roles, timeSinceLastUpdate=${timeSinceLastUpdate}ms")
+				lastRoleUpdate = now
+				
 				activity?.runOnUiThread {
+					val uiUpdateStart = System.currentTimeMillis()
+					
 					// Update roles text - show "Roles: --" when mesh not started or no roles determined yet
 					val meshState = meshrabiyaApi.getMeshStatus()
 					val meshStarted = meshState == MeshStateDto.CONNECTED || meshState == MeshStateDto.CONNECTING
 					
-					android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Updating meshRolesText")
+					android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Updating meshRolesText (meshState=$meshState, meshStarted=$meshStarted)")
 					MeshUIBindings.meshRolesText.text = if (!meshStarted) {
 						"Roles: --" // Show label with placeholder when mesh not started
 					} else if (roles.isNotEmpty()) {
@@ -527,6 +558,9 @@ class EnhancedMeshFragment : Fragment() {
 					} else {
 						android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Skipping deferred view updates - not yet initialized")
 					}
+					
+					val uiUpdateDuration = System.currentTimeMillis() - uiUpdateStart
+					android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] ✓ UI update completed in ${uiUpdateDuration}ms")
 					
 					android.util.Log.e("EnhancedMeshFragment", "[ROLE_OBSERVER] UI updated - meshStarted: $meshStarted, roles: ${roles.joinToString(", ")}")
 				}
@@ -915,8 +949,8 @@ class EnhancedMeshFragment : Fragment() {
 				MeshUIBindings.serviceLayerStatusText.text = if (serviceEnabled) "Service Layer active..." else "Service Layer inactive..."
 				
 				// Storage allocation slider and folder path (load from persisted values)
-			val prefs = requireActivity().getPreferences(android.content.Context.MODE_PRIVATE)
-			val quotaBytes = prefs.getLong(PREF_STORAGE_QUOTA_BYTES, DEFAULT_STORAGE_QUOTA)
+			
+			val quotaBytes = meshrabiyaApi.getStorageQuotaBytes()
 			val quotaGB = quotaBytes / (1024.0 * 1024.0 * 1024.0)
 			// Clamp to slider's valid range (1-50 GB)
 			val clampedQuotaGB = quotaGB.toFloat().coerceIn(1.0f, 50.0f)
@@ -924,23 +958,26 @@ class EnhancedMeshFragment : Fragment() {
 			MeshUIBindings.storageAllocationText.text = "${clampedQuotaGB.toInt()} GB"
 			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Loaded storage quota from preferences: ${quotaGB}GB (clamped to ${clampedQuotaGB}GB)")
 
-			// Drop folder
-			val dropFolder = meshrabiyaApi.getDropFolder()
-			MeshUIBindings.selectedFolderText.text = dropFolder?.absolutePath ?: "No folder selected"
+			// Update folder path display using URI-based storage
+            val savedUri = meshrabiyaApi.getDropFolderUri()
+            if (savedUri != null) {
+                try {
+                    val uri = Uri.parse(savedUri)
+                    val docFile = DocumentFile.fromTreeUri(requireContext(), uri)
+                    val displayName = docFile?.name ?: uri.lastPathSegment ?: savedUri
+                    MeshUIBindings.selectedFolderText.text = displayName
+                    android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Displaying drop folder: $displayName")
+                } catch (e: Exception) {
+                    android.util.Log.e("EnhancedMeshFragment", "[UPDATE_UI] Error parsing folder URI: ${e.message}")
+                    MeshUIBindings.selectedFolderText.text = "No folder selected"
+                }
+            } else {
+                MeshUIBindings.selectedFolderText.text = "No folder selected"
+            }
 
 			// Mesh files
 			val meshFiles = meshrabiyaApi.getAllMeshFiles()
 			// TODO: Update folderContentsAdapter with meshFiles
-			
-			// Update folder path display
-			val savedUri = prefs.getString(PREF_STORAGE_FOLDER_URI, null)
-			if (savedUri != null) {
-				val uri = Uri.parse(savedUri)
-				val docFile = DocumentFile.fromTreeUri(requireContext(), uri)
-				MeshUIBindings.selectedFolderText.text = docFile?.name ?: savedUri
-			} else {
-				MeshUIBindings.selectedFolderText.text = "No folder selected"
-			}
 			
 			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Deferred views updated successfully")
 		} else {
@@ -960,9 +997,7 @@ class EnhancedMeshFragment : Fragment() {
 				val quotaBytes = DEFAULT_STORAGE_QUOTA
 				
 				// Save quota to preferences
-				requireActivity().getPreferences(android.content.Context.MODE_PRIVATE).edit()
-					.putLong(PREF_STORAGE_QUOTA_BYTES, quotaBytes)
-					.apply()
+				meshrabiyaApi.setStorageQuotaBytes(quotaBytes)
 				
 				android.util.Log.i("EnhancedMeshFragment", "Storage allocation updated: ${quotaBytes / (1024 * 1024)}MB")
 				
@@ -994,9 +1029,7 @@ class EnhancedMeshFragment : Fragment() {
 						selectedFolderUri = folderUri
 						
 						// Save to preferences
-						requireActivity().getPreferences(android.content.Context.MODE_PRIVATE).edit()
-							.putString(PREF_STORAGE_FOLDER_URI, folderUri.toString())
-							.apply()
+						meshrabiyaApi.setDropFolderUri(folderUri.toString())
 						
 						updateStorageAllocation(folderUri)
 						updateUI()
@@ -1781,9 +1814,7 @@ class EnhancedMeshFragment : Fragment() {
 			MeshUIBindings.storageAllocationSlider.addOnChangeListener { _, value, fromUser ->
 				if (fromUser) {
 					val quotaBytes = (value * 1024 * 1024 * 1024).toLong()
-					requireActivity().getPreferences(android.content.Context.MODE_PRIVATE).edit()
-						.putLong(PREF_STORAGE_QUOTA_BYTES, quotaBytes)
-						.apply()
+					meshrabiyaApi.setStorageQuotaBytes(quotaBytes)
 					android.util.Log.d("EnhancedMeshFragment", "Storage quota updated to: ${value}GB ($quotaBytes bytes)")
 					MeshUIBindings.storageAllocationText.text = "${value.toInt()} GB"
 					if (meshrabiyaApi.getStorageParticipationStatus()) {
@@ -1862,8 +1893,8 @@ class EnhancedMeshFragment : Fragment() {
 			}
 			
 			// Load storage quota from preferences
-			val prefs = requireActivity().getPreferences(android.content.Context.MODE_PRIVATE)
-			val quotaBytes = prefs.getLong(PREF_STORAGE_QUOTA_BYTES, DEFAULT_STORAGE_QUOTA)
+			
+			val quotaBytes = meshrabiyaApi.getStorageQuotaBytes()
 			val quotaGB = quotaBytes / (1024f * 1024f * 1024f)
 			val clampedGB = quotaGB.coerceIn(1f, 50f)
 			android.util.Log.d("EnhancedMeshFragment", "Loaded storage quota from preferences: ${quotaGB}GB (clamped to ${clampedGB}GB)")
