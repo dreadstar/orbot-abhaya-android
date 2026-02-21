@@ -1,3 +1,157 @@
+## 🚨 RULE ZERO: PROMPT COMPLIANCE VERIFICATION (2026-02-19)
+
+**CRITICAL: This rule is ALWAYS READ FIRST and ALWAYS ENFORCED before any agent begins work on a user prompt.**
+
+### The Meta-Rule
+
+**BEFORE starting ANY work requested in a user prompt, agents MUST:**
+
+1. ✅ **Analyze the prompt against ALL rules** in AGENTS.md
+2. ✅ **Identify any potential rule violations** in the requested approach
+3. ✅ **Refactor the prompt** to force compliance with all applicable rules
+4. ✅ **Present the refactored prompt** to the user for confirmation
+5. ✅ **Wait for approval** before proceeding with work
+
+### Enforcement Process
+
+**Step 1: Prompt Analysis**
+- Read the user's prompt carefully
+- Identify the requested actions (file edits, code generation, searches, builds, etc.)
+- Map each action to applicable rules from AGENTS.md
+
+**Step 2: Rule Violation Detection**
+- Check if the prompt would cause violations of:
+  - Large File Manual Edit Rule (files >800 lines)
+  - Mandatory Code Verification Before Generation
+  - Pre-Edit Verification Protocol
+  - Minimize Terminal Interactions
+  - Any other applicable rules
+- Document ALL potential violations
+
+**Step 3: Prompt Refactoring**
+- Rewrite the approach to comply with all rules
+- Add verification steps where needed
+- Change direct edits to BEFORE/AFTER presentations where needed
+- Replace terminal commands with internal tools where needed
+- Add pattern uniqueness testing where needed
+
+**Step 4: Present Refactored Prompt**
+```
+ORIGINAL PROMPT:
+[user's request]
+
+RULE ANALYSIS:
+- Rule X applies: [reason]
+- Rule Y applies: [reason]
+- Potential violation: [description]
+
+REFACTORED APPROACH:
+1. [compliant step 1]
+2. [compliant step 2]
+3. [compliant step 3]
+
+PROCEED? (yes/no)
+```
+
+**Step 5: Await Approval**
+- Do NOT begin work until user confirms the refactored approach
+- If user rejects, revise the refactoring
+
+### When to Apply
+
+**ALWAYS - for every prompt that involves:**
+- Code edits (any file, any size)
+- File creation/modification
+- Build commands
+- Terminal operations
+- Code generation
+- Multi-step workflows
+- **Steering prompts**: Questions about methodology, verification, or process quality (e.g., "was this verified by falsification?", "did you check X?", "is this correct?")
+  - When user asks about verification methodology, actually PERFORM that verification if not already done
+  - When user questions correctness, perform comprehensive falsification testing
+  - Apply relevant verification/analysis rules before responding
+
+**Exceptions:**
+- Simple read-only queries (file searches, documentation requests)
+- Clarification questions about user requirements (not about agent methodology)
+- Status checks (build progress, tool availability)
+- **User explicit exemptions**: When the user explicitly states in their prompt to ignore, exempt, or bypass a specific rule or rules for that request (e.g., "ignore the large file rule and make the change"), agents must comply with the user's instruction without presenting a refactored approach
+
+### Why This Rule Exists
+
+**Root Cause:**
+Agents sometimes begin work immediately without checking if their approach violates existing rules, leading to:
+- Wasted effort when edits fail due to large file rule
+- Missing verification steps that cause compilation errors
+- Unnecessary terminal commands when internal tools exist
+- Rule violations discovered mid-work requiring backtracking
+
+**The Fix:**
+Pre-flight compliance check ensures EVERY workflow is rule-compliant BEFORE work begins.
+
+**Intent:**
+This meta-rule acts as a gatekeeper, ensuring no work proceeds without first verifying compliance with all established protocols. It transforms reactive rule enforcement (catching violations after they occur) into proactive rule adherence (preventing violations before they happen).
+
+### Self-Enforcement Mechanism
+
+To ensure RULE ZERO is always followed, agents MUST use the `manage_todo_list` tool to create trackable TODO items for each compliance step at the start of EVERY response (except for exempted prompts).
+
+**REQUIRED TODO LIST STRUCTURE:**
+
+Agents MUST call `manage_todo_list` to create these items:
+
+```json
+{
+  "todoList": [
+    {"id": 1, "title": "Analyze prompt against AGENTS.md rules", "status": "not-started"},
+    {"id": 2, "title": "Identify potential rule violations", "status": "not-started"},
+    {"id": 3, "title": "Present refactored approach to user", "status": "not-started"},
+    {"id": 4, "title": "WAIT for user approval (BLOCKING)", "status": "not-started"},
+    {"id": 5, "title": "Execute approved work", "status": "not-started"}
+  ]
+}
+```
+
+**SEQUENTIAL EXECUTION REQUIREMENTS:**
+
+1. **Mark item 1 "in-progress"** → Analyze prompt → **Mark item 1 "completed"**
+2. **Mark item 2 "in-progress"** → Identify violations → **Mark item 2 "completed"**
+3. **Mark item 3 "in-progress"** → Present refactored approach with "PROCEED? (yes/no)" → **Mark item 3 "completed"**
+4. **Mark item 4 "in-progress"** → **STOP COMPLETELY - END RESPONSE - WAIT FOR USER**
+5. **Only after user types "yes/proceed"** → Mark item 4 "completed" → Mark item 5 "in-progress" → Execute work → Mark item 5 "completed"
+
+**CRITICAL BLOCKING RULE:**
+
+- Agent MUST NOT proceed past item 3 without user approval
+- Agent MUST END its response after presenting refactored approach
+- Agent MUST NOT mark item 4 "completed" until user explicitly approves
+- Agent MUST NOT execute ANY substantive work until item 4 is marked "completed"
+
+**Enforcement:**
+- VS Code UI will show TODO dropdown with these steps
+- User can verify agent is following correct sequence
+- Agent cannot skip ahead (enforced by sequential status updates)
+- If user rejects approach, agent updates item 3 and re-presents
+
+**Why This Works:**
+- Visual TODO list in VS Code UI prevents agents from claiming completion prematurely
+- Sequential status tracking forces proper workflow
+- Explicit WAIT step makes blocking requirement visible
+- User can see exactly which step agent is on
+
+**VS Code Integration:**
+This rule is enforced through:
+1. Custom instructions in VS Code settings (user-level or workspace-level)
+2. Workspace configuration in `.vscode/settings.json`
+3. This AGENTS.md file attached via `<instructions>` block in system prompt
+4. `manage_todo_list` tool for interactive step tracking (above)
+
+**Date Added:** 2026-02-19  
+**Updated:** 2026-02-20 (changed from markdown checklist to `manage_todo_list` tool requirement)  
+**Trigger:** User feedback: "you are marking steps in the rule zero checklist complete without executing them... why are you unable to follow the rule and the steps in the checklist?" - Solution: Use VS Code TODO UI to make steps trackable and blocking
+
+---
+
 ## LARGE FILE MANUAL EDIT RULE (2026-02-02)
 
 **RULE: For any file exceeding 800 lines, agents must NOT attempt direct edits using replace_string_in_file or multi_replace_string_in_file tools.**
@@ -330,6 +484,173 @@ This protocol eliminates the discrepancy between planned implementations and act
 
 **Date Added:** 2025-12-06  
 **Trigger:** V4 implementation had significant discrepancies between plan assumptions and actual API signatures, requiring multiple fix rounds.
+
+---
+
+## MANDATORY PRE-EDIT VERIFICATION PROTOCOL (2026-02-19)
+
+**RULE: Before ANY code edit (regardless of file size), agents MUST perform literal verification of ALL code to be modified AND verify pattern uniqueness.**
+
+This protocol extends and refines the "IMPLEMENTATION VERIFICATION BEFORE CODE GENERATION PROTOCOL" by adding explicit pattern testing requirements.
+
+### The Complete Verification Workflow
+
+**Step 1: Read Actual Current Code**
+- Use `read_file` to read the EXACT section to be modified
+- Read enough context (minimum 5 lines before and after)
+- Copy exact text including ALL whitespace, indentation, newlines
+- **Document**: "Read lines X-Y from [file], here's what exists on disk"
+
+**Step 2: Verify API Signatures (if calling methods/properties)**
+- Use `grep_search` to find method/property definitions
+- Use `read_file` to read actual signatures
+- Check parameter count, types, names, return types
+- Check if suspend function vs regular function
+- **Document**: "Verified [method] signature is: [exact signature]"
+
+**Step 3: TEST PATTERN UNIQUENESS** ⭐ CRITICAL
+- Use `grep_search` with your exact `oldString` pattern on the target file
+- **REQUIRED**: Pattern must match EXACTLY ONCE in the file
+- If 0 matches: Your pattern has whitespace/content errors - re-read and fix
+- If 2+ matches: Add MORE context lines until pattern is unique
+- **Document**: "grep_search shows 1 match at line X - pattern is unique"
+
+**Step 4: Construct Edit Parameters**
+- `filePath`: Absolute path
+- `oldString`: Exact text from Step 1 (verified unique in Step 3)
+- `newString`: Modified version with verified API calls from Step 2
+
+**Step 5: Execute Edit**
+- Use `replace_string_in_file` or `multi_replace_string_in_file`
+- If edit fails due to pattern mismatch, return to Step 1
+
+### Enforcement Checklist
+
+Before ANY code edit, agents MUST answer YES to ALL:
+
+- [ ] Did I read the actual current code with `read_file`?
+- [ ] Did I copy the EXACT text including all whitespace?
+- [ ] Did I verify signatures of ALL methods/properties I'm calling?
+- [ ] Did I test my oldString pattern with `grep_search`?
+- [ ] Does `grep_search` show EXACTLY 1 match for my pattern?
+- [ ] If multiple matches, did I add more context until unique?
+- [ ] Did I document all verification steps?
+
+**If ANY answer is "NO", STOP - do not attempt the edit.**
+
+### Examples: Bad vs Good Pattern Testing
+
+**❌ BAD - No Pattern Testing (Causes Multi-Location Corruption):**
+```
+Agent: "I'll change logger(Log.INFO, tag, message) to logger(Log.INFO, message)"
+[Runs replace_string_in_file without testing pattern]
+Result: Changes ALL 28 occurrences when only 1 was intended
+```
+
+**✅ GOOD - Pattern Tested for Uniqueness:**
+```
+Agent: "Let me verify this pattern is unique"
+[Runs grep_search with oldString pattern]
+grep_search result: "Found 28 matches"
+Agent: "Pattern matches 28 locations - adding more context"
+[Adds 10 lines before/after to make pattern unique]
+[Runs grep_search again]
+grep_search result: "Found 1 match at line 462"
+Agent: "Pattern is now unique - safe to edit"
+[Runs replace_string_in_file]
+```
+
+### Pattern Uniqueness Failure Modes
+
+**0 Matches:**
+- Root cause: Whitespace differences (spaces vs tabs, line endings)
+- Fix: Re-read file section, copy EXACT text byte-for-byte
+- Tool: Compare your pattern to actual file content character-by-character
+
+**2+ Matches:**
+- Root cause: Pattern too generic (matches multiple locations)
+- Fix: Add more surrounding context (more lines before/after)
+- Goal: Make pattern match THE SPECIFIC CHANGE LOCATION ONLY
+- Verify: Re-run grep_search until exactly 1 match
+
+**Example - Making Pattern Unique:**
+```
+# Too generic (10 matches):
+oldString = "logger(Log.INFO, broadcastTag(broadcastId), message)"
+
+# More specific (3 matches):
+oldString = """
+    override fun onTextOnlyBroadcastComplete(...) {
+        logger(Log.INFO, broadcastTag(broadcastId), "Text broadcast complete")
+    }
+"""
+
+# Unique (1 match):
+oldString = """
+    override fun onTextOnlyBroadcastComplete(broadcastId: String, text: String) {
+        logger(Log.DEBUG, "onTextOnlyBroadcastComplete called for broadcast: $broadcastId")
+        logger(Log.INFO, broadcastTag(broadcastId), "✅ Text-only broadcast completed")
+        
+        // Update broadcast status
+        ...
+    }
+"""
+```
+
+### Verification Tools to Use
+
+**Required Tools:**
+- `read_file` - Get actual current code
+- `grep_search` - Test pattern uniqueness (MANDATORY)
+- `replace_string_in_file` - Execute single edit
+- `multi_replace_string_in_file` - Execute multiple edits
+
+**Verification Sequence:**
+1. `read_file` → Get code
+2. `grep_search` → Test pattern (MUST show exactly 1 match)
+3. `replace_string_in_file` → Execute edit
+
+### Why This Rule Exists
+
+**Root Cause of Edit Failures:**
+- Agents skip pattern uniqueness testing
+- Patterns match multiple locations unintentionally
+- Whitespace mismatches cause 0-match failures
+- Edits corrupt wrong code locations
+- Time wasted on fix-retry cycles
+
+**The Fix:**
+Mandatory pattern testing catches these issues BEFORE executing edits:
+- Ensures pattern matches exactly once (prevents multi-location changes)
+- Reveals whitespace mismatches early (fix before edit attempt)
+- Documents verification (builds confidence in edit accuracy)
+- Eliminates fix-retry waste (get it right the first time)
+
+**Measured Impact:**
+- ✅ Large file edits (854 lines, 1931 lines) succeeded on first try
+- ✅ Zero whitespace mismatch failures
+- ✅ Zero multi-location corruption
+- ✅ Build compiled successfully after edits
+- **Root cause**: Rigorous verification, not tool improvements
+
+### Integration with Existing Rules
+
+**This protocol COMPLEMENTS:**
+- Large File Manual Edit Rule: This protocol is why large file edits CAN succeed (with verification)
+- Mandatory Code Verification: This adds pattern testing to that protocol
+- Implementation Verification: This is the edit-time extension of that protocol
+
+**This protocol is REQUIRED FOR:**
+- All code edits using `replace_string_in_file`
+- All code edits using `multi_replace_string_in_file`
+- All files, regardless of size (yes, even small files)
+- All file types (Kotlin, Java, Python, XML, etc.)
+
+**Intent:**
+This protocol transforms code editing from "guess and retry" into "verify and execute once." Every edit is preceded by verification that the pattern is correct, unique, and will change exactly what's intended. The pattern uniqueness requirement (Step 3) is the critical addition that prevents the most common edit failures: multi-location matches and whitespace mismatches.
+
+**Date Added:** 2026-02-19  
+**Trigger:** User asked how to memorialize the verification steps that made large file edits succeed. Analysis revealed pattern uniqueness testing was the missing enforcement mechanism. User refined rule to include explicit pattern testing requirement.
 
 ---
 

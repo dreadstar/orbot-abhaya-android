@@ -1,6 +1,7 @@
 # Broadcast Workflow Analysis - End-to-End Trace
 **Date:** February 16, 2026  
-**Investigation:** Complete broadcast failure workflow trace from initiation to completion
+**Investigation:** Complete broadcast failure workflow trace from initiation to completion  
+**Updated:** February 20, 2026 (refined with Issue #1 and Issue #2 architectural understanding)
 
 ---
 
@@ -8,9 +9,13 @@
 
 **CRITICAL FINDING:** Broadcast transmission and reception work PERFECTLY. All 3367 chunks were successfully transmitted and received. The workflow breaks at Step 10 (File Writing) because **the drop folder callback returns NULL**, causing an exception that prevents notification creation.
 
-**Root Cause:** User configuration error - no storage folder selected on Phone 2 (receiver).
+**Root Cause (Feb 16, 2026 Analysis):** User configuration error - no storage folder selected on Phone 2 (receiver).
 
-**Status:** This is NOT a broadcast system bug. This is expected behavior when storage is not configured.
+**Additional Architectural Issues Discovered (Feb 20, 2026):**
+- **Issue #1 (Sender Loopback):** VirtualNode.kt routing layer delivers broadcasts to local handler BEFORE deduplication check, causing sender to receive own broadcasts (fixed Feb 20, 2026 - see BROADCAST_NOTIFICATION_FIXES_02202026.md)
+- **Issue #2 (Error Notifications):** BroadcastMessageHandler notifies listeners even when file write fails (hasError=true), causing notification count increment without actual file (fix pending)
+
+**Status:** This analysis identified configuration issues. Subsequent Issue #1 and Issue #2 analysis revealed architectural flaws in routing and error handling layers.
 
 ---
 
@@ -84,8 +89,15 @@ Line 2408: 02-16 09:21:58.248 I/System.out(31084): V: t+101.06s : BroadcastMessa
 
 **VirtualNode Layer:**
 - Chunks sent directly to neighbor via `lastMsg.receivedFromSocket.send()`
-- NO route() call (no loopback - sender doesn't receive own broadcast per design)
+- Broadcasts use DIRECT neighbor send (NOT via route() for outgoing)
+- **HOWEVER:** When broadcast loops back via network, sender WILL receive it and call route()
 - Packet structure: VirtualPacket with BROADCAST addressing (toAddr = ADDR_BROADCAST)
+
+**Sender Loopback Behavior (Issue #1 discovered Feb 20, 2026):**
+- At time of this test (Feb 16), sender DID receive own broadcast via network loopback
+- VirtualNode.route() was called on sender when broadcast looped back
+- Local delivery happened OUTSIDE deduplication check → sender processed own broadcast
+- **This was a BUG** - fixed Feb 20, 2026 by moving local delivery inside dedup check
 
 **UDP Layer:**
 - Actual UDP send operations to neighbor's real address/port
@@ -150,11 +162,39 @@ Line 3147: 02-16 09:21:17.782 I/System.out( 2664): D: t+44.52s : BroadcastMessag
 ```
 
 ### Routing Analysis
-**VirtualNode → BroadcastMessageHandler Path:**
+**VirtualNode Architecture (Updated Understanding Feb 20, 2026):**
+
+VirtualNode.kt processes broadcast packets through route() method with these steps:
+1. **Deduplication Check:** `seenBroadcasts.putIfAbsent(broadcastId, timestamp)`
+   - Returns `null` if first time seeing broadcast
+   - Returns previous timestamp if already seen
+2. **Forwarding (if first time):** Forward to mesh neighbors (Router/Hub roles)
+3. **Local Delivery:** Deliver to BroadcastMessageHandler for local processing
+
+**BUG DISCOVERED (Feb 20, 2026 - Issue #1):**
+At time of this test, local delivery happened OUTSIDE the dedup check:
 ```kotlin
-// From VirtualNode.kt:650
+// BUGGY CODE (Feb 16, 2026):
+if (prev == null) {
+    // Forward to neighbors
+}
+// Local delivery OUTSIDE dedup check ❌
 broadcastMessageHandler?.onReceiveBroadcastPacket(virtualPacket)
-return false  // Don't route broadcast packets through MMCP routing
+```
+
+This caused sender to process own broadcasts when they looped back through the network.
+
+**FIXED CODE (Feb 20, 2026):**
+```kotlin
+if (prev == null) {
+    // Forward to neighbors
+    // Local delivery INSIDE dedup check ✅
+    if (fromAddr != addressAsInt) {
+        broadcastMessageHandler?.onReceiveBroadcastPacket(virtualPacket)
+    }
+} else {
+    logger("Broadcast already seen, ignoring")
+}
 ```
 
 **Handler Reception:**
@@ -167,7 +207,7 @@ return false  // Don't route broadcast packets through MMCP routing
 - **Packets routed to BroadcastHandler:** 7,585+ (100% routing success)
 - **Routing loss:** 0 packets
 
-**CRITICAL FINDING:** ✅ NO ROUTING FAILURES - All broadcast packets successfully routed to handler.
+**FINDING:** ✅ NO ROUTING FAILURES - All broadcast packets successfully routed to handler. However, architectural bug caused sender loopback (fixed Feb 20, 2026).
 
 ---
 
@@ -627,13 +667,21 @@ Line 3151: 09:21:17.785 I: [TEXT_ONLY_COMPLETE] Notifying 1 listeners
 Line 3152: 09:21:17.791 I: [TEXT_ONLY_COMPLETE] ✅ All listeners notified
 ```
 
-**Result:** ✅ **COMPLETE SUCCESS** - Text-only broadcast completed on both phones with listener notification.
+**Result:** ✅ **COMPLETE SUCCESS** (with caveat) - Text-only broadcast completed on both phones with listener notification.
 
 **Why It Worked:**
 - No file write required (totalChunks=0)
 - `onTextOnlyBroadcastComplete()` called directly
 - No dependency on drop folder configuration
 - Notification created and listeners notified successfully
+
+**Issue #1 Evidence (Sender Loopback):**
+- **Line 1836:** Phone 1 (SENDER) shows "Received broadcast chunk" for its OWN broadcast
+- **Line 1839-1841:** Phone 1 (SENDER) notified listeners and created notification
+- **This was the BUG:** Sender should NOT receive own broadcast notification
+- At time of this test (Feb 16, 2026), VirtualNode routing bug caused sender loopback
+- **Fixed Feb 20, 2026:** Local delivery now skipped for sender's own broadcasts
+- **Expected behavior:** Only Phone 2 (receiver) should show "Received broadcast chunk" and notification
 
 ### File Broadcast (`119fc954-04bb-41c0-b440-a57b1a38757a`)
 

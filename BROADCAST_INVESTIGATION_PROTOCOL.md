@@ -78,26 +78,32 @@ When investigating ANY broadcast or file transfer failure, agents MUST trace the
 ---
 
 ### Step 3: Transmission Path (Sender → Network)
-**Objective:** Verify chunks transmitted from app layer through system to network
+**Objective:** Verify chunks transmitted from app layer through system to network, and check for sender loopback behavior
 
 **Required Actions:**
 1. ✅ App layer: Find broadcast send logs showing chunk-by-chunk transmission
 2. ✅ Extract chunk indices sent (0, 1, 2, ..., totalChunks-1)
-3. ✅ Find VirtualNode.route() calls for BROADCAST packet type
+3. ✅ Find VirtualNode direct send to neighbors (broadcasts bypass route() for outgoing)
 4. ✅ Find actual network transmission logs (UDP send, socket write)
 5. ✅ Count total chunks transmitted
 6. ✅ Verify destination address and port
 7. ✅ Calculate transmission rate (chunks/second)
 8. ✅ Check for transmission errors, retries, or failures
+9. ✅ **Sender loopback check:** Verify sender does NOT process own broadcast when it loops back
+   - Check if sender receives own broadcast via route() (expected in mesh)
+   - Verify deduplication prevents local delivery (seenBroadcasts check)
+   - Verify sender check prevents notification (fromAddr != addressAsInt)
 
 **Log Keywords to Search:**
-- "Sending chunk", "BROADCAST packet", "route()"
+- "Sending chunk", "sent to neighbor", "BROADCAST packet"
 - "UDP send", "DatagramSocket", "sendto"
 - Destination IP, destination port
+- "Broadcast already seen, ignoring" (sender dedup)
+- "Skipping local delivery" (sender check)
 
 **Code Files to Verify:**
 - BroadcastMessageHandler.kt `sendBroadcast()` transmission loop
-- VirtualNode.kt `route()` method
+- VirtualNode.kt `route()` method (for loopback handling)
 - VirtualNodeDatagramSocket.kt or equivalent
 
 **Evidence Required:**
@@ -105,10 +111,67 @@ When investigating ANY broadcast or file transfer failure, agents MUST trace the
 - Transmission rate
 - Destination address
 - Any transmission errors
+- Sender loopback handling (see Step 3.5 for detailed verification)
 
 **Critical Verification:**
 - ❓ Did ALL chunks get transmitted? (count == totalChunks)
 - ❓ Any network errors or socket failures?
+- ❓ Does sender receive own broadcast via loopback? (see Step 3.5)
+
+---
+
+### Step 3.5: Sender Loopback Check (Sender Device) ⚠️ CRITICAL
+**Objective:** Verify sender does NOT receive own broadcast via network loopback
+
+**Issue #1 Context:**
+Broadcasts transmitted by a node can loop back through the mesh network and be received by the originating node. The routing layer MUST prevent the sender from processing their own broadcasts locally, as this causes unwanted notifications.
+
+**Required Actions:**
+1. ✅ Find VirtualNode.route() logs on SENDER for broadcast packets received
+2. ✅ Check if sender's own broadcast appears in "Received broadcast chunk" logs
+3. ✅ Verify seenBroadcasts deduplication mechanism:
+   - Find "seenBroadcasts.putIfAbsent" logs
+   - Extract return value (null = first time, timestamp = already seen)
+4. ✅ Verify local delivery ONLY happens when prev == null (first time)
+5. ✅ Verify sender check: `packet.header.fromAddr != addressAsInt`
+6. ✅ Find "Broadcast already seen, ignoring" or "Skipping local delivery" logs
+7. ✅ Verify sender does NOT create notification for own broadcast
+
+**Log Keywords to Search:**
+- "Broadcast already seen, ignoring"
+- "Skipping local delivery for broadcast" (sender is THIS node)
+- "seenBroadcasts.putIfAbsent"
+- "Delivering broadcast locally" (should NOT appear for sender's own broadcasts)
+- "fromAddr" comparisons
+
+**Code Files to Verify:**
+- VirtualNode.kt `route()` method (lines 894-950)
+- Deduplication logic with seenBroadcasts map
+- Local delivery conditional: `if (prev == null && fromAddr != addressAsInt)`
+
+**Evidence Required:**
+- Sender logs showing broadcast received from network
+- Deduplication check result (already seen?)
+- Whether local delivery was skipped
+- Whether notification was created
+
+**Critical Verification:**
+- ❓ Did sender receive own broadcast via network loopback?
+- ❓ If YES, was local delivery skipped due to dedup check?
+- ❓ If local delivery happened, did sender create notification? ❌ BUG
+- ❓ Does VirtualNode check `fromAddr != addressAsInt` before local delivery?
+
+**Expected Behavior:**
+- ✅ Sender broadcasts → seenBroadcasts[id] = timestamp (prev == null)
+- ✅ Broadcast loops back → seenBroadcasts.putIfAbsent returns prev timestamp
+- ✅ VirtualNode logs "Broadcast already seen, ignoring"
+- ✅ Local delivery SKIPPED (notification count = 0 on sender)
+
+**Bug Indicators:**
+- ❌ Sender logs show "Delivering broadcast locally"
+- ❌ Sender notification count > 0 after sending
+- ❌ Toast/Snackbar appears on sender device
+- ❌ Local delivery happens OUTSIDE `if (prev == null)` check
 
 ---
 
@@ -150,34 +213,57 @@ When investigating ANY broadcast or file transfer failure, agents MUST trace the
 ### Step 5: Routing to Handler (Receiver)
 **Objective:** Verify packets correctly routed from VirtualNode to BroadcastMessageHandler
 
+**VirtualNode Architecture Context:**
+The VirtualNode routing layer handles broadcast packets differently than MMCP messages:
+- **Broadcast packets** (toAddr == ADDR_BROADCAST): Forwarded to neighbors + delivered locally
+- **MMCP messages** (toAddr == specific node): Routed through originatingMessageManager
+- **Deduplication**: `seenBroadcasts` map prevents infinite forwarding loops
+- **Local delivery**: Should ONLY happen for broadcasts from OTHER nodes, not own broadcasts
+
 **Required Actions:**
-1. ✅ Find VirtualNode.route() or equivalent routing logic for BROADCAST packets
-2. ✅ Count packets routed to BroadcastMessageHandler
-3. ✅ Verify packet type detection (BROADCAST vs other types)
-4. ✅ Find BroadcastMessageHandler.handlePacket() invocations
+1. ✅ Find VirtualNode.route() or onIncomingMmcpMessage() logs for BROADCAST packets
+2. ✅ Verify broadcast packet type detection:
+   - Find "BROADCAST PACKET DETECTED" logs
+   - Extract packet type byte (should be 0x01 for broadcast chunks)
+3. ✅ Count packets routed to BroadcastMessageHandler
+4. ✅ Find BroadcastMessageHandler.onReceiveBroadcastPacket() invocations
 5. ✅ Calculate routing loss: `receivedAtNode - routedToHandler`
-6. ✅ Check for:
+6. ✅ Verify routing decision logic:
+   - Check if packet bypasses MMCP routing (correct for broadcasts)
+   - Verify broadcastMessageHandler?.onReceiveBroadcastPacket() called
+7. ✅ Check for:
    - Routing errors
    - Unknown packet types
    - Handler not registered
+   - Deduplication preventing local delivery (check if intended)
 
 **Log Keywords to Search:**
-- "route()", "BROADCAST packet", "routing to handler"
-- "handlePacket", "BroadcastMessageHandler"
+- "✅ BROADCAST PACKET DETECTED", "routing to BroadcastMessageHandler"
+- "onReceiveBroadcastPacket", "Received broadcast chunk"
+- "Delivering broadcast locally" (should appear for receiver)
+- "Forwarding broadcast to neighbor" (forwarding vs local delivery)
 - "Unknown packet type", "handler not found"
 
 **Code Files to Verify:**
-- VirtualNode.kt routing logic
-- BroadcastMessageHandler.kt `handlePacket()` method
+- VirtualNode.kt routing logic (lines 894-950)
+  - Broadcast detection: `if (toAddr == ADDR_BROADCAST)`
+  - Deduplication: `seenBroadcasts.putIfAbsent(broadcastId, now)`
+  - Forwarding: Router/Hub roles forward to neighbors
+  - Local delivery: `broadcastMessageHandler?.onReceiveBroadcastPacket(packet)`
+- BroadcastMessageHandler.kt `onReceiveBroadcastPacket()` method
 
 **Evidence Required:**
 - Count of packets routed to handler
+- Deduplication check results (first seen vs already seen)
+- Differentiation between forwarding and local delivery
 - Any routing errors or failures
 
 **Critical Verification:**
 - ❓ Does routed count match received count?
-- ❓ If not, THIS IS THE BUG - packets received but not routed to handler
-- ❓ This was the PREVIOUS bug fixed by connectionExecutor migration
+- ❓ If not, is deduplication preventing delivery? (check if sender's own broadcast)
+- ❓ Are broadcasts from OTHER nodes delivered locally? (correct)
+- ❓ Are broadcasts from THIS node delivered locally? (incorrect - Issue #1)
+- ❓ Is local delivery happening INSIDE or OUTSIDE dedup check?
 
 ---
 
@@ -356,7 +442,7 @@ When investigating ANY broadcast or file transfer failure, agents MUST trace the
 ---
 
 ### Step 11: Notification Creation (Receiver)
-**Objective:** Verify user notified of broadcast reception
+**Objective:** Verify user notified of broadcast reception ONLY when file successfully received
 
 **Required Actions:**
 1. ✅ Find BroadcastReceivedDto creation in logs
@@ -366,40 +452,116 @@ When investigating ANY broadcast or file transfer failure, agents MUST trace the
    - Message text
    - File name
    - File path (or empty if text-only)
-   - Error status
-   - Error message
+   - **hasError flag** (CRITICAL - see Issue #2)
+   - Error message (if hasError=true)
 3. ✅ Find listener callback invocations
-4. ✅ Count listeners notified
-5. ✅ Find UI layer notification handling
-6. ✅ Verify notification added to receivedBroadcasts list
-7. ✅ Verify badge count updated
-8. ✅ Verify notification appears in dropdown
-9. ✅ Check for:
-   - Listener not registered
-   - UI update failures
-   - Notification lost
+4. ✅ **Error handling check:** Verify notification ONLY created when hasError=false
+   - If file write failed, check for "Skipping listener notification for failed file transfer"
+   - Verify notification count does NOT increment on errors
+5. ✅ Count listeners notified
+6. ✅ Find UI layer notification handling
+7. ✅ Verify notification added to receivedBroadcasts list
+8. ✅ Verify badge count updated
+9. ✅ Verify notification appears in dropdown
+10. ✅ Check for:
+    - Listener not registered
+    - UI update failures
+    - Notification lost
+    - **Notification created despite hasError=true (Issue #2 bug)**
 
 **Log Keywords to Search:**
-- "BroadcastReceivedDto", "notification"
+- "BroadcastReceivedDto", "notification", "hasError"
+- "Skipping listener notification for failed file transfer"
 - "receiveListeners", "listener callback"
 - "receivedBroadcasts.add", "updateNotificationBadge"
 - "notification badge", "dropdown"
+- "Creating notification DTO: hasError="
 
 **Code Files to Verify:**
 - BroadcastMessageHandler.kt listener notification logic
+  - Lines 495-540: File broadcast notification (check hasError handling)
+  - Lines 821-853: Text broadcast notification (check outgoingBroadcasts check)
 - EnhancedMeshFragment.kt or equivalent UI notification handling
 
 **Evidence Required:**
-- BroadcastReceivedDto contents
+- BroadcastReceivedDto contents (especially hasError flag)
 - Listener callback count
 - UI update logs
 - Badge count change
+- Whether notification skipped on file write error
 
 **Critical Verification:**
 - ❓ Were listeners notified?
+- ❓ If file write failed (hasError=true), were listeners SKIPPED? (correct)
+- ❓ If file write failed, was notification created anyway? (Issue #2 bug)
 - ❓ If not, are listeners registered?
 - ❓ Did UI receive and display notification?
-- ❓ If not, THIS IS THE BUG - notification delivery failure
+- ❓ Does badge count increment only for successful transfers?
+- ❓ If not, THIS IS THE BUG - notification delivery failure or error handling bug
+
+---
+
+### Step 11.5: Error Notification Check (Receiver) ⚠️ CRITICAL
+**Objective:** Verify notifications ONLY created for successful broadcasts, NOT for errors
+
+**Issue #2 Context:**
+When file broadcasts fail (e.g., file write error, no drop folder), the system should NOT create user-visible notifications or increment badge counts. Only successful broadcasts should appear in the notification dropdown.
+
+**Required Actions:**
+1. ✅ Find BroadcastReceivedDto creation logs
+2. ✅ Extract hasError flag value
+3. ✅ Verify listener notification logic:
+   - If hasError=false: Listeners should be notified ✅
+   - If hasError=true: Listeners should NOT be notified ❌
+4. ✅ Find "Skipping listener notification for failed file transfer" logs
+5. ✅ Verify badge count updates:
+   - Only increment on hasError=false
+   - Skip increment on hasError=true
+6. ✅ Check UI receivedBroadcasts list:
+   - Successful broadcasts should be added
+   - Failed broadcasts should NOT be added
+7. ✅ Verify error handling:
+   - hasError=true set when file write fails
+   - errorMessage populated with reason
+   - Notification creation skipped (not just created with error flag)
+
+**Log Keywords to Search:**
+- "Creating notification DTO: hasError=true" (should NOT trigger listener)
+- "Skipping listener notification for failed file transfer"
+- "hasError=false" (normal success path)
+- "Badge updated: count=" (correlate with hasError state)
+- "FILE_WRITE Failed" (error that should prevent notification)
+
+**Code Files to Verify:**
+- BroadcastMessageHandler.kt notification creation logic (lines 495-540)
+  - Check: `if (!hasError) { /* notify listeners */ }`
+  - Error path should skip notification entirely
+- EnhancedMeshFragment.kt broadcastListener callback
+  - Should only receive callbacks for successful broadcasts
+  - Badge count incremented only on successful broadcasts
+
+**Evidence Required:**
+- hasError flag value for each broadcast
+- Whether listeners were notified when hasError=true
+- Badge count changes correlated with hasError state
+- Notification dropdown entries (should not include hasError=true)
+
+**Critical Verification:**
+- ❓ If file write failed (hasError=true), were listeners notified? ❌ BUG
+- ❓ If hasError=true, was badge count incremented? ❌ BUG
+- ❓ If hasError=true, does notification appear in dropdown? ❌ BUG
+- ❓ Does notification creation happen INSIDE `if (!hasError)` check?
+
+**Expected Behavior:**
+- ✅ File write succeeds → hasError=false → notify listeners → badge++
+- ✅ File write fails → hasError=true → skip notification → badge unchanged
+- ✅ Error logged but user NOT shown notification
+
+**Bug Indicators:**
+- ❌ Logs show "hasError=true" AND "Notifying N listeners"
+- ❌ Badge count incremented despite file write failure
+- ❌ Notification dropdown shows entry with no file on disk
+- ❌ Listener notification happens OUTSIDE `if (!hasError)` check
 
 ---
 
@@ -422,42 +584,56 @@ Test each hypothesis in order:
    - If loss rate > expected threshold: CONFIRMED
    - Otherwise: DISPROVEN
 
-3. **❓ Routing failure (VirtualNode → Handler)?**
-   - Check Step 5 evidence
-   - Calculate: Step 4 received - Step 5 routed
-   - If routing loss > 0: CONFIRMED - THIS IS THE BUG
+3. **❓ **⚠️ Sender loopback notification (Issue #1)?**
+   - Check Step 3.5 evidence on SENDER device
+   - If sender received own broadcast AND created notification: CONFIRMED - THIS IS BUG #1
+   - If sender received own broadcast BUT skipped local delivery: DISPROVEN (working correctly)
    - Otherwise: DISPROVEN
 
-4. **❓ Chunk processing bug?**
+4. **❓ Routing failure (VirtualNode → Handler)?**
+   - Check Step 5 evidence
+   - Calculate: Step 4 received - Step 5 routed
+   - If routing loss > 0 on RECEIVER: CONFIRMED - THIS IS THE BUG
+   - If routing loss > 0 on SENDER due to dedup: EXPECTED (not a bug)
+   - Otherwise: DISPROVEN
+
+5. **❓ Chunk processing bug?**
    - Check Step 6 evidence
    - Calculate: Step 5 routed - Step 6 processed
    - If processing loss > 0: CONFIRMED - THIS IS THE BUG
    - Otherwise: DISPROVEN
 
-5. **❓ Completion logic bug?**
+6. **❓ Completion logic bug?**
    - Check Step 7 evidence
    - If receivedChunks.size == totalChunks AND isComplete() returns false: CONFIRMED
    - Otherwise: DISPROVEN
 
-6. **❓ File reassembly bug?**
+7. **❓ File reassembly bug?**
    - Check Step 8 evidence
    - If reassembled size != original size: CONFIRMED
    - Otherwise: DISPROVEN
 
-7. **❓ Folder configuration error?**
+8. **❓ Folder configuration error?**
    - Check Step 9 evidence
    - If drop folder == null OR folder creation failed: CONFIRMED
    - Otherwise: DISPROVEN
 
-8. **❓ File write failure?**
+9. **❓ File write failure?**
    - Check Step 10 evidence
    - If write operation failed with error: CONFIRMED
    - Otherwise: DISPROVEN
 
-9. **❓ Notification delivery failure?**
-   - Check Step 11 evidence
-   - If listeners not notified OR UI not updated: CONFIRMED
-   - Otherwise: DISPROVEN
+10. **❓ Notification delivery failure?**
+    - Check Step 11 evidence
+    - If listeners not notified OR UI not updated: CONFIRMED
+    - Otherwise: DISPROVEN
+
+11. **❓ **⚠️ Error notification created (Issue #2)?**
+    - Check Step 11.5 evidence on RECEIVER device
+    - If file write failed (hasError=true) AND listeners notified: CONFIRMED - THIS IS BUG #2
+    - If hasError=true AND notification skipped: DISPROVEN (working correctly)
+    - If badge count incremented despite hasError=true: CONFIRMED - THIS IS BUG #2
+    - Otherwise: DISPROVEN
 
 ### Root Cause Determination
 

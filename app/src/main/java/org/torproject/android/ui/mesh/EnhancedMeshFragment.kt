@@ -295,15 +295,25 @@ class EnhancedMeshFragment : Fragment() {
 		
 		// Broadcast listener - receives broadcasts from the mesh network
         broadcastListener = { broadcast: BroadcastReceivedDto ->
-			android.util.Log.e("EnhancedMeshFragment", 
-				"[BROADCAST_LISTENER] ⚡ Callback invoked: id=${broadcast.broadcastId}, " +
-				"sender=${broadcast.senderNodeId}, message='${broadcast.messageText}', " +
-				"fileName='${broadcast.fileName}', filePath='${broadcast.filePath}', hasError=${broadcast.hasError}")
+			val shortId = broadcast.broadcastId.take(8)
+			val tag = "EnhancedMeshFragment[$shortId]"
+			
+			android.util.Log.e(tag, 
+				"[UI_CALLBACK] ⚡ Broadcast listener invoked: sender=${broadcast.senderNodeId}, " +
+				"message='${broadcast.messageText}', fileName='${broadcast.fileName}', " +
+				"filePath='${broadcast.filePath}', hasError=${broadcast.hasError}")
 			
 			lifecycleScope.launch(Dispatchers.Main) {
-				android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] Adding to receivedBroadcasts list")
+				// Check for duplicate broadcast ID (fixes duplicate notification bug)
+				val isDuplicate = receivedBroadcasts.any { it.broadcastId == broadcast.broadcastId }
+				if (isDuplicate) {
+					android.util.Log.w(tag, "[UI_CALLBACK] ⚠️ DUPLICATE broadcast detected, skipping (already in list)")
+					return@launch
+				}
 				
-				// Store notification first
+				android.util.Log.d(tag, "[UI_CALLBACK] Adding to receivedBroadcasts list (currently ${receivedBroadcasts.size} items)")
+				
+				// Store notification
 				receivedBroadcasts.add(0, BroadcastNotification(
 					broadcastId = broadcast.broadcastId,
 					senderNodeId = broadcast.senderNodeId.toString(),
@@ -315,14 +325,12 @@ class EnhancedMeshFragment : Fragment() {
 					errorMessage = broadcast.errorMessage
 				))
 				
-				android.util.Log.d("EnhancedMeshFragment", 
-					"[BROADCAST_LISTENER] List updated - size=${receivedBroadcasts.size}")
+				android.util.Log.d(tag, "[UI_CALLBACK] ✅ Added to list - new size=${receivedBroadcasts.size}")
 				
 				// Update notification badge
 				val badgeCount = receivedBroadcasts.size
 				(activity as? org.torproject.android.OrbotActivity)?.updateNotificationBadge(badgeCount)
-				android.util.Log.d("EnhancedMeshFragment", 
-					"[BROADCAST_LISTENER] Badge updated: count=$badgeCount")
+				android.util.Log.d(tag, "[UI_CALLBACK] 🔔 Badge updated: count=$badgeCount (broadcast added)")
                 
                 // Check for receive error (drop folder not set)
                 if (broadcast.hasError) {
@@ -378,21 +386,17 @@ class EnhancedMeshFragment : Fragment() {
                     android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] Attempting to show Snackbar")
                     android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] view=$view, isAdded=$isAdded, isVisible=$isVisible")
 
-                    // Show snackbar using view?.let pattern
+                    // Show snackbar if view is available
                     view?.let { fragmentView ->
-                        try {
-                            Snackbar.make(
-                                fragmentView,
-                                message,
-                                Snackbar.LENGTH_LONG
-                            ).setAction("View") {
-                                Toast.makeText(requireContext(), "Viewing broadcast details", Toast.LENGTH_SHORT).show()
-                            }.show()
-                            android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] ✅ Snackbar shown successfully")
-                        } catch (e: Exception) {
-                            android.util.Log.e("EnhancedMeshFragment", "[BROADCAST_LISTENER] ❌ Failed to show Snackbar", e)
-                        }
-                    }
+                        Snackbar.make(
+                            fragmentView,
+                            message,
+                            Snackbar.LENGTH_LONG
+                        ).setAction("View") {
+                            Toast.makeText(requireContext(), "Viewing broadcast details", Toast.LENGTH_SHORT).show()
+                        }.show()
+                        android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] ✅ Snackbar shown successfully")
+                    } ?: android.util.Log.w("EnhancedMeshFragment", "[BROADCAST_LISTENER] ⚠️ View not available, skipping Snackbar")
                 }
 			}
             
