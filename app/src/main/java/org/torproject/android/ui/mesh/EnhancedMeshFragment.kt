@@ -55,7 +55,8 @@ import java.io.ByteArrayOutputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlinx.coroutines.Job
-
+import android.os.Build
+import androidx.core.content.PermissionChecker
 
 
 /**
@@ -117,7 +118,39 @@ class EnhancedMeshFragment : Fragment() {
 		private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
 	}
 
-	    /**
+private var pendingFolderName: String? = null
+
+private val requestWritePermissionLauncher = registerForActivityResult(
+    ActivityResultContracts.RequestPermission()
+) { isGranted ->
+    if (isGranted && pendingFolderName != null) {
+        createStorageFolder(pendingFolderName!!)
+        pendingFolderName = null
+    } else {
+        Snackbar.make(requireView(), "Write permission is required to create folders", Snackbar.LENGTH_LONG).show()
+        pendingFolderName = null
+    }
+}
+
+private fun hasWritePermission(): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        // App-specific storage: permission not required
+        true
+    } else {
+        ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+    }
+}
+
+private fun ensureWritePermissionAndCreateFolder(folderName: String) {
+    if (!hasWritePermission()) {
+        pendingFolderName = folderName
+        requestWritePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        return
+    }
+    createStorageFolder(folderName)
+}
+
+	/**
      * Convert content:// URI to file system path
      * Required for configuring drop folder with meshrabiya API
      */
@@ -142,7 +175,7 @@ class EnhancedMeshFragment : Fragment() {
                     val appFolder = requireContext().getExternalFilesDir(null)
                     val broadcastFolder = java.io.File(appFolder, "broadcasts")
                     if (!broadcastFolder.exists()) {
-                        broadcastFolder.mkdirs()
+                        ensureWritePermissionAndCreateFolder("broadcasts")
                     }
                     android.util.Log.d("EnhancedMeshFragment", "Using broadcast folder: ${broadcastFolder.absolutePath}")
                     return broadcastFolder.absolutePath
@@ -152,7 +185,7 @@ class EnhancedMeshFragment : Fragment() {
             // Fallback: use app's external files directory
             val fallbackFolder = java.io.File(requireContext().getExternalFilesDir(null), "broadcasts")
             if (!fallbackFolder.exists()) {
-                fallbackFolder.mkdirs()
+                ensureWritePermissionAndCreateFolder("broadcasts")
             }
             android.util.Log.d("EnhancedMeshFragment", "Using fallback broadcast folder: ${fallbackFolder.absolutePath}")
             fallbackFolder.absolutePath
@@ -162,7 +195,7 @@ class EnhancedMeshFragment : Fragment() {
             // Last resort fallback
             val fallbackFolder = java.io.File(requireContext().getExternalFilesDir(null), "broadcasts")
             if (!fallbackFolder.exists()) {
-                fallbackFolder.mkdirs()
+                ensureWritePermissionAndCreateFolder("broadcasts")
             }
             fallbackFolder.absolutePath
         }
@@ -1025,22 +1058,21 @@ class EnhancedMeshFragment : Fragment() {
 			if (appDir != null) {
 				val newFolder = java.io.File(appDir, folderName)
 				if (!newFolder.exists()) {
-					if (newFolder.mkdirs()) {
-						android.util.Log.i("EnhancedMeshFragment", "Created folder: ${newFolder.absolutePath}")
-						
-						// Convert to Uri and update storage
-						val folderUri = Uri.fromFile(newFolder)
-						selectedFolderUri = folderUri
-						
-						// Save to preferences
-						meshrabiyaApi.setDropFolderUri(folderUri.toString())
-						
-						updateStorageAllocation(folderUri)
-						updateUI()
-						
-						Snackbar.make(requireView(), "Folder created: $folderName", Snackbar.LENGTH_SHORT).show()
+					if (hasWritePermission()) {
+						if (newFolder.mkdirs()) {
+							android.util.Log.i("EnhancedMeshFragment", "Created folder: ${newFolder.absolutePath}")
+							val folderUri = Uri.fromFile(newFolder)
+							selectedFolderUri = folderUri
+							meshrabiyaApi.setDropFolderUri(folderUri.toString())
+							updateStorageAllocation(folderUri)
+							updateUI()
+							Snackbar.make(requireView(), "Folder created: $folderName", Snackbar.LENGTH_SHORT).show()
+						} else {
+							Snackbar.make(requireView(), "Failed to create folder", Snackbar.LENGTH_SHORT).show()
+						}
 					} else {
-						Snackbar.make(requireView(), "Failed to create folder", Snackbar.LENGTH_SHORT).show()
+						pendingFolderName = folderName
+						requestWritePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
 					}
 				} else {
 					Snackbar.make(requireView(), "Folder already exists", Snackbar.LENGTH_SHORT).show()
