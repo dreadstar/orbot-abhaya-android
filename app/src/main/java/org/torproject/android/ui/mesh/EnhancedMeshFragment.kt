@@ -32,6 +32,8 @@ import androidx.documentfile.provider.DocumentFile
 import android.widget.TextView
 import android.widget.Toast
 import android.util.Log
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.LinearLayoutManager
 
 // QR Code generation and Camera scanning
 import android.graphics.Bitmap
@@ -57,7 +59,17 @@ import java.util.concurrent.Executors
 import kotlinx.coroutines.Job
 import android.os.Build
 import androidx.core.content.PermissionChecker
-
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.SharingStarted
+import org.torproject.android.ui.mesh.model.BroadcastNotification
+import org.torproject.android.ui.mesh.model.StatusNotification
+import org.torproject.android.ui.mesh.model.StorageNotification
+import org.torproject.android.ui.mesh.model.NotificationFeedEntry
+import org.torproject.android.ui.mesh.model.NotificationType
+import org.torproject.android.ui.mesh.model.toFeedEntry
+import kotlinx.coroutines.flow.stateIn
 
 /**
  * EnhancedMeshFragment: Mesh UI fragment using MeshrabiyaApi for all mesh logic.
@@ -69,9 +81,13 @@ class EnhancedMeshFragment : Fragment() {
 	private lateinit var broadcastListener: (com.ustadmobile.meshrabiya.api.model.BroadcastReceivedDto) -> Unit
 
 	// Notification storage for broadcast messages (NEW)
-    private val receivedBroadcasts = mutableListOf<BroadcastNotification>()
+    private val broadcastNotifications = MutableStateFlow<List<BroadcastNotification>>(emptyList())
+	private val statusNotifications = MutableStateFlow<List<StatusNotification>>(emptyList())
+	private val storageNotifications = MutableStateFlow<List<StorageNotification>>(emptyList())
     
-	
+	private lateinit var notificationFeed: StateFlow<List<NotificationFeedEntry>>
+	private lateinit var notificationsAdapter: NotificationsAdapter
+
 	// Track whether deferred views (cards 4-9) have been initialized via ViewStub
 	private var deferredViewsInitialized = false
 	
@@ -267,6 +283,13 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 		val view = inflater.inflate(R.layout.fragment_mesh_enhanced, container, false)
 		// Only bind immediate views (cards 1-3), deferred views bound after ViewStub inflation
 		MeshUIBindings.bindImmediateViews(view)
+
+		// Initialize notifications adapter and bind to RecyclerView
+        notificationsAdapter = NotificationsAdapter(emptyList())
+		val notificationsRecyclerView = view.findViewById<RecyclerView>(R.id.notificationsDropdownRecyclerView)
+		notificationsRecyclerView.adapter = notificationsAdapter
+		notificationsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
+
 		return view
 	}
 
@@ -276,7 +299,16 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 		// Get MeshrabiyaApi singleton (already initialized in OrbotApp.onCreate)
 		meshrabiyaApi = MeshrabiyaApiImpl.getInstance()
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] MeshrabiyaApi obtained")
-		
+		notificationFeed = combine(
+			broadcastNotifications,
+			statusNotifications,
+			storageNotifications
+		) { broadcasts, errors, storage ->
+			(broadcasts.map { it.toFeedEntry() } +
+			errors.map { it.toFeedEntry() } +
+			storage.map { it.toFeedEntry() })
+				.sortedByDescending { it.createdAt }
+		}.stateIn(viewLifecycleOwner.lifecycleScope, SharingStarted.Eagerly, emptyList())
 		// NOTE: initMesh() is called ONLY in OrbotApp.onCreate() at app startup.
 		// Fragment just uses the already-initialized mesh infrastructure.
 		
@@ -328,112 +360,100 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 		
 		// Broadcast listener - receives broadcasts from the mesh network
         broadcastListener = { broadcast: BroadcastReceivedDto ->
-			val shortId = broadcast.broadcastId.take(8)
-			val tag = "EnhancedMeshFragment[$shortId]"
-			
-			android.util.Log.e(tag, 
-				"[UI_CALLBACK] ⚡ Broadcast listener invoked: sender=${broadcast.senderNodeId}, " +
-				"message='${broadcast.messageText}', fileName='${broadcast.fileName}', " +
-				"filePath='${broadcast.filePath}', hasError=${broadcast.hasError}")
-			
+			val tag = "EnhancedMeshFragment[${broadcast.broadcastId.take(8)}]"
 			lifecycleScope.launch(Dispatchers.Main) {
-				// Check for duplicate broadcast ID (fixes duplicate notification bug)
-				val isDuplicate = receivedBroadcasts.any { it.broadcastId == broadcast.broadcastId }
-				if (isDuplicate) {
-					android.util.Log.w(tag, "[UI_CALLBACK] ⚠️ DUPLICATE broadcast detected, skipping (already in list)")
-					return@launch
-				}
-				
-				android.util.Log.d(tag, "[UI_CALLBACK] Adding to receivedBroadcasts list (currently ${receivedBroadcasts.size} items)")
-				
-				// Store notification
-				receivedBroadcasts.add(0, BroadcastNotification(
-					broadcastId = broadcast.broadcastId,
-					senderNodeId = broadcast.senderNodeId.toString(),
-					messageText = broadcast.messageText,
-					fileName = broadcast.fileName,
-					filePath = broadcast.filePath,
-					timestamp = System.currentTimeMillis(),
-					hasError = broadcast.hasError,
-					errorMessage = broadcast.errorMessage
-				))
-				
-				android.util.Log.d(tag, "[UI_CALLBACK] ✅ Added to list - new size=${receivedBroadcasts.size}")
-				
-				// Update notification badge
-				val badgeCount = receivedBroadcasts.size
-				(activity as? org.torproject.android.OrbotActivity)?.updateNotificationBadge(badgeCount)
-				android.util.Log.d(tag, "[UI_CALLBACK] 🔔 Badge updated: count=$badgeCount (broadcast added)")
-                
-                // Check for receive error (drop folder not set)
-                if (broadcast.hasError) {
-                    val errorMessage = broadcast.errorMessage ?: "Failed to receive file"
-                    Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
-                    
-                    // Log error to console
-                    android.util.Log.e("EnhancedMeshFragment", "Broadcast error: ${broadcast.errorMessage}")
-                    
-                    // Show error snackbar with action to go to drop folder settings
-                    view?.let { fragmentView ->
-                        Snackbar.make(
-                            fragmentView,
-                            "File broadcast failed: $errorMessage",
-                            Snackbar.LENGTH_LONG
-                        ).setAction("Set Folder") {
-                            folderPickerLauncher.launch(null)
-                        }.show()
-                    }
-                } else {
-                    // Success case
-                    android.util.Log.d("EnhancedMeshFragment", 
-						"[BROADCAST_LISTENER] Constructing message - fileName='${broadcast.fileName}', filePath='${broadcast.filePath}'")
+				val myNodeId = meshrabiyaApi.getNodeId().toString()
+				val isDuplicate = broadcastNotifications.value.any { it.id == broadcast.broadcastId }
+				val isSelf = broadcast.senderNodeId.toString() == myNodeId
+				val hasError = broadcast.hasError
+				val errorMessage = broadcast.errorMessage ?: "Failed to receive file"
 
-					val message = if (broadcast.fileName.isNotBlank() && broadcast.filePath.isNotBlank()) {
-						"Message from node ${broadcast.senderNodeId}: ${broadcast.messageText}\n" +
-								"File: ${broadcast.fileName} saved to ${broadcast.filePath}"
-					} else {
-						"Message from node ${broadcast.senderNodeId}: ${broadcast.messageText}"
+				when {
+					isDuplicate -> {
+						// Add status notification for duplicate
+						statusNotifications.value = statusNotifications.value + StatusNotification(
+							id = broadcast.broadcastId,
+							title = "Duplicate Broadcast",
+							createdAt = System.currentTimeMillis(),
+							statusMessage = "Broadcast already received"
+						)
+						Toast.makeText(requireContext(), "Duplicate broadcast received", Toast.LENGTH_SHORT).show()
+						android.util.Log.w(tag, "[UI_CALLBACK] ⚠️ DUPLICATE broadcast detected, skipping (already in list)")
+						return@launch
 					}
+					isSelf -> {
+						// Add status notification for self-broadcast
+						statusNotifications.value = statusNotifications.value + StatusNotification(
+							id = broadcast.broadcastId,
+							title = "Self Broadcast",
+							createdAt = System.currentTimeMillis(),
+							statusMessage = "Sender is self"
+						)
+						Toast.makeText(requireContext(), "Ignored self-broadcast", Toast.LENGTH_SHORT).show()
+						android.util.Log.w(tag, "[UI_CALLBACK] ⚠️ Self-broadcast detected, skipping")
+						return@launch
+					}
+					hasError -> {
+						// Add status notification for error
+						statusNotifications.value = statusNotifications.value + StatusNotification(
+							id = broadcast.broadcastId,
+							title = "File Error",
+							createdAt = System.currentTimeMillis(),
+							statusMessage = errorMessage
+						)
+						Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
+						android.util.Log.e(tag, "[UI_CALLBACK] ❌ Broadcast error: $errorMessage")
+						// Show error snackbar with action to go to drop folder settings
+						view?.let { fragmentView ->
+							Snackbar.make(
+								fragmentView,
+								"File broadcast failed: $errorMessage",
+								Snackbar.LENGTH_LONG
+							).setAction("Set Folder") {
+								folderPickerLauncher.launch(null)
+							}.show()
+						}
+						return@launch
+					}
+					else -> {
+						// Add broadcast notification
+						val newItem = BroadcastNotification(
+							id = broadcast.broadcastId,
+							title = "Broadcast Rcvd: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())}",
+							createdAt = System.currentTimeMillis(),
+							message = broadcast.messageText,
+							filePath = broadcast.filePath,
+							senderNodeId = broadcast.senderNodeId.toString()
+						)
+						broadcastNotifications.value = broadcastNotifications.value + newItem
+						android.util.Log.d(tag, "[UI_CALLBACK] ✅ Added to broadcastNotifications (size=${broadcastNotifications.value.size})")
 
-					android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] Final message: '$message'")
-                    
-                    android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] Showing Toast: message='$message'")
-					try {
-						Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-						android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] ✅ Toast shown successfully")
-					} catch (e: Exception) {
-						android.util.Log.e("EnhancedMeshFragment", "[BROADCAST_LISTENER] ❌ Toast failed", e)
-						// Fallback: Try with activity context
+						// UI feedback (Toast, Snackbar) for success
+						val message = if (broadcast.fileName.isNotBlank() && broadcast.filePath.isNotBlank()) {
+							"Message from node ${broadcast.senderNodeId}: ${broadcast.messageText}\n" +
+							"File: ${broadcast.fileName} saved to ${broadcast.filePath}"
+						} else {
+							"Message from node ${broadcast.senderNodeId}: ${broadcast.messageText}"
+						}
 						try {
-							Toast.makeText(requireActivity(), message, Toast.LENGTH_SHORT).show()
-						} catch (e2: Exception) {
-							android.util.Log.e("EnhancedMeshFragment", "[BROADCAST_LISTENER] ❌ Activity Toast also failed", e2)
+							Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+						} catch (e: Exception) {
+							android.util.Log.e(tag, "[UI_CALLBACK] ❌ Toast failed", e)
+						}
+						view?.let { fragmentView ->
+							Snackbar.make(
+								fragmentView,
+								message,
+								Snackbar.LENGTH_LONG
+							).setAction("View") {
+								Toast.makeText(requireContext(), "Viewing broadcast details", Toast.LENGTH_SHORT).show()
+							}.show()
 						}
 					}
-                    
-                    // Log the broadcast notification to console
-                    android.util.Log.e("EnhancedMeshFragment", "Broadcast ${broadcast.broadcastId}: file saved to ${broadcast.filePath}")
-            
-                    
-                    // Show snackbar
-                    android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] Attempting to show Snackbar")
-                    android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] view=$view, isAdded=$isAdded, isVisible=$isVisible")
-
-                    // Show snackbar if view is available
-                    view?.let { fragmentView ->
-                        Snackbar.make(
-                            fragmentView,
-                            message,
-                            Snackbar.LENGTH_LONG
-                        ).setAction("View") {
-                            Toast.makeText(requireContext(), "Viewing broadcast details", Toast.LENGTH_SHORT).show()
-                        }.show()
-                        android.util.Log.d("EnhancedMeshFragment", "[BROADCAST_LISTENER] ✅ Snackbar shown successfully")
-                    } ?: android.util.Log.w("EnhancedMeshFragment", "[BROADCAST_LISTENER] ⚠️ View not available, skipping Snackbar")
-                }
+				}
 			}
-            
-        }
+		}
+
 		meshrabiyaApi.registerBroadcastListener(broadcastListener)
 		
 		// Register broadcast success handler
@@ -490,6 +510,15 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 				}
 			} catch (e: Exception) {
 				android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Failed to inflate deferred cards", e)
+			}
+		}
+
+		// Observe notificationFeed and update both badge and dropdown adapter
+		viewLifecycleOwner.lifecycleScope.launch {
+			notificationFeed.collect { notifications ->
+				val badgeCount = notifications.size
+				(activity as? org.torproject.android.OrbotActivity)?.updateNotificationBadge(badgeCount)
+				notificationsAdapter.submitList(notifications)
 			}
 		}
 	}
@@ -1955,13 +1984,15 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 	/**
      * Get list of received broadcast notifications
      */
-    fun getReceivedBroadcasts(): List<BroadcastNotification> = receivedBroadcasts.toList()
+    fun getNotificationFeed(): StateFlow<List<NotificationFeedEntry>> = notificationFeed
     
-    /**
-     * Clear all broadcast notifications
-     */
-    fun clearNotifications() {
-        receivedBroadcasts.clear()
-        (activity as? org.torproject.android.OrbotActivity)?.updateNotificationBadge(0)
-    }
+
+	fun clearNotifications() {
+		broadcastNotifications.value = emptyList()
+		statusNotifications.value = emptyList()
+		storageNotifications.value = emptyList()
+		(activity as? org.torproject.android.OrbotActivity)?.updateNotificationBadge(0)
+	}
+
+	
 }

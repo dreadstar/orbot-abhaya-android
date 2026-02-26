@@ -482,13 +482,13 @@ class OrbotActivity : BaseActivity() {
      */
     private fun showNotificationsDialog() {
         val fragment = supportFragmentManager.findFragmentByTag("MESH_FRAGMENT") as? EnhancedMeshFragment
-        val notifications = fragment?.getReceivedBroadcasts() ?: emptyList()
-        
+        val notifications = fragment?.getNotificationFeed()?.value ?: emptyList()
+
         if (notifications.isEmpty()) {
             showToast("No notifications yet")
             return
         }
-        
+
         // Create dialog with RecyclerView showing notifications
         val dialogView = layoutInflater.inflate(R.layout.dialog_notifications, null)
         val recyclerView = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.notificationsRecyclerView)

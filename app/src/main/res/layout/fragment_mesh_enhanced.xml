@@ -463,6 +463,17 @@
 
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Notifications Dropdown RecyclerView -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/notificationsDropdownRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:clipToPadding="false"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            tools:listitem="@layout/item_notification_dropdown" />
+
         <!-- ViewStub for Cards 4-9: Deferred loading to improve initial load performance -->
         <!-- Inflated asynchronously after initial fragment display to prevent UI thread blocking -->
         <ViewStub
