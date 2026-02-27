@@ -286,6 +286,7 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 
 		// Initialize notifications adapter and bind to RecyclerView
         notificationsAdapter = NotificationsAdapter(emptyList())
+        android.util.Log.d("EnhancedMeshFragment", "[DROPDOWN] adapter created in fragment, size=${notificationsAdapter.itemCount}")
 		val notificationsRecyclerView = view.findViewById<RecyclerView>(R.id.notificationsDropdownRecyclerView)
 		notificationsRecyclerView.adapter = notificationsAdapter
 		notificationsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
@@ -516,9 +517,13 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 		// Observe notificationFeed and update both badge and dropdown adapter
 		viewLifecycleOwner.lifecycleScope.launch {
 			notificationFeed.collect { notifications ->
+				android.util.Log.d("EnhancedMeshFragment", "[DROPDOWN] collector received ${notifications.size} items")
 				val badgeCount = notifications.size
-				(activity as? org.torproject.android.OrbotActivity)?.updateNotificationBadge(badgeCount)
-				notificationsAdapter.submitList(notifications)
+				(activity as? org.torproject.android.OrbotActivity)?.let { act ->
+					act.updateNotificationBadge(badgeCount)
+					act.onNotificationFeedChanged(notifications)
+				}
+				// notificationsAdapter.submitList(notifications)
 			}
 		}
 	}
@@ -1986,6 +1991,14 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
      */
     fun getNotificationFeed(): StateFlow<List<NotificationFeedEntry>> = notificationFeed
     
+    /**
+     * Return the shared adapter used by both fragment and activity dropdown.
+     * This allows the activity to display the same list without maintaining its
+     * own copy. The adapter is initialized in onCreateView.
+     */
+    fun getNotificationsAdapter(): NotificationsAdapter =
+        if (this::notificationsAdapter.isInitialized) notificationsAdapter
+        else NotificationsAdapter(emptyList())
 
 	fun clearNotifications() {
 		broadcastNotifications.value = emptyList()

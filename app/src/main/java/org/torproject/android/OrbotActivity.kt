@@ -62,6 +62,10 @@ class OrbotActivity : BaseActivity() {
 
     // Notification badge for broadcast notifications
     private var notificationBadge: android.widget.TextView? = null
+
+    // Popup window attached to the notification icon; displays current feed
+    private var notificationsPopup: android.widget.PopupWindow? = null
+    private lateinit var notificationsAdapter: NotificationsAdapter
     
     override fun onCreate(savedInstanceState: Bundle?) {
         android.util.Log.d("OrbotActivity", "onCreate() - START")
@@ -469,10 +473,44 @@ class OrbotActivity : BaseActivity() {
         // Initialize notification badge reference from custom action view
         val actionView = menu?.findItem(R.id.action_notifications)?.actionView
         notificationBadge = actionView?.findViewById(R.id.notification_badge)
-        
-        // Set click listener on the action view to show notifications dialog
+
+        // start with an empty adapter; the fragment will populate its own instance
+        notificationsAdapter = NotificationsAdapter(emptyList())
+        android.util.Log.d("OrbotActivity", "[DROPDOWN] initial adapter created, size=${notificationsAdapter.itemCount}")
+
+        // Prepare dropdown layout and popup
+        val dropdownView = layoutInflater.inflate(R.layout.toolbar_notification_dropdown, null)
+        val recyclerView = dropdownView.findViewById<androidx.recyclerview.widget.RecyclerView>(
+            R.id.notificationsDropdownRecyclerView
+        )
+        recyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        recyclerView.adapter = notificationsAdapter
+
+        notificationsPopup = android.widget.PopupWindow(
+            dropdownView,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        ).apply {
+            elevation = 8f
+            setOnDismissListener {
+                android.util.Log.d("OrbotActivity", "[DROPDOWN] popup dismissed")
+            }
+        }
+        android.util.Log.d("OrbotActivity", "[DROPDOWN] popup created")
+
+        // Toggle popup on icon click; adapter already kept up-to-date via activity callback
         actionView?.setOnClickListener {
-            showNotificationsDialog()
+            android.util.Log.d("OrbotActivity", "[DROPDOWN] icon clicked, popup showing=${notificationsPopup?.isShowing}")
+            android.util.Log.d("OrbotActivity", "[DROPDOWN] current adapter size=${notificationsAdapter.itemCount}")
+
+            if (notificationsPopup?.isShowing == true) {
+                notificationsPopup?.dismiss()
+            } else {
+                android.util.Log.d("OrbotActivity", "[DROPDOWN] anchor size=${actionView?.width}x${actionView?.height}")
+                notificationsPopup?.showAsDropDown(actionView)
+                android.util.Log.d("OrbotActivity", "[DROPDOWN] popup shown")
+            }
         }
         return true
     }
@@ -520,5 +558,14 @@ class OrbotActivity : BaseActivity() {
                 visibility = View.GONE
             }
         }
+    }
+
+    /**
+     * Called by fragment when the notification feed changes.  Keeps the popup
+     * adapter in sync even if the fragment is not currently attached.
+     */
+    fun onNotificationFeedChanged(feed: List<org.torproject.android.ui.mesh.model.NotificationFeedEntry>) {
+        android.util.Log.d("OrbotActivity", "[DROPDOWN] activity received feed update, size=${feed.size}")
+        notificationsAdapter.submitList(feed)
     }
 }
