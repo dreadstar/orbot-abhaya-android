@@ -38,6 +38,8 @@ import org.torproject.android.ui.more.LogBottomSheet
 import org.torproject.android.ui.connect.ConnectViewModel
 import org.torproject.android.ui.core.DeviceAuthenticationPrompt
 import java.util.Locale
+import org.torproject.android.ui.mesh.EnhancedMeshFragment
+import org.torproject.android.ui.mesh.NotificationsAdapter
 
 class OrbotActivity : BaseActivity() {
 
@@ -58,6 +60,13 @@ class OrbotActivity : BaseActivity() {
 
     private val connectViewModel: ConnectViewModel by viewModels()
 
+    // Notification badge for broadcast notifications
+    private var notificationBadge: android.widget.TextView? = null
+
+    // Popup window attached to the notification icon; displays current feed
+    private var notificationsPopup: android.widget.PopupWindow? = null
+    private lateinit var notificationsAdapter: NotificationsAdapter
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         android.util.Log.d("OrbotActivity", "onCreate() - START")
         
@@ -457,5 +466,112 @@ class OrbotActivity : BaseActivity() {
         if (!logBottomSheet.isAdded) {
             logBottomSheet.show(supportFragmentManager, OrbotActivity::class.java.simpleName)
         }
+    }
+
+    override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
+        menuInflater.inflate(R.menu.main_toolbar, menu)
+        // Initialize notification badge reference from custom action view
+        val actionView = menu?.findItem(R.id.action_notifications)?.actionView
+        notificationBadge = actionView?.findViewById(R.id.notification_badge)
+
+        // start with an empty adapter; the fragment will populate its own instance
+        notificationsAdapter = NotificationsAdapter(emptyList()) { entry ->
+            val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_fragment) as? androidx.navigation.fragment.NavHostFragment
+            val fragment = navHostFragment?.childFragmentManager?.fragments?.firstOrNull() as? EnhancedMeshFragment
+            fragment?.removeNotification(entry)
+        }
+        android.util.Log.d("OrbotActivity", "[DROPDOWN] initial adapter created, size=${notificationsAdapter.itemCount}")
+
+        // Prepare dropdown layout and popup
+        val dropdownView = layoutInflater.inflate(R.layout.toolbar_notification_dropdown, null)
+        val recyclerView = dropdownView.findViewById<androidx.recyclerview.widget.RecyclerView>(
+            R.id.notificationsDropdownRecyclerView
+        )
+        recyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        recyclerView.adapter = notificationsAdapter
+
+        notificationsPopup = android.widget.PopupWindow(
+            dropdownView,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        ).apply {
+            elevation = 8f
+            setOnDismissListener {
+                android.util.Log.d("OrbotActivity", "[DROPDOWN] popup dismissed")
+            }
+        }
+        android.util.Log.d("OrbotActivity", "[DROPDOWN] popup created")
+
+        // Toggle popup on icon click; adapter already kept up-to-date via activity callback
+        actionView?.setOnClickListener {
+            android.util.Log.d("OrbotActivity", "[DROPDOWN] icon clicked, popup showing=${notificationsPopup?.isShowing}")
+            android.util.Log.d("OrbotActivity", "[DROPDOWN] current adapter size=${notificationsAdapter.itemCount}")
+
+            if (notificationsPopup?.isShowing == true) {
+                notificationsPopup?.dismiss()
+            } else {
+                android.util.Log.d("OrbotActivity", "[DROPDOWN] anchor size=${actionView?.width}x${actionView?.height}")
+                notificationsPopup?.showAsDropDown(actionView)
+                android.util.Log.d("OrbotActivity", "[DROPDOWN] popup shown")
+            }
+        }
+        return true
+    }
+
+    /**
+     * Show dialog with list of received broadcast notifications
+     */
+    private fun showNotificationsDialog() {
+        val fragment = supportFragmentManager.findFragmentByTag("MESH_FRAGMENT") as? EnhancedMeshFragment
+        val notifications = fragment?.getNotificationFeed()?.value ?: emptyList()
+
+        if (notifications.isEmpty()) {
+            showToast("No notifications yet")
+            return
+        }
+
+        // Create dialog with RecyclerView showing notifications
+        val dialogView = layoutInflater.inflate(R.layout.dialog_notifications, null)
+        val recyclerView = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.notificationsRecyclerView)
+        recyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        recyclerView.adapter = NotificationsAdapter(notifications) { entry ->
+            fragment?.removeNotification(entry)
+        }
+        
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Broadcast Notifications (${notifications.size})")
+            .setView(dialogView)
+            .setPositiveButton("Clear All") { _, _ ->
+                fragment?.clearNotifications()
+                updateNotificationBadge(0)
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    /**
+     * Update notification badge count in toolbar
+     * Shows red badge with count when notifications > 0
+     */
+    fun updateNotificationBadge(count: Int) {
+        notificationBadge?.apply {
+            if (count > 0) {
+                text = if (count > 99) "99+" else count.toString()
+                visibility = View.VISIBLE
+            } else {
+                text = ""
+                visibility = View.GONE
+            }
+        }
+    }
+
+    /**
+     * Called by fragment when the notification feed changes.  Keeps the popup
+     * adapter in sync even if the fragment is not currently attached.
+     */
+    fun onNotificationFeedChanged(feed: List<org.torproject.android.ui.mesh.model.NotificationFeedEntry>) {
+        android.util.Log.d("OrbotActivity", "[DROPDOWN] activity received feed update, size=${feed.size}")
+        notificationsAdapter.submitList(feed)
     }
 }

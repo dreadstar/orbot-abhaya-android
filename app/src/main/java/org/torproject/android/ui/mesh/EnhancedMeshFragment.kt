@@ -25,9 +25,15 @@ import com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl
 import com.ustadmobile.meshrabiya.api.model.MeshStateDto
 import com.ustadmobile.meshrabiya.api.model.DropFolderItemDto
 import com.ustadmobile.meshrabiya.api.model.NetworkInfoDto
+import com.ustadmobile.meshrabiya.api.model.BroadcastReceivedDto
 import android.net.Uri
 import androidx.activity.result.ActivityResultLauncher
 import androidx.documentfile.provider.DocumentFile
+import android.widget.TextView
+import android.widget.Toast
+import android.util.Log
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.LinearLayoutManager
 
 // QR Code generation and Camera scanning
 import android.graphics.Bitmap
@@ -51,8 +57,23 @@ import java.io.ByteArrayOutputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlinx.coroutines.Job
+import android.os.Build
+import androidx.core.content.PermissionChecker
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.SharingStarted
+import org.torproject.android.ui.mesh.model.BroadcastNotification
+import org.torproject.android.ui.mesh.model.StatusNotification
+import org.torproject.android.ui.mesh.model.StorageNotification
+import org.torproject.android.ui.mesh.model.NotificationFeedEntry
+import org.torproject.android.ui.mesh.model.NotificationType
+import org.torproject.android.ui.mesh.model.toFeedEntry
+import kotlinx.coroutines.flow.stateIn
 
-
+interface EnhancedMeshFragmentHost {
+    fun getFilePathFromUri(uri: Uri): String?
+}
 
 /**
  * EnhancedMeshFragment: Mesh UI fragment using MeshrabiyaApi for all mesh logic.
@@ -61,13 +82,44 @@ import kotlinx.coroutines.Job
 class EnhancedMeshFragment : Fragment() {
 
 	private lateinit var meshrabiyaApi: MeshrabiyaApi
-	
+	private lateinit var broadcastListener: (com.ustadmobile.meshrabiya.api.model.BroadcastReceivedDto) -> Unit
+	private enum class LocationRequestOrigin { NONE, START_MESH, BROADCAST }
+	private var locationRequestOrigin = LocationRequestOrigin.NONE
+
+	// Notification storage for broadcast messages (NEW)
+    private val broadcastNotifications = MutableStateFlow<List<BroadcastNotification>>(emptyList())
+	private val statusNotifications = MutableStateFlow<List<StatusNotification>>(emptyList())
+	private val storageNotifications = MutableStateFlow<List<StorageNotification>>(emptyList())
+    
+	private lateinit var notificationFeed: StateFlow<List<NotificationFeedEntry>>
+	private lateinit var notificationsAdapter: NotificationsAdapter
+
 	// Track whether deferred views (cards 4-9) have been initialized via ViewStub
 	private var deferredViewsInitialized = false
 	
 	// Folder picker for storage allocation
 	private lateinit var folderPickerLauncher: ActivityResultLauncher<Uri?>
 	private var selectedFolderUri: Uri? = null
+	// keep coordinates until send is tapped
+	private var pendingLatitude: Double? = null
+	private var pendingLongitude: Double? = null
+	private var locationRequestJob: Job? = null
+	private var activeLocationListener: android.location.LocationListener? = null
+	// File picker for broadcast attachments (must be registered before onCreate)
+	private val broadcastFilePicker = registerForActivityResult(
+		ActivityResultContracts.OpenDocument()
+	) { uri: Uri? ->
+		uri?.let {
+			handleBroadcastFileSelected(it)
+		}
+	}
+	
+	private var pendingFileCallback: ((Uri) -> Unit)? = null
+	
+	private fun handleBroadcastFileSelected(uri: Uri) {
+		pendingFileCallback?.invoke(uri)
+		pendingFileCallback = null
+	}
 	
 	// Flags to prevent recursive toggle updates from programmatic changes
 	private var isStorageToggleProgrammatic = false
@@ -86,11 +138,96 @@ class EnhancedMeshFragment : Fragment() {
 	private lateinit var networkOverviewMetricsJob: Job
 	
 	companion object {
-		private const val PREF_STORAGE_FOLDER_URI = "mesh_storage_folder_uri"
-		private const val PREF_STORAGE_QUOTA_BYTES = "mesh_storage_quota_bytes"
+		
+		
 		private const val DEFAULT_STORAGE_QUOTA = 100_000_000L // 100MB default
 		private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
 	}
+
+	private var pendingFolderName: String? = null
+
+	private val requestWritePermissionLauncher = registerForActivityResult(
+		ActivityResultContracts.RequestPermission()
+	) { isGranted ->
+		if (isGranted && pendingFolderName != null) {
+			createStorageFolder(pendingFolderName!!)
+			pendingFolderName = null
+		} else {
+			Snackbar.make(requireView(), "Write permission is required to create folders", Snackbar.LENGTH_LONG).show()
+			pendingFolderName = null
+		}
+	}
+
+	/**
+	 * Convert content:// URI to file system path
+	 * Required for configuring drop folder with meshrabiya API
+	 */
+	fun getFilePathFromUri(uri: Uri): String? {
+		return try {
+			// For DocumentTree URIs (from folder picker), use the tree document ID
+			val docId = android.provider.DocumentsContract.getTreeDocumentId(uri)
+			
+			// Try to get real path from document provider
+			val contentResolver = requireContext().contentResolver
+			val cursor = contentResolver.query(
+				android.provider.DocumentsContract.buildDocumentUriUsingTree(uri, docId),
+				arrayOf(android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+				null, null, null
+			)
+			
+			cursor?.use {
+				if (it.moveToFirst()) {
+					// For now, use the app's external files directory + folder name
+					// This is a workaround since content:// URIs don't map directly to filesystem paths
+					val folderName = it.getString(0)
+					val appFolder = requireContext().getExternalFilesDir(null)
+					val broadcastFolder = java.io.File(appFolder, "broadcasts")
+					if (!broadcastFolder.exists()) {
+						ensureWritePermissionAndCreateFolder("broadcasts")
+					}
+					android.util.Log.d("EnhancedMeshFragment", "Using broadcast folder: ${broadcastFolder.absolutePath}")
+					return broadcastFolder.absolutePath
+				}
+			}
+			
+			// Fallback: use app's external files directory
+			val fallbackFolder = java.io.File(requireContext().getExternalFilesDir(null), "broadcasts")
+			if (!fallbackFolder.exists()) {
+				ensureWritePermissionAndCreateFolder("broadcasts")
+			}
+			android.util.Log.d("EnhancedMeshFragment", "Using fallback broadcast folder: ${fallbackFolder.absolutePath}")
+			fallbackFolder.absolutePath
+			
+		} catch (e: Exception) {
+			android.util.Log.e("EnhancedMeshFragment", "Error converting URI to path: ${e.message}")
+			// Last resort fallback
+			val fallbackFolder = java.io.File(requireContext().getExternalFilesDir(null), "broadcasts")
+			if (!fallbackFolder.exists()) {
+				ensureWritePermissionAndCreateFolder("broadcasts")
+			}
+			fallbackFolder.absolutePath
+		}
+	}
+
+	private fun hasWritePermission(): Boolean {
+		return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+			// App-specific storage: permission not required
+			true
+		} else {
+			ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+		}
+	}
+
+	private fun ensureWritePermissionAndCreateFolder(folderName: String) {
+		if (!hasWritePermission()) {
+			pendingFolderName = folderName
+			requestWritePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+			return
+		}
+		createStorageFolder(folderName)
+	}
+
+	
 	
 	// Permission launcher for runtime location permission requests
 	private val requestLocationPermissionLauncher = registerForActivityResult(
@@ -98,11 +235,38 @@ class EnhancedMeshFragment : Fragment() {
 	) { permissions ->
 		val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
 		val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
-		
+
 		if (fineLocationGranted && coarseLocationGranted) {
-			// Permissions granted, retry starting mesh
-			android.util.Log.d("EnhancedMeshFragment", "Location permissions granted, retrying startMesh()")
-			startMeshWithPermissionCheck()
+			when (locationRequestOrigin) {
+				LocationRequestOrigin.START_MESH -> {
+					android.util.Log.d("EnhancedMeshFragment",
+						"Permissions granted (origin=START_MESH) – retrying startMesh()")
+					startMeshWithPermissionCheck()
+				}
+				LocationRequestOrigin.BROADCAST -> {
+					android.util.Log.d("EnhancedMeshFragment",
+						"Permissions granted (origin=BROADCAST) – acquiring location for pending broadcast")
+					// duplicate the acquisition code from the checkbox listener:
+					try {
+						val lm = requireContext().getSystemService(Context.LOCATION_SERVICE)
+								as android.location.LocationManager
+						val loc = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+							?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+						if (loc != null) {
+							// store in the vars defined in showBroadcastDialog()
+							pendingLatitude = loc.latitude
+							pendingLongitude = loc.longitude
+							Log.d("EnhancedMeshFragment",
+								"location acquired after permission: $pendingLatitude,$pendingLongitude")
+						}
+					} catch (e: Exception) {
+						Log.e("EnhancedMeshFragment", "Failed to get location after permission", e)
+					}
+				}
+				LocationRequestOrigin.NONE -> {
+					// should never happen
+				}
+			}
 		} else {
 			// Permissions denied, show message
 			android.util.Log.w("EnhancedMeshFragment", "Location permissions denied by user")
@@ -114,6 +278,7 @@ class EnhancedMeshFragment : Fragment() {
 					.show()
 			}
 		}
+		locationRequestOrigin = LocationRequestOrigin.NONE
 	}
 
 	override fun onCreate(savedInstanceState: Bundle?) {
@@ -136,9 +301,8 @@ class EnhancedMeshFragment : Fragment() {
 				selectedFolderUri = it
 				
 				// Save to preferences
-				requireActivity().getPreferences(android.content.Context.MODE_PRIVATE).edit()
-					.putString(PREF_STORAGE_FOLDER_URI, it.toString())
-					.apply()
+				// Save to library-managed preferences via API
+				meshrabiyaApi.setDropFolderUri(it.toString())
 				
 				android.util.Log.d("EnhancedMeshFragment", "Folder selected: $it")
 				
@@ -159,6 +323,14 @@ class EnhancedMeshFragment : Fragment() {
 		val view = inflater.inflate(R.layout.fragment_mesh_enhanced, container, false)
 		// Only bind immediate views (cards 1-3), deferred views bound after ViewStub inflation
 		MeshUIBindings.bindImmediateViews(view)
+
+		// Initialize notifications adapter and bind to RecyclerView
+        notificationsAdapter = NotificationsAdapter(emptyList()) { entry -> removeNotification(entry) }
+        android.util.Log.d("EnhancedMeshFragment", "[DROPDOWN] adapter created in fragment, size=${notificationsAdapter.itemCount}")
+		val notificationsRecyclerView = view.findViewById<RecyclerView>(R.id.notificationsDropdownRecyclerView)
+		notificationsRecyclerView.adapter = notificationsAdapter
+		notificationsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
+
 		return view
 	}
 
@@ -168,7 +340,16 @@ class EnhancedMeshFragment : Fragment() {
 		// Get MeshrabiyaApi singleton (already initialized in OrbotApp.onCreate)
 		meshrabiyaApi = MeshrabiyaApiImpl.getInstance()
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] MeshrabiyaApi obtained")
-		
+		notificationFeed = combine(
+			broadcastNotifications,
+			statusNotifications,
+			storageNotifications
+		) { broadcasts, errors, storage ->
+			(broadcasts.map { it.toFeedEntry() } +
+			errors.map { it.toFeedEntry() } +
+			storage.map { it.toFeedEntry() })
+				.sortedByDescending { it.createdAt }
+		}.stateIn(viewLifecycleOwner.lifecycleScope, SharingStarted.Eagerly, emptyList())
 		// NOTE: initMesh() is called ONLY in OrbotApp.onCreate() at app startup.
 		// Fragment just uses the already-initialized mesh infrastructure.
 		
@@ -191,9 +372,15 @@ class EnhancedMeshFragment : Fragment() {
 					updateButtonStates(status)
 					// Optionally update other UI elements as needed
 				}
+
+				if (status == MeshStateDto.CONNECTED) {
+					Log.d("EnhancedMeshFragment", "[MESH_STATUS] Connected - role updates now automatic")
+					// Role updates happen automatically via EmergentRoleManager.startWifiStateMonitoring()
+				}
 			}
 		}
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Mesh status observer setup complete")
+		
 		
 		// Setup observer for network info StateFlow - auto-updates peer count and network stats
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Setting up network info observer...")
@@ -209,6 +396,126 @@ class EnhancedMeshFragment : Fragment() {
 		networkOverviewMetricsJob = viewLifecycleOwner.lifecycleScope.launch {
 			(meshrabiyaApi as? com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl)?.networkOverviewMetricsFlow?.collect { metrics ->
 				updateNetworkOverviewUI(metrics)
+			}
+		}
+		
+		// Broadcast listener - receives broadcasts from the mesh network
+        broadcastListener = { broadcast: BroadcastReceivedDto ->
+			val tag = "EnhancedMeshFragment[${broadcast.broadcastId.take(8)}]"
+			lifecycleScope.launch(Dispatchers.Main) {
+				val myNodeId = meshrabiyaApi.getNodeId().toString()
+				val isDuplicate = broadcastNotifications.value.any { it.id == broadcast.broadcastId }
+				val isSelf = broadcast.senderNodeId.toString() == myNodeId
+				val hasError = broadcast.hasError
+				val errorMessage = broadcast.errorMessage ?: "Failed to receive file"
+
+				when {
+					isDuplicate -> {
+						// Add status notification for duplicate
+						statusNotifications.value = statusNotifications.value + StatusNotification(
+							id = broadcast.broadcastId,
+							title = "Duplicate Broadcast",
+							createdAt = System.currentTimeMillis(),
+							statusMessage = "Broadcast already received"
+						)
+						Toast.makeText(requireContext(), "Duplicate broadcast received", Toast.LENGTH_SHORT).show()
+						android.util.Log.w(tag, "[UI_CALLBACK] ⚠️ DUPLICATE broadcast detected, skipping (already in list)")
+						return@launch
+					}
+					isSelf -> {
+						// Add status notification for self-broadcast
+						statusNotifications.value = statusNotifications.value + StatusNotification(
+							id = broadcast.broadcastId,
+							title = "Self Broadcast",
+							createdAt = System.currentTimeMillis(),
+							statusMessage = "Sender is self"
+						)
+						Toast.makeText(requireContext(), "Ignored self-broadcast", Toast.LENGTH_SHORT).show()
+						android.util.Log.w(tag, "[UI_CALLBACK] ⚠️ Self-broadcast detected, skipping")
+						return@launch
+					}
+					hasError -> {
+						// Add status notification for error
+						statusNotifications.value = statusNotifications.value + StatusNotification(
+							id = broadcast.broadcastId,
+							title = "File Error",
+							createdAt = System.currentTimeMillis(),
+							statusMessage = errorMessage
+						)
+						Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
+						android.util.Log.e(tag, "[UI_CALLBACK] ❌ Broadcast error: $errorMessage")
+						// Show error snackbar with action to go to drop folder settings
+						view?.let { fragmentView ->
+							Snackbar.make(
+								fragmentView,
+								"File broadcast failed: $errorMessage",
+								Snackbar.LENGTH_LONG
+							).setAction("Set Folder") {
+								folderPickerLauncher.launch(null)
+							}.show()
+						}
+						return@launch
+					}
+					else -> {
+						// Add broadcast notification
+						val newItem = BroadcastNotification(
+                            id = broadcast.broadcastId,
+                            title = "Broadcast Rcvd: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())}",
+                            createdAt = System.currentTimeMillis(),
+                            message = broadcast.messageText,
+                            filePath = broadcast.filePath,
+                            senderNodeId = broadcast.senderNodeId.toString(),
+                            latitude = broadcast.latitude,
+                            longitude = broadcast.longitude
+                        )
+						broadcastNotifications.value = broadcastNotifications.value + newItem
+						android.util.Log.d(tag, "[UI_CALLBACK] ✅ Added to broadcastNotifications (size=${broadcastNotifications.value.size})")
+
+						// UI feedback (Toast, Snackbar) for success
+						val message = if (broadcast.fileName.isNotBlank() && broadcast.filePath.isNotBlank()) {
+							"Message from node ${broadcast.senderNodeId}: ${broadcast.messageText}\n" +
+							"File: ${broadcast.fileName} saved to ${broadcast.filePath}"
+						} else {
+							"Message from node ${broadcast.senderNodeId}: ${broadcast.messageText}"
+						}
+						try {
+							Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+						} catch (e: Exception) {
+							android.util.Log.e(tag, "[UI_CALLBACK] ❌ Toast failed", e)
+						}
+						view?.let { fragmentView ->
+							Snackbar.make(
+								fragmentView,
+								message,
+								Snackbar.LENGTH_LONG
+							).setAction("View") {
+								Toast.makeText(requireContext(), "Viewing broadcast details", Toast.LENGTH_SHORT).show()
+							}.show()
+						}
+					}
+				}
+			}
+		}
+
+		meshrabiyaApi.registerBroadcastListener(broadcastListener)
+		
+		// Register broadcast success handler
+		meshrabiyaApi.setOnBroadcastSent { result ->
+			activity?.runOnUiThread {
+				val coords = if (result.latitude != null && result.longitude != null) {
+					" [coords=${result.latitude},${result.longitude}]"
+				} else ""
+				android.util.Log.d("EnhancedMeshFragment", "Broadcast sent: ${result.broadcastId}, ${result.successNodeIds.size} nodes reached$coords")
+			}
+		}
+		
+		// Register broadcast failure handler
+		meshrabiyaApi.setOnBroadcastFailed { broadcastId, error ->
+			activity?.runOnUiThread {
+				android.util.Log.e("EnhancedMeshFragment", "Broadcast failed: $broadcastId", error)
+				view?.let { v ->
+					Snackbar.make(v, "Broadcast failed: ${error.message}", Snackbar.LENGTH_LONG).show()
+				}
 			}
 		}
 		
@@ -251,6 +558,19 @@ class EnhancedMeshFragment : Fragment() {
 				android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Failed to inflate deferred cards", e)
 			}
 		}
+
+		// Observe notificationFeed and update both badge and dropdown adapter
+		viewLifecycleOwner.lifecycleScope.launch {
+			notificationFeed.collect { notifications ->
+				android.util.Log.d("EnhancedMeshFragment", "[DROPDOWN] collector received ${notifications.size} items")
+				val badgeCount = notifications.size
+				(activity as? org.torproject.android.OrbotActivity)?.let { act ->
+					act.updateNotificationBadge(badgeCount)
+					act.onNotificationFeedChanged(notifications)
+				}
+				// notificationsAdapter.submitList(notifications)
+			}
+		}
 	}
 
 	override fun onResume() {
@@ -263,6 +583,14 @@ class EnhancedMeshFragment : Fragment() {
 			while (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
 				kotlinx.coroutines.delay(2000) // Update every 2 seconds
 				updateUI()
+			}
+		}
+
+		viewLifecycleOwner.lifecycleScope.launch {
+			while (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
+				val status = meshrabiyaApi.getMeshStatus()
+				
+				kotlinx.coroutines.delay(10_000) // Every 10 seconds
 			}
 		}
 	}
@@ -287,6 +615,11 @@ class EnhancedMeshFragment : Fragment() {
 			networkOverviewMetricsJob.cancel()
 		}
 		
+		// Unregister broadcast listener
+		if (this::broadcastListener.isInitialized) {
+			meshrabiyaApi.unregisterBroadcastListener(broadcastListener)
+		}
+		
 	}
 
 	private fun updateNetworkOverviewUI(metrics: com.ustadmobile.meshrabiya.api.model.NetworkOverviewMetricsDto) {
@@ -300,15 +633,26 @@ class EnhancedMeshFragment : Fragment() {
 	 */
 	private fun setupRoleObserver() {
 		android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Setting up role observer")
+		var lastRoleUpdate = 0L
+		var roleUpdateCount = 0
+		
 		viewLifecycleOwner.lifecycleScope.launch {
 			(meshrabiyaApi as? MeshrabiyaApiImpl)?.currentMeshRolesFlow?.collect { roles ->
-				android.util.Log.e("EnhancedMeshFragment", "[ROLE_OBSERVER] Roles changed: $roles")
+				val now = System.currentTimeMillis()
+				val timeSinceLastUpdate = if (lastRoleUpdate > 0) now - lastRoleUpdate else 0
+				roleUpdateCount++
+				
+				android.util.Log.e("EnhancedMeshFragment", "[ROLE_OBSERVER] ⚡ ROLE UPDATE #$roleUpdateCount: roles=$roles, timeSinceLastUpdate=${timeSinceLastUpdate}ms")
+				lastRoleUpdate = now
+				
 				activity?.runOnUiThread {
+					val uiUpdateStart = System.currentTimeMillis()
+					
 					// Update roles text - show "Roles: --" when mesh not started or no roles determined yet
 					val meshState = meshrabiyaApi.getMeshStatus()
 					val meshStarted = meshState == MeshStateDto.CONNECTED || meshState == MeshStateDto.CONNECTING
 					
-					android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Updating meshRolesText")
+					android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Updating meshRolesText (meshState=$meshState, meshStarted=$meshStarted)")
 					MeshUIBindings.meshRolesText.text = if (!meshStarted) {
 						"Roles: --" // Show label with placeholder when mesh not started
 					} else if (roles.isNotEmpty()) {
@@ -330,6 +674,9 @@ class EnhancedMeshFragment : Fragment() {
 					} else {
 						android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Skipping deferred view updates - not yet initialized")
 					}
+					
+					val uiUpdateDuration = System.currentTimeMillis() - uiUpdateStart
+					android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] ✓ UI update completed in ${uiUpdateDuration}ms")
 					
 					android.util.Log.e("EnhancedMeshFragment", "[ROLE_OBSERVER] UI updated - meshStarted: $meshStarted, roles: ${roles.joinToString(", ")}")
 				}
@@ -461,6 +808,11 @@ class EnhancedMeshFragment : Fragment() {
 			updateUI()
 		}
 		
+		// Send Broadcast button
+		MeshUIBindings.sendBroadcastButton.setOnClickListener {
+			showBroadcastDialog()
+		}
+		
 		// ========================================
 		// JOIN MESH BUTTON HANDLER
 		// ========================================
@@ -567,6 +919,11 @@ class EnhancedMeshFragment : Fragment() {
 	 */
 	private fun requestLocationPermissions() {
 		android.util.Log.d("EnhancedMeshFragment", "Requesting location permissions")
+		if (!checkLocationPermissions()) {
+			android.util.Log.d("EnhancedMeshFragment", "Permissions not granted, requesting now")
+			locationRequestOrigin = LocationRequestOrigin.START_MESH
+			requestLocationPermissions()
+		}
 		requestLocationPermissionLauncher.launch(
 			arrayOf(
 				Manifest.permission.ACCESS_FINE_LOCATION,
@@ -713,8 +1070,8 @@ class EnhancedMeshFragment : Fragment() {
 				MeshUIBindings.serviceLayerStatusText.text = if (serviceEnabled) "Service Layer active..." else "Service Layer inactive..."
 				
 				// Storage allocation slider and folder path (load from persisted values)
-			val prefs = requireActivity().getPreferences(android.content.Context.MODE_PRIVATE)
-			val quotaBytes = prefs.getLong(PREF_STORAGE_QUOTA_BYTES, DEFAULT_STORAGE_QUOTA)
+			
+			val quotaBytes = meshrabiyaApi.getStorageQuotaBytes()
 			val quotaGB = quotaBytes / (1024.0 * 1024.0 * 1024.0)
 			// Clamp to slider's valid range (1-50 GB)
 			val clampedQuotaGB = quotaGB.toFloat().coerceIn(1.0f, 50.0f)
@@ -722,23 +1079,26 @@ class EnhancedMeshFragment : Fragment() {
 			MeshUIBindings.storageAllocationText.text = "${clampedQuotaGB.toInt()} GB"
 			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Loaded storage quota from preferences: ${quotaGB}GB (clamped to ${clampedQuotaGB}GB)")
 
-			// Drop folder
-			val dropFolder = meshrabiyaApi.getDropFolder()
-			MeshUIBindings.selectedFolderText.text = dropFolder?.absolutePath ?: "No folder selected"
+			// Update folder path display using URI-based storage
+            val savedUri = meshrabiyaApi.getDropFolderUri()
+            if (savedUri != null) {
+                try {
+                    val uri = Uri.parse(savedUri)
+                    val docFile = DocumentFile.fromTreeUri(requireContext(), uri)
+                    val displayName = docFile?.name ?: uri.lastPathSegment ?: savedUri
+                    MeshUIBindings.selectedFolderText.text = displayName
+                    android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Displaying drop folder: $displayName")
+                } catch (e: Exception) {
+                    android.util.Log.e("EnhancedMeshFragment", "[UPDATE_UI] Error parsing folder URI: ${e.message}")
+                    MeshUIBindings.selectedFolderText.text = "No folder selected"
+                }
+            } else {
+                MeshUIBindings.selectedFolderText.text = "No folder selected"
+            }
 
 			// Mesh files
 			val meshFiles = meshrabiyaApi.getAllMeshFiles()
 			// TODO: Update folderContentsAdapter with meshFiles
-			
-			// Update folder path display
-			val savedUri = prefs.getString(PREF_STORAGE_FOLDER_URI, null)
-			if (savedUri != null) {
-				val uri = Uri.parse(savedUri)
-				val docFile = DocumentFile.fromTreeUri(requireContext(), uri)
-				MeshUIBindings.selectedFolderText.text = docFile?.name ?: savedUri
-			} else {
-				MeshUIBindings.selectedFolderText.text = "No folder selected"
-			}
 			
 			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Deferred views updated successfully")
 		} else {
@@ -758,9 +1118,7 @@ class EnhancedMeshFragment : Fragment() {
 				val quotaBytes = DEFAULT_STORAGE_QUOTA
 				
 				// Save quota to preferences
-				requireActivity().getPreferences(android.content.Context.MODE_PRIVATE).edit()
-					.putLong(PREF_STORAGE_QUOTA_BYTES, quotaBytes)
-					.apply()
+				meshrabiyaApi.setStorageQuotaBytes(quotaBytes)
 				
 				android.util.Log.i("EnhancedMeshFragment", "Storage allocation updated: ${quotaBytes / (1024 * 1024)}MB")
 				
@@ -784,24 +1142,21 @@ class EnhancedMeshFragment : Fragment() {
 			if (appDir != null) {
 				val newFolder = java.io.File(appDir, folderName)
 				if (!newFolder.exists()) {
-					if (newFolder.mkdirs()) {
-						android.util.Log.i("EnhancedMeshFragment", "Created folder: ${newFolder.absolutePath}")
-						
-						// Convert to Uri and update storage
-						val folderUri = Uri.fromFile(newFolder)
-						selectedFolderUri = folderUri
-						
-						// Save to preferences
-						requireActivity().getPreferences(android.content.Context.MODE_PRIVATE).edit()
-							.putString(PREF_STORAGE_FOLDER_URI, folderUri.toString())
-							.apply()
-						
-						updateStorageAllocation(folderUri)
-						updateUI()
-						
-						Snackbar.make(requireView(), "Folder created: $folderName", Snackbar.LENGTH_SHORT).show()
+					if (hasWritePermission()) {
+						if (newFolder.mkdirs()) {
+							android.util.Log.i("EnhancedMeshFragment", "Created folder: ${newFolder.absolutePath}")
+							val folderUri = Uri.fromFile(newFolder)
+							selectedFolderUri = folderUri
+							meshrabiyaApi.setDropFolderUri(folderUri.toString())
+							updateStorageAllocation(folderUri)
+							updateUI()
+							Snackbar.make(requireView(), "Folder created: $folderName", Snackbar.LENGTH_SHORT).show()
+						} else {
+							Snackbar.make(requireView(), "Failed to create folder", Snackbar.LENGTH_SHORT).show()
+						}
 					} else {
-						Snackbar.make(requireView(), "Failed to create folder", Snackbar.LENGTH_SHORT).show()
+						pendingFolderName = folderName
+						requestWritePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
 					}
 				} else {
 					Snackbar.make(requireView(), "Folder already exists", Snackbar.LENGTH_SHORT).show()
@@ -883,6 +1238,8 @@ class EnhancedMeshFragment : Fragment() {
 				MeshUIBindings.mergeMeshButton.visibility = View.GONE
 				// Hide expand indicator when disconnected
 				MeshUIBindings.expandCollapseIndicator.visibility = View.GONE
+				// Disable broadcast button when disconnected
+				MeshUIBindings.sendBroadcastButton.isEnabled = false
 			}
 			MeshStateDto.CONNECTING -> {
 				MeshUIBindings.meshToggleButton.text = "Stop Mesh"
@@ -893,6 +1250,8 @@ class EnhancedMeshFragment : Fragment() {
 				MeshUIBindings.mergeMeshButton.visibility = View.GONE
 				// Show expand indicator for QR code when connecting/connected
 				MeshUIBindings.expandCollapseIndicator.visibility = View.VISIBLE
+				// Disable broadcast button while connecting
+				MeshUIBindings.sendBroadcastButton.isEnabled = false
 			}
 			MeshStateDto.CONNECTED -> {
 				MeshUIBindings.meshToggleButton.text = "Stop Mesh"
@@ -904,6 +1263,8 @@ class EnhancedMeshFragment : Fragment() {
 				MeshUIBindings.mergeMeshButton.isEnabled = true
 				// Show expand indicator for QR code when connected
 				MeshUIBindings.expandCollapseIndicator.visibility = View.VISIBLE
+				// Enable broadcast button when CONNECTED
+				MeshUIBindings.sendBroadcastButton.isEnabled = true
 			}
 			MeshStateDto.INITIALIZING,
 			MeshStateDto.ERROR,
@@ -915,17 +1276,424 @@ class EnhancedMeshFragment : Fragment() {
 				MeshUIBindings.mergeMeshButton.visibility = View.GONE
 				// Hide expand indicator in error states
 				MeshUIBindings.expandCollapseIndicator.visibility = View.GONE
+				// Disable broadcast button in error states
+				MeshUIBindings.sendBroadcastButton.isEnabled = false
 			}
 		}
 	}
 	
-	// ========================================
-	// QR CODE GENERATION METHODS
-	// ========================================
-	
 	/**
-	 * Show current network QR code
+	 * Show broadcast message+file dialog
 	 */
+	private fun showBroadcastDialog() {
+		val dialogView = layoutInflater.inflate(R.layout.dialog_broadcast, null)
+		
+		// Find views
+		val messageInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.broadcastMessageInput)
+        val messageCounterText = dialogView.findViewById<TextView>(R.id.messageCharacterCounter)
+        val fileNameText = dialogView.findViewById<TextView>(R.id.selectedFileNameText)
+        val includeLocationCheckbox = dialogView.findViewById<android.widget.CheckBox>(R.id.includeLocationCheckbox)
+        val gpsLocationDisplay = dialogView.findViewById<TextView>(R.id.gpsLocationDisplay)
+        val selectFileButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.selectFileButton)
+        val clearFileButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.clearFileButton)
+        val selectedFileContainer = dialogView.findViewById<android.view.ViewGroup>(R.id.selectedFileContainer)
+        val sendButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.sendBroadcastDialogButton)
+		val cancelButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.cancelBroadcastDialogButton)
+        val progressBar = dialogView.findViewById<com.google.android.material.progressindicator.CircularProgressIndicator>(R.id.sendProgressIndicator)
+        val errorText = dialogView.findViewById<TextView>(R.id.errorMessageText)
+        
+        // Track selected file
+        var selectedFileUri: Uri? = null
+        
+        // Local function to update send button state
+        fun updateSendButtonState() {
+			val messageLength = messageInput.text?.length ?: 0
+			val hasMessage = messageLength > 0 && messageLength <= 500
+			val hasFile = selectedFileUri != null
+			val locationPending = includeLocationCheckbox.isChecked && pendingLatitude == null
+			sendButton.isEnabled = (hasMessage || hasFile) && !locationPending
+		}
+        
+        // Capture location immediately when checkbox checked (emergency use case - use cached location)
+        includeLocationCheckbox.setOnCheckedChangeListener { _, isChecked ->
+			Log.d("EnhancedMeshFragment", "includeLocationCheckbox toggled: $isChecked")
+			if (!isChecked) {
+				// Cancel any pending location request
+				cancelPendingLocationRequest()
+				
+				// Clear location data and reset UI
+				pendingLatitude = null
+				pendingLongitude = null
+				gpsLocationDisplay.visibility = View.GONE
+				progressBar.visibility = View.GONE
+				updateSendButtonState()
+				Log.d("EnhancedMeshFragment", "[LOCATION] Checkbox unchecked - cleared coordinates")
+				return@setOnCheckedChangeListener
+			}
+
+			// When checked, try IMMEDIATE cached location first (fast path)
+			try {
+				val lm = requireContext().getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+				
+				Log.d("EnhancedMeshFragment", "[LOCATION] Checkbox checked - attempting to get cached location")
+				
+				// Try GPS provider first, then NETWORK provider
+				var location: android.location.Location? = null
+				try {
+					location = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+					if (location != null) {
+						Log.d("EnhancedMeshFragment", "[LOCATION] GPS cached location available")
+					}
+				} catch (e: SecurityException) {
+					Log.w("EnhancedMeshFragment", "[LOCATION] GPS location permission denied")
+				}
+				
+				// Fallback to NETWORK if GPS unavailable
+				if (location == null) {
+					try {
+						location = lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+						if (location != null) {
+							Log.d("EnhancedMeshFragment", "[LOCATION] NETWORK cached location available")
+						}
+					} catch (e: SecurityException) {
+						Log.w("EnhancedMeshFragment", "[LOCATION] NETWORK location permission denied")
+					}
+				}
+				
+				if (location != null) {
+					// FAST PATH: Cached location available - display immediately
+					pendingLatitude = location.latitude
+					pendingLongitude = location.longitude
+					gpsLocationDisplay.text = String.format("📍 %.6f, %.6f", pendingLatitude, pendingLongitude)
+					gpsLocationDisplay.setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
+					gpsLocationDisplay.visibility = View.VISIBLE
+					progressBar.visibility = View.GONE
+					updateSendButtonState()
+					Log.d("EnhancedMeshFragment", 
+						"[LOCATION] ✅ Cached location captured: lat=$pendingLatitude, lon=$pendingLongitude, " +
+						"accuracy=${location.accuracy}m, age=${(System.currentTimeMillis() - location.time)/1000}s old")
+				} else {
+					// SLOW PATH: No cached location - start async GPS request
+					Log.w("EnhancedMeshFragment", "[LOCATION] No cached location - starting async GPS request")
+					
+					// Show acquiring state
+					pendingLatitude = null
+					pendingLongitude = null
+					gpsLocationDisplay.text = "Acquiring GPS..."
+					gpsLocationDisplay.setTextColor(resources.getColor(android.R.color.holo_orange_dark, null))
+					gpsLocationDisplay.visibility = View.VISIBLE
+					progressBar.visibility = View.VISIBLE
+					updateSendButtonState()
+					
+					// Start async location request with timeout
+					startAsyncLocationRequest(lm, progressBar, gpsLocationDisplay, sendButton, ::updateSendButtonState)
+				}
+			} catch (e: Exception) {
+				// Unexpected error - show error message and disable send button
+				Log.e("EnhancedMeshFragment", "[LOCATION] Failed to get location", e)
+				pendingLatitude = null
+				pendingLongitude = null
+				gpsLocationDisplay.text = "Location Error"
+				gpsLocationDisplay.setTextColor(resources.getColor(android.R.color.holo_red_dark, null))
+				gpsLocationDisplay.visibility = View.VISIBLE
+				progressBar.visibility = View.GONE
+				updateSendButtonState()
+			}
+		}
+
+		
+        
+        // Initialize button state immediately
+        updateSendButtonState()
+        
+        // Set up file selection callback for pre-registered launcher
+        pendingFileCallback = { uri ->
+            android.util.Log.d("EnhancedMeshFragment", "File selection callback invoked, URI: $uri")
+            selectedFileUri = uri
+            // Get file name from URI
+            val docFile = DocumentFile.fromSingleUri(requireContext(), uri)
+            android.util.Log.d("EnhancedMeshFragment", "DocumentFile: $docFile, name: ${docFile?.name}")
+            val fileName = docFile?.name ?: "Unknown file"
+            android.util.Log.d("EnhancedMeshFragment", "Setting fileName text to: $fileName")
+            fileNameText.text = fileName
+            selectedFileContainer.visibility = View.VISIBLE  // Show parent container
+            android.util.Log.d("EnhancedMeshFragment", "File name display updated, container visibility: ${selectedFileContainer.visibility}")
+            updateSendButtonState()
+        }
+		
+		// Character counter update
+		messageInput.addTextChangedListener(object : android.text.TextWatcher {
+			override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+			override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+			override fun afterTextChanged(s: android.text.Editable?) {
+				val length = s?.length ?: 0
+				messageCounterText.text = "$length / 500"
+				
+				// Show red if exceeds limit
+				if (length > 500) {
+					messageCounterText.setTextColor(android.graphics.Color.RED)
+				} else {
+					messageCounterText.setTextColor(
+						android.content.res.Resources.getSystem()
+							.getColor(android.R.color.darker_gray, null)
+					)
+				}
+				
+				updateSendButtonState()
+			}
+		})
+		
+		// Select file button - use pre-registered launcher
+		selectFileButton.setOnClickListener {
+			// Launch file picker with all MIME types
+			broadcastFilePicker.launch(arrayOf("*/*"))
+		}
+		
+		// Clear file button
+		clearFileButton.setOnClickListener {
+            selectedFileUri = null
+            selectedFileContainer.visibility = View.GONE  // Hide parent container
+            updateSendButtonState()
+        }
+		
+		
+		
+		// Create dialog
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Send Broadcast")
+            .setView(dialogView)
+            .create()
+
+        // Clean up callback and location request when dialog is dismissed
+        dialog.setOnDismissListener {
+            pendingFileCallback = null
+            cancelPendingLocationRequest()
+        }
+		
+		// Send button
+		sendButton.setOnClickListener {
+            val messageText = messageInput.text?.toString() ?: ""
+
+            // basic validation
+            if (messageText.isEmpty() && selectedFileUri == null) {
+                errorText.text = "Please enter a message or select a file"
+                errorText.visibility = View.VISIBLE
+                return@setOnClickListener
+            }
+            if (messageText.length > 500) {
+                errorText.text = "Message exceeds 500 character limit"
+                errorText.visibility = View.VISIBLE
+                return@setOnClickListener
+            }
+
+            // resolve file URI to path if needed
+            var filePath = ""
+            selectedFileUri?.let { uri ->
+                try {
+                    val inputStream = requireContext().contentResolver.openInputStream(uri)
+                    val fileName = DocumentFile.fromSingleUri(requireContext(), uri)?.name ?: "broadcast_file"
+                    val cacheFile = java.io.File(requireContext().cacheDir, fileName)
+                    inputStream?.use { input ->
+                        cacheFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    filePath = cacheFile.absolutePath
+                } catch (e: Exception) {
+                    errorText.text = "Failed to access file: ${e.message}"
+                    errorText.visibility = View.VISIBLE
+                    return@setOnClickListener
+                }
+            }
+
+            
+
+            // latitude/longitude will be whatever was stored above
+            // ========================================
+            // LOCATION DIAGNOSTICS - PRE-SEND
+            // ========================================
+            Log.d("EnhancedMeshFragment", "[SEND] ========== BROADCAST SEND DIAGNOSTICS ==========")
+            Log.d("EnhancedMeshFragment", "[SEND] Checkbox state: isChecked=${includeLocationCheckbox.isChecked}")
+            Log.d("EnhancedMeshFragment", "[SEND] pendingLatitude (raw): $pendingLatitude")
+            Log.d("EnhancedMeshFragment", "[SEND] pendingLongitude (raw): $pendingLongitude")
+            
+            // latitude/longitude will be whatever was stored above
+            val latitude: Double? = if (includeLocationCheckbox.isChecked) pendingLatitude else null
+            val longitude: Double? = if (includeLocationCheckbox.isChecked) pendingLongitude else null
+            
+            Log.d("EnhancedMeshFragment", "[SEND] latitude (after ?:): $latitude")
+            Log.d("EnhancedMeshFragment", "[SEND] longitude (after ?:): $longitude")
+            Log.d("EnhancedMeshFragment", "[SEND] message: '$messageText'")
+            Log.d("EnhancedMeshFragment", "[SEND] filePath: '$filePath'")
+            Log.d("EnhancedMeshFragment", "[SEND] ======================================================")
+
+            // show spinner and send
+            progressBar.visibility = View.VISIBLE
+            sendButton.isEnabled = false
+            errorText.visibility = View.GONE
+
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    meshrabiyaApi.broadcastMessageAndFile(messageText, filePath, latitude, longitude)
+                    activity?.runOnUiThread {
+                        dialog.dismiss()
+                        view?.let { v ->
+                            Snackbar.make(v, "Broadcast sent successfully", Snackbar.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    activity?.runOnUiThread {
+                        progressBar.visibility = View.GONE
+                        sendButton.isEnabled = true
+                        errorText.text = "Failed to send: ${e.message}"
+                        errorText.visibility = View.VISIBLE
+                    }
+                }
+            }
+        }
+		
+		
+		// Initial button state
+		updateSendButtonState()
+		
+		// Cancel button dismisses dialog
+        cancelButton.setOnClickListener {
+            dialog.dismiss()
+        }
+		// Show dialog
+		dialog.show()
+	}
+	
+	private fun startAsyncLocationRequest(
+        locationManager: android.location.LocationManager,
+        progressIndicator: com.google.android.material.progressindicator.CircularProgressIndicator,
+        locationDisplay: TextView,
+        sendBtn: com.google.android.material.button.MaterialButton,
+        updateButtonState: () -> Unit
+    ) {
+		// Cancel any existing request first
+		cancelPendingLocationRequest()
+		
+		Log.d("EnhancedMeshFragment", "[LOCATION] Starting async GPS request (60s timeout) with HIGH_ACCURACY priority")
+		
+		// Create location listener for callback
+		val listener = object : android.location.LocationListener {
+			override fun onLocationChanged(location: android.location.Location) {
+				Log.d("EnhancedMeshFragment", "[LOCATION] ✅ Async location received: lat=${location.latitude}, lon=${location.longitude}")
+				
+				// Store coordinates
+				pendingLatitude = location.latitude
+				pendingLongitude = location.longitude
+				
+				// Update UI on main thread
+				activity?.runOnUiThread {
+                    locationDisplay.text = String.format("📍 %.6f, %.6f", pendingLatitude, pendingLongitude)
+                    locationDisplay.setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
+                    locationDisplay.visibility = View.VISIBLE
+                    progressIndicator.visibility = View.GONE
+                    updateButtonState()
+                }
+				
+				// Clean up listener
+				cancelPendingLocationRequest()
+			}
+			
+			@Deprecated("Deprecated in Java")
+			override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
+			}
+			
+			override fun onProviderEnabled(provider: String) {
+				Log.d("EnhancedMeshFragment", "[LOCATION] Provider enabled: $provider")
+			}
+			
+			override fun onProviderDisabled(provider: String) {
+				Log.w("EnhancedMeshFragment", "[LOCATION] Provider disabled: $provider")
+			}
+		}
+		
+		// Store listener reference for cancellation
+        activeLocationListener = listener
+        
+        // Request location update from GPS with HIGH_ACCURACY priority
+        try {
+            // Use Criteria to force GPS satellite usage (not WiFi/cell tower fallback)
+            // This is compatible with API 24+ (minSdk)
+            val criteria = android.location.Criteria().apply {
+                accuracy = android.location.Criteria.ACCURACY_FINE  // Forces GPS satellites
+                powerRequirement = android.location.Criteria.POWER_HIGH  // Allow high power for GPS
+                isAltitudeRequired = false
+                isBearingRequired = false
+                isSpeedRequired = false
+            }
+            
+            locationManager.requestSingleUpdate(
+                criteria,
+                listener,
+                android.os.Looper.getMainLooper()
+            )
+            Log.d("EnhancedMeshFragment", "[LOCATION] GPS request registered successfully (ACCURACY_FINE - GPS satellites forced)")
+        } catch (e: SecurityException) {
+            Log.e("EnhancedMeshFragment", "[LOCATION] Permission denied for async GPS request", e)
+            activity?.runOnUiThread {
+                locationDisplay.text = "Permission Denied"
+                locationDisplay.setTextColor(resources.getColor(android.R.color.holo_red_dark, null))
+                progressIndicator.visibility = View.GONE
+                updateButtonState()
+            }
+            activeLocationListener = null
+			return
+		} catch (e: Exception) {
+            Log.e("EnhancedMeshFragment", "[LOCATION] Failed to start async GPS request", e)
+            activity?.runOnUiThread {
+                locationDisplay.text = "Location Error"
+                locationDisplay.setTextColor(resources.getColor(android.R.color.holo_red_dark, null))
+                progressIndicator.visibility = View.GONE
+                updateButtonState()
+            }
+            activeLocationListener = null
+            return
+		}
+		
+		// Start timeout timer (60 seconds)
+		locationRequestJob = viewLifecycleOwner.lifecycleScope.launch {
+			delay(60000)
+			
+			// Timeout - check if location still not acquired
+			if (pendingLatitude == null && activeLocationListener != null) {
+				Log.w("EnhancedMeshFragment", "[LOCATION] ❌ GPS request timed out after 60s")
+                
+                activity?.runOnUiThread {
+                    locationDisplay.text = "GPS Timeout - Try outside"
+                    locationDisplay.setTextColor(resources.getColor(android.R.color.holo_red_dark, null))
+                    progressIndicator.visibility = View.GONE
+                    updateButtonState()
+                }
+				
+				// Cancel listener
+				cancelPendingLocationRequest()
+			}
+		}
+	}
+
+	private fun cancelPendingLocationRequest() {
+		// Cancel timeout job
+		locationRequestJob?.cancel()
+		locationRequestJob = null
+		
+		// Remove location listener
+		activeLocationListener?.let { listener ->
+			try {
+				val lm = requireContext().getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+				lm.removeUpdates(listener)
+				Log.d("EnhancedMeshFragment", "[LOCATION] Location request cancelled")
+			} catch (e: Exception) {
+				Log.e("EnhancedMeshFragment", "[LOCATION] Failed to cancel location request", e)
+			}
+			activeLocationListener = null
+		}
+	}
+	
+	
 	private fun showCurrentNetworkQR() {
 		android.util.Log.d("EnhancedMeshFragment", "showCurrentNetworkQR() called")
 		
@@ -1406,9 +2174,7 @@ class EnhancedMeshFragment : Fragment() {
 			MeshUIBindings.storageAllocationSlider.addOnChangeListener { _, value, fromUser ->
 				if (fromUser) {
 					val quotaBytes = (value * 1024 * 1024 * 1024).toLong()
-					requireActivity().getPreferences(android.content.Context.MODE_PRIVATE).edit()
-						.putLong(PREF_STORAGE_QUOTA_BYTES, quotaBytes)
-						.apply()
+					meshrabiyaApi.setStorageQuotaBytes(quotaBytes)
 					android.util.Log.d("EnhancedMeshFragment", "Storage quota updated to: ${value}GB ($quotaBytes bytes)")
 					MeshUIBindings.storageAllocationText.text = "${value.toInt()} GB"
 					if (meshrabiyaApi.getStorageParticipationStatus()) {
@@ -1487,8 +2253,8 @@ class EnhancedMeshFragment : Fragment() {
 			}
 			
 			// Load storage quota from preferences
-			val prefs = requireActivity().getPreferences(android.content.Context.MODE_PRIVATE)
-			val quotaBytes = prefs.getLong(PREF_STORAGE_QUOTA_BYTES, DEFAULT_STORAGE_QUOTA)
+			
+			val quotaBytes = meshrabiyaApi.getStorageQuotaBytes()
 			val quotaGB = quotaBytes / (1024f * 1024f * 1024f)
 			val clampedGB = quotaGB.coerceIn(1f, 50f)
 			android.util.Log.d("EnhancedMeshFragment", "Loaded storage quota from preferences: ${quotaGB}GB (clamped to ${clampedGB}GB)")
@@ -1508,5 +2274,38 @@ class EnhancedMeshFragment : Fragment() {
 		// For example, refresh the RecyclerView adapter with new data
 		// val adapter = MeshUIBindings.folderContentsRecyclerView.adapter as DropFolderContentsAdapter
 		// adapter.updateItems(changes)
+	}
+
+	/**
+     * Get list of received broadcast notifications
+     */
+    fun getNotificationFeed(): StateFlow<List<NotificationFeedEntry>> = notificationFeed
+    
+    /**
+     * Return the shared adapter used by both fragment and activity dropdown.
+     * This allows the activity to display the same list without maintaining its
+     * own copy. The adapter is initialized in onCreateView.
+     */
+    fun getNotificationsAdapter(): NotificationsAdapter =
+		if (this::notificationsAdapter.isInitialized) notificationsAdapter
+		else NotificationsAdapter(emptyList()) { entry -> removeNotification(entry) }
+
+	fun clearNotifications() {
+		broadcastNotifications.value = emptyList()
+		statusNotifications.value = emptyList()
+		storageNotifications.value = emptyList()
+		(activity as? org.torproject.android.OrbotActivity)?.updateNotificationBadge(0)
+	}
+
+	fun removeNotification(entry: NotificationFeedEntry) {
+		when (entry.type) {
+			NotificationType.BROADCAST ->
+				broadcastNotifications.value = broadcastNotifications.value.filter { it.id != entry.id }
+			NotificationType.STATUS ->
+				statusNotifications.value = statusNotifications.value.filter { it.id != entry.id }
+			NotificationType.STORAGE ->
+				storageNotifications.value = storageNotifications.value.filter { it.id != entry.id }
+			else -> {}
+		}
 	}
 }

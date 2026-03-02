@@ -1,3 +1,253 @@
+## 🚨 RULE ZERO: PROMPT COMPLIANCE VERIFICATION (2026-02-19)
+
+**CRITICAL: This rule is ALWAYS READ FIRST and ALWAYS ENFORCED before any agent begins work on a user prompt.**
+
+### The Meta-Rule
+
+**BEFORE starting ANY work requested in a user prompt, agents MUST:**
+
+1. ✅ **Analyze the prompt against ALL rules** in AGENTS.md
+2. ✅ **Identify any potential rule violations** in the requested approach
+3. ✅ **Refactor the prompt** to force compliance with all applicable rules
+4. ✅ **Present the refactored prompt** to the user for confirmation
+5. ✅ **Wait for approval** before proceeding with work
+
+### Enforcement Process
+
+**Step 1: Prompt Analysis**
+- Read the user's prompt carefully
+- Identify the requested actions (file edits, code generation, searches, builds, etc.)
+- Map each action to applicable rules from AGENTS.md
+
+**Step 2: Rule Violation Detection**
+- Check if the prompt would cause violations of:
+  - Large File Manual Edit Rule (files >800 lines)
+  - Mandatory Code Verification Before Generation
+  - Pre-Edit Verification Protocol
+  - Minimize Terminal Interactions
+  - Any other applicable rules
+- Document ALL potential violations
+
+**Step 3: Prompt Refactoring**
+- Rewrite the approach to comply with all rules
+- Add verification steps where needed
+- Change direct edits to BEFORE/AFTER presentations where needed
+- Replace terminal commands with internal tools where needed
+- Add pattern uniqueness testing where needed
+
+**Step 4: Present Refactored Prompt**
+```
+ORIGINAL PROMPT:
+[user's request]
+
+RULE ANALYSIS:
+- Rule X applies: [reason]
+- Rule Y applies: [reason]
+- Potential violation: [description]
+
+REFACTORED APPROACH:
+1. [compliant step 1]
+2. [compliant step 2]
+3. [compliant step 3]
+
+PROCEED? (yes/no)
+```
+
+**Step 5: Await Approval**
+- Do NOT begin work until user confirms the refactored approach
+- If user rejects, revise the refactoring
+
+### When to Apply
+
+**ALWAYS - for every prompt that involves:**
+- Code edits (any file, any size)
+- File creation/modification
+- Build commands
+- Terminal operations
+- Code generation
+- Multi-step workflows
+- **Steering prompts**: Questions about methodology, verification, or process quality (e.g., "was this verified by falsification?", "did you check X?", "is this correct?")
+  - When user asks about verification methodology, actually PERFORM that verification if not already done
+  - When user questions correctness, perform comprehensive falsification testing
+  - Apply relevant verification/analysis rules before responding
+
+**Exceptions:**
+- Simple read-only queries (file searches, documentation requests)
+- Clarification questions about user requirements (not about agent methodology)
+- Status checks (build progress, tool availability)
+- **User explicit exemptions**: When the user explicitly states in their prompt to ignore, exempt, or bypass a specific rule or rules for that request (e.g., "ignore the large file rule and make the change"), agents must comply with the user's instruction without presenting a refactored approach
+
+### Why This Rule Exists
+
+**Root Cause:**
+Agents sometimes begin work immediately without checking if their approach violates existing rules, leading to:
+- Wasted effort when edits fail due to large file rule
+- Missing verification steps that cause compilation errors
+- Unnecessary terminal commands when internal tools exist
+- Rule violations discovered mid-work requiring backtracking
+
+**The Fix:**
+Pre-flight compliance check ensures EVERY workflow is rule-compliant BEFORE work begins.
+
+**Intent:**
+This meta-rule acts as a gatekeeper, ensuring no work proceeds without first verifying compliance with all established protocols. It transforms reactive rule enforcement (catching violations after they occur) into proactive rule adherence (preventing violations before they happen).
+
+### Self-Enforcement Mechanism
+
+To ensure RULE ZERO is always followed, agents MUST use the `manage_todo_list` tool to create trackable TODO items for each compliance step at the start of EVERY response (except for exempted prompts).
+
+**REQUIRED TODO LIST STRUCTURE:**
+
+Agents MUST call `manage_todo_list` to create these items:
+
+```json
+{
+  "todoList": [
+    {"id": 1, "title": "Analyze prompt against AGENTS.md rules", "status": "not-started"},
+    {"id": 2, "title": "Identify potential rule violations", "status": "not-started"},
+    {"id": 3, "title": "Present refactored approach to user", "status": "not-started"},
+    {"id": 4, "title": "WAIT for user approval (BLOCKING)", "status": "not-started"},
+    {"id": 5, "title": "Execute approved work", "status": "not-started"}
+  ]
+}
+```
+
+**SEQUENTIAL EXECUTION REQUIREMENTS:**
+
+1. **Mark item 1 "in-progress"** → Analyze prompt → **Mark item 1 "completed"**
+2. **Mark item 2 "in-progress"** → Identify violations → **Mark item 2 "completed"**
+3. **Mark item 3 "in-progress"** → Present refactored approach with "PROCEED? (yes/no)" → **Mark item 3 "completed"**
+4. **Mark item 4 "in-progress"** → **STOP COMPLETELY - END RESPONSE - WAIT FOR USER**
+5. **Only after user types "yes/proceed"** → Mark item 4 "completed" → Mark item 5 "in-progress" → Execute work → Mark item 5 "completed"
+
+**CRITICAL BLOCKING RULE:**
+
+- Agent MUST NOT proceed past item 3 without user approval
+- Agent MUST END its response after presenting refactored approach
+- Agent MUST NOT mark item 4 "completed" until user explicitly approves
+- Agent MUST NOT execute ANY substantive work until item 4 is marked "completed"
+
+**Enforcement:**
+- VS Code UI will show TODO dropdown with these steps
+- User can verify agent is following correct sequence
+- Agent cannot skip ahead (enforced by sequential status updates)
+- If user rejects approach, agent updates item 3 and re-presents
+
+**Why This Works:**
+- Visual TODO list in VS Code UI prevents agents from claiming completion prematurely
+- Sequential status tracking forces proper workflow
+- Explicit WAIT step makes blocking requirement visible
+- User can see exactly which step agent is on
+
+**VS Code Integration:**
+This rule is enforced through:
+1. Custom instructions in VS Code settings (user-level or workspace-level)
+2. Workspace configuration in `.vscode/settings.json`
+3. This AGENTS.md file attached via `<instructions>` block in system prompt
+4. `manage_todo_list` tool for interactive step tracking (above)
+
+**Date Added:** 2026-02-19  
+**Updated:** 2026-02-20 (changed from markdown checklist to `manage_todo_list` tool requirement)  
+**Trigger:** User feedback: "you are marking steps in the rule zero checklist complete without executing them... why are you unable to follow the rule and the steps in the checklist?" - Solution: Use VS Code TODO UI to make steps trackable and blocking
+
+---
+
+## LARGE FILE MANUAL EDIT RULE (2026-02-02)
+
+**RULE: For any file exceeding 800 lines, agents must NOT attempt direct edits using replace_string_in_file or multi_replace_string_in_file tools.**
+
+When a file is longer than 800 lines and requires modification, agents must:
+
+1. **Present the change as a code snippet** with BEFORE and AFTER sections
+2. **Include sufficient context** (minimum 5 lines before and after the change location)
+3. **Specify exact line numbers** where the change should be made
+4. **Include the full file path** (absolute path)
+5. **Explain what the change accomplishes** and why it's needed
+6. **Wait for user to implement** the change manually
+
+**Rationale:**
+- Large files have complex formatting, indentation, and whitespace patterns that are difficult for agents to match exactly
+- Tab vs. space mismatches cause repeated tool failures
+- Manual implementation is faster and more reliable than multiple failed tool attempts
+- User can verify context and formatting while making the change
+- Reduces token waste on failed replacement attempts
+
+**Exceptions:**
+- None. This rule is absolute for files > 800 lines.
+
+**Format for presenting changes:**
+```
+**File:** [absolute path]
+**Location:** Lines X-Y
+
+**BEFORE (Lines X-Y):**
+[exact code with context]
+
+**AFTER (Lines X-Y):**
+[exact code with modification and context]
+
+**Purpose:** [explanation of what this fixes/implements]
+```
+
+**Date Added:** 2026-02-02  
+**Trigger:** Multiple failed attempts to edit EnhancedMeshFragment.kt (1752 lines) due to whitespace matching issues, wasting significant token budget and user time.
+
+---
+
+## 🚨 MANDATORY CODE VERIFICATION BEFORE GENERATION (2026-02-13)
+
+**CRITICAL RULE: NEVER write code fixes or proposals WITHOUT reading the actual current code first.**
+
+This rule has been violated REPEATEDLY. Each violation wastes user time and breaks trust.
+
+### Violation Tracking
+
+**Violation #1 (2025-12-06):** V4 implementation had significant discrepancies between plan assumptions and actual API signatures  
+**Violation #2 (2026-02-13):** Issue #5 (Message-Only Broadcast) - Proposed code changes WITHOUT reading MeshrabiyaApi.kt, MeshrabiyaApiImpl.kt, or BroadcastMessageHandler.kt
+
+### The Rule
+
+**BEFORE writing ANY code that modifies existing functionality, agents MUST:**
+
+1. ✅ **Read the ACTUAL current state** of ALL files to be modified (use `read_file`)
+2. ✅ **Verify ACTUAL signatures** of every method/property to be called (use `grep_search` + `read_file`)
+3. ✅ **Verify ACTUAL data structures** - property names, types, nullability (use `read_file`)
+4. ✅ **Document discrepancies** between assumptions and reality
+5. ✅ **Only then write code** based on verified reality
+
+**DO NOT:**
+- ❌ Assume code structure based on error messages
+- ❌ Guess API signatures based on "how it probably works"
+- ❌ Write code based on documentation or plans without verification
+- ❌ Skip verification because it "seems obvious"
+
+### Enforcement
+
+**A checklist file has been created:** `.copilot-verification-checklist.md`
+
+**Agents must consult this checklist BEFORE writing ANY code fix.**
+
+### Why This Rule Exists
+
+**Root Cause of Violations:**
+- Agent sees error/symptom
+- Pattern matching suggests "this is probably how the code looks"
+- Agent generates code based on assumptions
+- Agent skips verification because it feels "obvious"
+- **Result:** Code doesn't match reality, wastes time, breaks user trust
+
+**The Fix:**
+- ALWAYS verify before coding
+- Use grep_search to find definitions
+- Use read_file to read actual signatures
+- Document what you found
+- Then write code that matches reality
+
+**Date Added:** 2026-02-13  
+**Trigger:** Issue #5 analysis proposed API changes without reading actual code, discovered API already supports empty filePath but handler doesn't check for it
+
+---
+
 ## DETAILED PLAN SPECIFICATION RULE (2026-01-25)
 
 **RULE: All agents must provide plans with exhaustive, codebase-driven research and code-level specification whenever the user requests a plan.**
@@ -14,6 +264,9 @@
 
 **Intent:**  
 Guarantee that every plan is actionable, codebase-verified, and ready for direct implementation, eliminating ambiguity and ensuring agent outputs are always production-ready.
+
+---
+
 ## NEVER ASSUME USER ERROR - CRITICAL RULE (2026-01-23)
 
 **RULE: NEVER assume the user made a testing error (not rebuilding, not deploying, cached build, wrong QR code, improper procedure, etc.)**
@@ -234,6 +487,173 @@ This protocol eliminates the discrepancy between planned implementations and act
 
 ---
 
+## MANDATORY PRE-EDIT VERIFICATION PROTOCOL (2026-02-19)
+
+**RULE: Before ANY code edit (regardless of file size), agents MUST perform literal verification of ALL code to be modified AND verify pattern uniqueness.**
+
+This protocol extends and refines the "IMPLEMENTATION VERIFICATION BEFORE CODE GENERATION PROTOCOL" by adding explicit pattern testing requirements.
+
+### The Complete Verification Workflow
+
+**Step 1: Read Actual Current Code**
+- Use `read_file` to read the EXACT section to be modified
+- Read enough context (minimum 5 lines before and after)
+- Copy exact text including ALL whitespace, indentation, newlines
+- **Document**: "Read lines X-Y from [file], here's what exists on disk"
+
+**Step 2: Verify API Signatures (if calling methods/properties)**
+- Use `grep_search` to find method/property definitions
+- Use `read_file` to read actual signatures
+- Check parameter count, types, names, return types
+- Check if suspend function vs regular function
+- **Document**: "Verified [method] signature is: [exact signature]"
+
+**Step 3: TEST PATTERN UNIQUENESS** ⭐ CRITICAL
+- Use `grep_search` with your exact `oldString` pattern on the target file
+- **REQUIRED**: Pattern must match EXACTLY ONCE in the file
+- If 0 matches: Your pattern has whitespace/content errors - re-read and fix
+- If 2+ matches: Add MORE context lines until pattern is unique
+- **Document**: "grep_search shows 1 match at line X - pattern is unique"
+
+**Step 4: Construct Edit Parameters**
+- `filePath`: Absolute path
+- `oldString`: Exact text from Step 1 (verified unique in Step 3)
+- `newString`: Modified version with verified API calls from Step 2
+
+**Step 5: Execute Edit**
+- Use `replace_string_in_file` or `multi_replace_string_in_file`
+- If edit fails due to pattern mismatch, return to Step 1
+
+### Enforcement Checklist
+
+Before ANY code edit, agents MUST answer YES to ALL:
+
+- [ ] Did I read the actual current code with `read_file`?
+- [ ] Did I copy the EXACT text including all whitespace?
+- [ ] Did I verify signatures of ALL methods/properties I'm calling?
+- [ ] Did I test my oldString pattern with `grep_search`?
+- [ ] Does `grep_search` show EXACTLY 1 match for my pattern?
+- [ ] If multiple matches, did I add more context until unique?
+- [ ] Did I document all verification steps?
+
+**If ANY answer is "NO", STOP - do not attempt the edit.**
+
+### Examples: Bad vs Good Pattern Testing
+
+**❌ BAD - No Pattern Testing (Causes Multi-Location Corruption):**
+```
+Agent: "I'll change logger(Log.INFO, tag, message) to logger(Log.INFO, message)"
+[Runs replace_string_in_file without testing pattern]
+Result: Changes ALL 28 occurrences when only 1 was intended
+```
+
+**✅ GOOD - Pattern Tested for Uniqueness:**
+```
+Agent: "Let me verify this pattern is unique"
+[Runs grep_search with oldString pattern]
+grep_search result: "Found 28 matches"
+Agent: "Pattern matches 28 locations - adding more context"
+[Adds 10 lines before/after to make pattern unique]
+[Runs grep_search again]
+grep_search result: "Found 1 match at line 462"
+Agent: "Pattern is now unique - safe to edit"
+[Runs replace_string_in_file]
+```
+
+### Pattern Uniqueness Failure Modes
+
+**0 Matches:**
+- Root cause: Whitespace differences (spaces vs tabs, line endings)
+- Fix: Re-read file section, copy EXACT text byte-for-byte
+- Tool: Compare your pattern to actual file content character-by-character
+
+**2+ Matches:**
+- Root cause: Pattern too generic (matches multiple locations)
+- Fix: Add more surrounding context (more lines before/after)
+- Goal: Make pattern match THE SPECIFIC CHANGE LOCATION ONLY
+- Verify: Re-run grep_search until exactly 1 match
+
+**Example - Making Pattern Unique:**
+```
+# Too generic (10 matches):
+oldString = "logger(Log.INFO, broadcastTag(broadcastId), message)"
+
+# More specific (3 matches):
+oldString = """
+    override fun onTextOnlyBroadcastComplete(...) {
+        logger(Log.INFO, broadcastTag(broadcastId), "Text broadcast complete")
+    }
+"""
+
+# Unique (1 match):
+oldString = """
+    override fun onTextOnlyBroadcastComplete(broadcastId: String, text: String) {
+        logger(Log.DEBUG, "onTextOnlyBroadcastComplete called for broadcast: $broadcastId")
+        logger(Log.INFO, broadcastTag(broadcastId), "✅ Text-only broadcast completed")
+        
+        // Update broadcast status
+        ...
+    }
+"""
+```
+
+### Verification Tools to Use
+
+**Required Tools:**
+- `read_file` - Get actual current code
+- `grep_search` - Test pattern uniqueness (MANDATORY)
+- `replace_string_in_file` - Execute single edit
+- `multi_replace_string_in_file` - Execute multiple edits
+
+**Verification Sequence:**
+1. `read_file` → Get code
+2. `grep_search` → Test pattern (MUST show exactly 1 match)
+3. `replace_string_in_file` → Execute edit
+
+### Why This Rule Exists
+
+**Root Cause of Edit Failures:**
+- Agents skip pattern uniqueness testing
+- Patterns match multiple locations unintentionally
+- Whitespace mismatches cause 0-match failures
+- Edits corrupt wrong code locations
+- Time wasted on fix-retry cycles
+
+**The Fix:**
+Mandatory pattern testing catches these issues BEFORE executing edits:
+- Ensures pattern matches exactly once (prevents multi-location changes)
+- Reveals whitespace mismatches early (fix before edit attempt)
+- Documents verification (builds confidence in edit accuracy)
+- Eliminates fix-retry waste (get it right the first time)
+
+**Measured Impact:**
+- ✅ Large file edits (854 lines, 1931 lines) succeeded on first try
+- ✅ Zero whitespace mismatch failures
+- ✅ Zero multi-location corruption
+- ✅ Build compiled successfully after edits
+- **Root cause**: Rigorous verification, not tool improvements
+
+### Integration with Existing Rules
+
+**This protocol COMPLEMENTS:**
+- Large File Manual Edit Rule: This protocol is why large file edits CAN succeed (with verification)
+- Mandatory Code Verification: This adds pattern testing to that protocol
+- Implementation Verification: This is the edit-time extension of that protocol
+
+**This protocol is REQUIRED FOR:**
+- All code edits using `replace_string_in_file`
+- All code edits using `multi_replace_string_in_file`
+- All files, regardless of size (yes, even small files)
+- All file types (Kotlin, Java, Python, XML, etc.)
+
+**Intent:**
+This protocol transforms code editing from "guess and retry" into "verify and execute once." Every edit is preceded by verification that the pattern is correct, unique, and will change exactly what's intended. The pattern uniqueness requirement (Step 3) is the critical addition that prevents the most common edit failures: multi-location matches and whitespace mismatches.
+
+**Date Added:** 2026-02-19  
+**Trigger:** User asked how to memorialize the verification steps that made large file edits succeed. Analysis revealed pattern uniqueness testing was the missing enforcement mechanism. User refined rule to include explicit pattern testing requirement.
+
+---
+
 ## PROPERTY REFERENCE ERROR RESOLUTION PROTOCOL (2025-11-22)
 When an error occurs due to a missing property in a class/object:
 
@@ -301,6 +721,98 @@ This document defines the effective operational rules and protocols for all AI a
 
 
 ## 🚨 CRITICAL AGENT PROTOCOLS (HIGHEST PRIORITY)
+
+### 0. MINIMIZE TERMINAL INTERACTIONS - USE INTERNAL TOOLS FIRST (2026-02-16)
+
+**RULE: Agents MUST prefer internal file manipulation tools over terminal commands whenever functionally equivalent.**
+
+**Rationale:**
+- Terminal commands are slower and less reliable than internal tools
+- Terminal output can be corrupted or truncated
+- Internal tools provide atomic operations with better error handling
+- Reduces system load and context switching
+
+**Required Actions:**
+
+**File Creation/Writing:**
+- ✅ USE: `create_file` tool for new files
+- ❌ AVOID: `cat > file.txt << EOF`, `echo >> file.txt`, heredocs, shell redirects
+
+**File Reading:**
+- ✅ USE: `read_file` tool with line ranges
+- ❌ AVOID: `cat`, `head`, `tail`, `sed -n` (unless specific formatting needed)
+
+**File Editing:**
+- ✅ USE: `replace_string_in_file`, `multi_replace_string_in_file`
+- ❌ AVOID: `sed -i`, `awk`, `perl`, shell text manipulation
+
+**File Management:**
+- ✅ USE: `create_directory` for directory creation
+- ⚠️ ACCEPTABLE: `rm`, `mv` for deletion/renaming (no internal tool exists)
+
+**Code Analysis:**
+- ✅ USE: `grep_search`, `semantic_search`, `file_search`
+- ❌ AVOID: `grep`, `find`, `ag`, `rg` (unless complex regex required)
+
+**File Information:**
+- ✅ USE: `read_file` with line range 1-1 to get total line count (shows "Lines 1 to 1 (XXX lines total)")
+- ✅ USE: `list_dir` to list directory contents
+- ✅ USE: `file_search` to find files by pattern
+- ❌ AVOID: `wc -l`, `ls`, `find`, `stat` for information that internal tools provide
+
+**Build/Test/Deploy Commands:**
+- ✅ USE: `run_in_terminal` ONLY for commands with no internal equivalent (Gradle, ADB, compilation)
+- ❌ AVOID: Using terminal for file operations that have internal tools
+
+**Exceptions (Terminal Required):**
+- Build commands (Gradle, Maven, make)
+- Deployment (ADB, device interaction)
+- Git operations (commit, push, status)
+- System commands (environment setup, process management)
+- Complex shell pipelines where internal tools insufficient
+
+**Enforcement:**
+Before using `run_in_terminal` for ANY file operation, agent must:
+1. Check if equivalent internal tool exists
+2. Document why terminal is necessary (if used)
+3. Prefer internal tool unless impossible
+
+**Example Violations:**
+```bash
+# ❌ WRONG - using terminal for file creation
+run_in_terminal: cat > file.txt << 'EOF'
+
+# ❌ WRONG - using terminal to count lines
+run_in_terminal: wc -l /path/to/file.kt
+
+# ❌ WRONG - using terminal to list directory
+run_in_terminal: ls /path/to/dir
+
+# ✅ CORRECT - using internal tool
+create_file: filePath=file.txt, content=...
+
+# ✅ CORRECT - using internal tool to get line count
+read_file: filePath=/path/to/file.kt, startLine=1, endLine=1
+# (Output shows: "Lines 1 to 1 (489 lines total)")
+
+# ✅ CORRECT - using internal tool to list directory
+list_dir: path=/path/to/dir
+```
+
+**Example Correct Usage:**
+```bash
+# ✅ CORRECT - terminal required for build
+run_in_terminal: ./gradlew assembleDebug
+
+# ✅ CORRECT - internal tool for file creation
+create_file: filePath=ANALYSIS.md, content=...
+```
+
+**Date Added:** 2026-02-16  
+**Trigger:** Agent used `cat >> file.md << EOF` causing terminal corruption, then deleted and recreated file. User mandate: "ALWAYS MINIMIZE THE AMOUNT OF TERMINAL INTERACTIONS."
+
+---
+
 ### 6. CANONICAL COMMAND FORMATS & STANDARD STATEMENTS
 - Always use canonical build, test, and deployment command formats:
     - **Gradle Build:**
@@ -408,6 +920,47 @@ Agents must always perform a codebase-wide text search for the class or object d
 
 ---
 
+## ISSUE/PROBLEM AND CODE TRACING BEST PRACTICES RULE
+
+### General Principles
+- Always perform literal, end-to-end tracing of the full code path from user action (e.g., button press) to the final effect (e.g., UI update, notification, data write).
+- Enumerate every function, method, and logic block involved in the lifecycle of the feature or bug under investigation.
+- Use both static code analysis (reading code, searching for references, call graphs) and dynamic analysis (logging, breakpoints, stack traces, runtime inspection).
+- Document every step, including all intermediate layers (UI, API, manager, handler, router, packet processor, etc.).
+- Never assume the cause based on symptoms alone—always verify by tracing the actual code and data flow.
+- For each step, record the file, function, and line number, and describe the logic and data transformations.
+- starting from the function containing  the effect at issue and moving backwards along the chain of funcitions invovled, review all the uses of the functions to check those other uses as being invovled in the issue being investigated
+- Use automated tools (internal search tools, IDE search, call hierarchy, code navigation, static analyzers) to ensure completeness.
+- Starting from the function containing the effect at issue and moving backwards along the chain of functions involved, check all the uses of the functions to check those other uses as being involved in the issue being investigated.
+- Always check for indirect effects (side effects, callbacks, listeners, observers, background jobs).
+- When in doubt, over-document rather than under-document.
+
+### Kotlin/Java App Issue Tracing Strategy
+- Start with the user-facing symptom or bug report.
+- Identify the UI entry point (Activity, Fragment, View, or Composable) and trace all event handlers (e.g., setOnClickListener, setOnCheckedChangeListener).
+- Follow the call chain through ViewModels, Presenters, or Controllers, noting all data/state propagation.
+- Trace through all API/service calls, including asynchronous flows (coroutines, LiveData, StateFlow, RxJava, callbacks).
+- For each function, check for:
+  - Direct calls
+  - Indirect triggers (observers, listeners, event buses)
+  - Background/worker threads
+- Use logging and breakpoints to confirm runtime execution order and data values.
+- For notification, broadcast, or event-driven features, enumerate all registration and dispatch points (e.g., registerListener, addObserver, subscribe).
+- Always check for legacy or compatibility code that may alter the flow (but see project-specific rules for compatibility handling).
+- Document all findings in a stepwise, reproducible format, suitable for peer review.
+
+### Industry Best Practices
+- Use version control to track all changes and facilitate blame/annotate for historical bug tracing.
+- Write and maintain automated tests to catch regressions and verify fixes.
+- Use code review and pair programming to catch missed paths and logic errors.
+- Prefer explicit, readable code over clever but opaque logic.
+- Keep documentation and tracing artifacts up to date with code changes.
+
+**Intent:**
+Ensure all agents and developers follow a rigorous, industry-standard approach to issue tracing and code path analysis, with special focus on Kotlin/Java app workflows.
+
+---
+
 **This document supersedes all previous agent instructions. All agents must operate according to these protocols.**
 
 ## Literal, Exhaustive, and Verified Reference Mapping Protocol (2025-11-21)
@@ -439,3 +992,21 @@ Intent:
 Guarantees literal, automated, and unambiguous structural validation for every file, preventing silent errors and enforcing strict codebase integrity.
 
 Date: 2025-11-21
+
+---
+
+## NO_APP_VERSION_Backwards_COMPATIBILITY RULE (2026-02-22)
+
+**RULE: Solution design and code implementation plans must NEVER include app version backwards compatibility logic.**
+
+- All solution designs, refactor plans, and code implementation steps must target the current app version only.
+- Agents must not propose, implement, or document compatibility layers, migration logic, or fallback code for older app versions.
+- All code, UI, and API changes must assume a single, current version baseline.
+- If a user requests backwards compatibility, agents must present a refactored approach that omits compatibility logic unless explicitly exempted.
+- This rule applies to all planning, design, implementation, and documentation tasks.
+
+**Intent:**
+Guarantee that all code and solution designs are streamlined for the current app version, eliminating legacy compatibility complexity and ensuring maintainability.
+
+**Date Added:** 2026-02-22
+**Trigger:** User mandate to eliminate backwards compatibility logic from all solution designs and implementation plans.

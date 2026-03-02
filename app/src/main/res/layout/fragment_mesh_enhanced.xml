@@ -307,13 +307,32 @@
                     android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                     android:layout_marginBottom="12dp" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/refreshButton"
+                <!-- Button row for Refresh Status and Send Broadcast -->
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/refresh_mesh_status"
-                    android:icon="@drawable/ic_refresh"
-                    style="@style/Widget.Material3.Button.OutlinedButton" />
+                    android:orientation="horizontal"
+                    android:gravity="start">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/refreshButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/refresh_mesh_status"
+                        android:icon="@drawable/ic_refresh"
+                        style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/sendBroadcastButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="@string/send_broadcast"
+                        android:icon="@drawable/ic_broadcast"
+                        android:enabled="false"
+                        style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                </LinearLayout>
 
             </LinearLayout>
 
@@ -361,7 +380,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="0 nodes"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                             android:textStyle="bold" />
 
                         <TextView
@@ -384,7 +403,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="0 Bps"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                             android:textStyle="bold" />
 
                         <TextView
@@ -407,7 +426,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="0 Bps"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                             android:textStyle="bold" />
 
                         <TextView
@@ -443,6 +462,17 @@
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
+
+        <!-- Notifications Dropdown RecyclerView -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/notificationsDropdownRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:clipToPadding="false"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            tools:listitem="@layout/item_notification_dropdown" />
 
         <!-- ViewStub for Cards 4-9: Deferred loading to improve initial load performance -->
         <!-- Inflated asynchronously after initial fragment display to prevent UI thread blocking -->

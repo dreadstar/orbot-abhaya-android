@@ -1,0 +1,245 @@
+# BROADCAST WORKFLOW LOG PATTERNS REFERENCE
+# Generated from actual phone_test.log and phone_test2.log
+# Use this to validate pattern matching in filter_broadcast_logs.py
+
+## ACTUAL BROADCAST IDs IN TEST LOGS:
+# f6b31072-6793-46ad-acb4-f3180919c970 (File broadcast: IMG_20220412_112527.jpg, 4247 chunks)
+# ab4cdf84-580c-453d-b974-f10ea77e329b (Text broadcast: "Test")
+
+## LOG TAG SOURCES FOR BROADCAST WORKFLOW:
+# - BroadcastMessageHandler (broadcast operations)
+# - VirtualNodeDatagramSocket (packet I/O)
+# - VirtualNode (routing, packet checks)
+# - AndroidVirtualNode (node operations)
+# - EnhancedMeshFragment (UI callbacks)
+# - System.out (most logs go here with tag prefix)
+
+## PATTERN SAMPLES BY WORKFLOW STEP:
+
+### STEP 1: Broadcast Initiation (Sender)
+# TAG: BroadcastMessageHandler
+02-17 23:04:41.001 I/System.out(24074): I: t+82.05s : BroadcastMessageHandler Starting broadcast: message='Test', file=''
+02-17 23:05:14.902 I/System.out(24074): I: t+115.95s : BroadcastMessageHandler Starting broadcast: message='', file='/data/user/0/org.torproject.android.debug/cache/IMG_20220412_112527.jpg'
+
+### STEP 2: File Chunking (Sender)
+# TAG: BroadcastMessageHandler
+02-17 23:04:41.003 I/System.out(24074): D: t+82.05s : BroadcastMessageHandler Broadcast ab4cdf84-580c-453d-b974-f10ea77e329b: file size=0, chunks=0, hasFile=false
+02-17 23:05:14.928 I/System.out(24074): D: t+115.98s : BroadcastMessageHandler Broadcast f6b31072-6793-02-17 23:05:14.928 I/System.out(240747932, chunks=4247, hasFile=true
+02-17 23:05:14.927 I/System.out(24074): D: t+115.97s : BroadcastMessageHandler File broadcast: 4347932 bytes, file=IMG_20220412_112527.jpg
+
+### STEP 3: Transmission Path (Sender → Network)
+# TAG: BroadcastMessageHandler
+02-17 23:05:14.930 I/System.out(24074): I: t+115.98s : BroadcastMessageHandler Broadcast f6b31072-6793-46ad-acb4-f3180919c970: Starting batch 1/43 (chunks 0-99)
+02-17 23:05:14.958 I/System.out(24074): D: t+116.01s : BroadcastMessageHandler Broadcast f6b31072-6793-46ad-acb4-f3180919c970 chunk 0: sending to 1 neighbor(s)
+02-17 23:05:14.962 I/System.out(24074): V: t+116.01s : BroadcastMessageHandler Broadcast f6b31072-6793-46ad-acb4-f3180919c970 chunk 0: sent to neighbor -1442968969
+02-17 23:05:14.963 I/System.out(24074): I: t+116.01s : BroadcastMessageHandler Broadcast f6b31072-6793-46ad-acb4-f3180919c970: 0% complete (0/4247 chunks)
+
+### STEP 4: Network Reception (Network → Receiver)  
+# TAG: VirtualNodeDatagramSocket
+02-17 23:04:20.619 I/System.out(24074): I: t+61.67s : [VirtualNodeDatagramSocket for 169.254.61.175 ]  ⬇️ RECEIVED packet from /192.168.66.230:12353 size=53 bytes
+02-17 23:04:41.038 I/System.out(24611): I: t+0.08s : [VirtualNodeDatagramSocket for 169.254.10.119 ]  ⬇️ RECEIVED packet from /192.168.66.198:12353 size=1093 bytes
+
+### STEP 5: Routing to Handler (Receiver)
+# TAG: VirtualNode
+02-17 23:04:20.634 I/System.out(24074): D: t+61.68s : [VirtualNode 169.254.61.175]: [PKT_CHECK] ✅ BROADCAST PACKET DETECTED (type=0x01) - routing to BroadcastMessageHandler
+02-17 23:04:41.041 I/System.out(24074): I: t+82.09s : BroadcastMessageHandler New incoming broadcast: id=ab4cdf84-580c-453d-b974-f10ea77e329b, file=, totalChunks=0, isTextOnly=true
+
+### STEP 6: Chunk Processing (Receiver)
+# TAG: BroadcastMessageHandler
+# NEW FORMAT (with broadcast ID sub-tag):
+02-17 23:05:15.722 I/System.out(24611): D: t+0.77s : BroadcastMessageHandler[f6b31072] 1/4247 chunks received
+02-17 23:05:15.724 I/System.out(24611): D: t+0.77s : BroadcastMessageHandler[f6b31072] Received chunk 0/4247
+
+# OLD FORMAT (deprecated - for reference):
+02-17 23:05:15.722 I/System.out(24611): D: t+0.77s : BroadcastMessageHandler Broadcast f6b31072-6793-46ad-acb4-f3180919c970: 1/4247 chunks received
+
+### STEP 7: Completion Check (Receiver)
+# TAG: BroadcastMessageHandler
+# NEW FORMAT (with broadcast ID sub-tag):
+02-17 23:05:15.726 I/System.out(24611): D: t+0.77s : BroadcastMessageHandler[f6b31072] [BROADCAST_COMPLETE_CHECK] receivedChunks=1, totalChunks=4247, isComplete=false
+
+# OLD FORMAT (deprecated - for reference):
+02-17 23:05:15.726 I/System.out(24611): D: t+0.77s : BroadcastMessageHandler [BROADCAST_COMPLETE_CHECK] broadcastId=f6b31072-6793-46ad-acb4-f3180919c970, receivedChunks=1, totalChunks=4247, isComplete=false
+
+### STEP 8: File Reassembly (Receiver)
+# TAG: BroadcastMessageHandler
+# NEW FORMAT (with broadcast ID sub-tag):
+02-17 23:04:41.041 I/System.out(24074): I: t+82.09s : BroadcastMessageHandler[ab4cdf84] ✅ Text-only broadcast received, message='Test'
+02-17 23:05:15.726 I/System.out(24611): I: t+0.77s : BroadcastMessageHandler[f6b31072] ✅ [BROADCAST_COMPLETE] All 4247 chunks received, reassembling
+02-17 23:05:15.730 I/System.out(24611): I: t+0.77s : BroadcastMessageHandler[f6b31072] [RECONSTITUTE] Reassembled 4347932 bytes from 4247 chunks
+
+# OLD FORMAT (deprecated - for reference):
+02-17 23:04:41.041 I/System.out(24074): I: t+82.09s : BroadcastMessageHandler ✅ Text-only broadcast received: id=ab4cdf84-580c-453d-b974-f10ea77e329b, message='Test'
+
+### STEP 9: Folder Creation (Receiver)
+# TAG: BroadcastMessageHandler
+# NEW FORMAT (with broadcast ID sub-tag):
+02-17 23:05:25.438 I/System.out(29426): I: t+116.25s : BroadcastMessageHandler[f6b31072] [SHARED_FOLDER] Drop folder path: /tree/primary:abhaya2/document/primary:abhaya2
+02-17 23:05:25.439 I/System.out(29426): I: t+116.25s : BroadcastMessageHandler[f6b31072] [SHARED_FOLDER] 📁 Creating SharedWithMe folder
+02-17 23:05:25.441 I/System.out(29426): E: t+116.26s : BroadcastMessageHandler[f6b31072] [SHARED_FOLDER] ❌ mkdirs() FAILED
+
+### STEP 10: File Writing (Receiver)
+# TAG: BroadcastMessageHandler
+# NEW FORMAT (with broadcast ID sub-tag):
+02-17 23:05:25.442 I/System.out(29426): D: t+116.26s : BroadcastMessageHandler[f6b31072] [FILE_WRITE] Attempting to write file: IMG_20220412_112527.jpg
+02-17 23:05:25.443 I/System.out(29426): I: t+116.26s : BroadcastMessageHandler[f6b31072] ✅ [FILE_WRITE] Complete, file written to: /path/to/file
+02-17 23:05:25.446 I/System.out(29426): E: t+116.26s : BroadcastMessageHandler[f6b31072] ❌ [FILE_WRITE] Failed: SharedWithMe path error
+
+### STEP 11: Notification Creation (Receiver)
+# TAG: BroadcastMessageHandler + EnhancedMeshFragment
+# NEW FORMAT (with broadcast ID sub-tag in handler):
+02-17 23:04:41.042 I/System.out(24074): D: t+82.09s : BroadcastMessageHandler[ab4cdf84] [NOTIFICATION] Creating notification DTO: hasError=false
+02-17 23:04:41.043 I/System.out(24074): I: t+82.09s : BroadcastMessageHandler[ab4cdf84] [NOTIFICATION] Notifying 1 listeners for text broadcast
+02-17 23:04:41.044 I/System.out(24074): I: t+82.09s : BroadcastMessageHandler[ab4cdf84] [NOTIFICATION] ✅ All 1 listeners notified
+
+# EnhancedMeshFragment (still uses full ID in callback DTO):
+02-17 23:04:41.050 E/EnhancedMeshFragment(24074): [BROADCAST_LISTENER] ⚡ Callback invoked: id=ab4cdf84-580c-453d-b974-f10ea77e329b, sender=-1442955857, message='Test', fileName='', filePath='', hasError=false
+02-17 23:04:41.221 E/EnhancedMeshFragment(24074): Broadcast ab4cdf84-580c-453d-b974-f10ea77e329b: file saved to 
+
+## FALSE POSITIVE EXAMPLES (should NOT be included):
+
+### Facebook Katana (system UUID, not broadcast)
+02-17 23:04:19.631 D/Nightwatch(29641): NightWatch using: Binary path: /data/app/com.facebook.katana.../libwatcher_binary.so log path: .../sess__000000923-1771387449774-54d9dda5-d43e-c6c3-8218-36f687298844/nightwatch.txt
+
+### Camera2 (system UUID, not broadcast)  
+02-17 23:04:09.878 D/Camera2CameraImpl(29426): {Camera@aaca47f[id=0]} Use case androidx.camera.core.ImageAnalysis-645531cf-0088-41b3-8d3c-1ff77205c82b74438471 ACTIVE
+
+### Generic VirtualNode logs (no broadcast context)
+02-17 23:03:18.984 I/System.out(24074): D: t+0.03s : [VirtualNodeDatagramSocket for 169.254.61.175 ]  Started on02-17 23:03:18.984 I/System.out(24074): D: t+0.03s : [VirtualNodeDatagramSocket for 169.254.61.175 ]  Started on02-17 23:03:18.984 I/System.out(24074): D: t+0.03s : [VirtualNodeDatagramSocket for 169.254.61.17074): D: t+61.68s : [VirtualNode 169.254.61.175]: [PKT_CHECK] Not broadcast type (0x0e) - attempting MMCP parsing
+
+## BROADCAST ID EXTRACTION LOGIC:
+
+### TWO FORMATS MUST BE SUPPORTED:
+
+**1. NEW FORMAT (Broadcast ID Sub-Tag):**
+```
+Pattern: BroadcastMessageHandler[<short-id>] message
+Example: "BroadcastMessageHandler[f6b31072] ✅ Text-only broadcast received"
+Extraction: [0-9a-f]{8} inside square brackets after BroadcastMessageHandler
+```
+
+**2. OLD FORMAT (Full UUID in Message):**
+```
+Pattern: id=<full-uuid> OR Broadcast <full-uuid>:
+Example: "id=ab4cdf84-580c-453d-b974-f10ea77e329b" or "Broadcast f6b31072-6793-46ad-acb4-f3180919c970:"
+Extraction: [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
+```
+
+### BROADCAST ID MAPPING:
+- Short ID (8 chars) → Full ID (36 chars) mapping maintained during analysis
+- When short ID seen: check if full ID known, otherwise create placeholder
+- When full ID seen: update mapping if short ID already exists
+- EnhancedMeshFragment logs contain full IDs (for mapping validation)
+
+## FILTERING LOGIC:
+# Include entries if:
+# 1. Message contains "BroadcastMessageHandler" (any log level, any tag - System.out) OR
+# 2. Message contains "BroadcastMessageHandler[" (new sub-tag format) OR
+# 3. Tag is "EnhancedMeshFragment" AND message contains "BROADCAST" OR "[BROADCAST_LISTENER]" OR
+# 4. Message contains "BROADCAST PACKET DETECTED" (VirtualNode routing) OR
+# 5. Tag contains "VirtualNode" AND message matches broadcast workflow pattern AND has broadcast UUID
+
+phone_test2.log:02-17 23:05:25.438 I/System.out(29426): I: t+116.25s : BroadcastMessageHandler [SHARED_FOLDER] Drop folder path: /tree/primary:abhaya2/document/primary:abhaya2, exists=false, isDir=false
+phone_test2.log:02-17 23:05:25.439 I/System.out(29426): I: t+116.25s : BroadcastMessageHandler [SHARED_FOLDER] 📁 Creating SharedWithMe folder: /tree/primary:abhaya2/document/primary:abhaya2/SharedWithMe
+phone_test2.log:02-17 23:05:25.441 I/System.out(29426): I: t+116.26s : BroadcastMessageHandler [SHARED_FOLDER] mkdirs() result=false, exists now=false, canWrite=false
+phone_test2.log:02-17 23:05:25.441 I/System.out(29426): E: t+116.26s : BroadcastMessageHandler [SHARED_FOLDER] ❌ mkdirs() FAILED - folder creation returned false
+phone_test2.log:02-17 23:05:25.446 I/System.out(29426): E: t+116.26s : BroadcastMessageHandler ❌ [BROADCAST_COMPLETE] Broadcast f6b31072-6793-46ad-acb4-f3180919c970: failed to write file java.lang.IllegalArgumentException: SharedWithMe path exists but is not a directory: /tree/primary:abhaya2/document/primary:abhaya2/SharedWithMe
+phone_test2.log:02-17 23:05:25.446 I/System.out(29426): D: t+116.26s : BroadcastMessageHandler [BROADCAST_COMPLETE] Creating notification DTO with hasError=true, errorMessage=Failed to save file: SharedWithMe path exists but is not a directory: /tree/primary:abhaya2/document/primary:abhaya2/SharedWithMe
+phone_test2.log:02-17 23:05:25.462 E/EnhancedMeshFragment(29426): Broadcast error: Failed to save file: SharedWithMe path exists but is not a directory: /tree/primary:abhaya2/document/primary:abhaya2/SharedWithMe
+
+## ADDITIONAL COMPREHENSIVE SAMPLES FROM ACTUAL LOGS
+
+### MORE STEP 1 SAMPLES (Initiation):
+phone_test.log:02-17 23:04:41.001 I/System.out(24074): I: t+82.05s : BroadcastMessageHandler Starting broadcast: message='Test', file=''
+phone_test.log:02-17 23:05:14.902 I/System.out(24074): I: t+115.95s : BroadcastMessageHandler Starting broadcast: message='', file='/data/user/0/org.torproject.android.debug/cache/IMG_20220412_112527.jpg'
+
+### MORE STEP 2 SAMPLES (Chunking):
+phone_test.log:02-17 23:04:41.003 I/System.out(24074): D: t+82.05s : BroadcastMessageHandler Broadcast ab4cdf84-580c-453d-b974-f10ea77e329b: file size=0, chunks=0, hasFile=false
+phone_test.log:02-17 23:05:14.928 I/System.out(24074): D: t+115.98s : BroadcastMessageHandler Broadcast f6b31072-6793-46ad-acb4-f3180919c970: file size=4347932, chunks=4247, hasFile=true
+phone_test.log:02-17 23:05:14.927 I/System.out(24074): D: t+115.97s : BroadcastMessageHandler File broadcast: 4347932 bytes, file=IMG_20220412_112527.jpg
+phone_test.log:02-17 23:04:41.001 I/System.out(24074): D: t+82.05s : BroadcastMessageHandler Text-only broadcast (no file)
+
+### MORE STEP 3 SAMPLES (Transmission):
+phone_test.log:02-17 23:05:14.930 I/System.out(24074): I: t+115.98s : BroadcastMessageHandler Broadcast f6b31072-6793-46ad-acb4-f3180919c970: Starting batch 1/43 (chunks 0-99)
+phone_test.log:02-17 23:05:14.958 I/System.out(24074): D: t+116.01s : BroadcastMessageHandler Broadcast f6b31072-6793-46ad-acb4-f3180919c970 chunk 0: sending to 1 neighbor(s)
+phone_test.log:02-17 23:05:14.962 I/System.out(24074): V: t+116.01s : BroadcastMessageHandler Broadcast f6b31072-6793-46ad-acb4-f3180919c970 chunk 0: sent to neighbor -1442968969
+phone_test.log:02-17 23:05:14.963 I/System.out(24074): I: t+116.01s : BroadcastMessageHandler Broadcast f6b31072-6793-46ad-acb4-f3180919c970: 0% complete (0/4247 chunks)
+phone_test.log:02-17 23:04:41.004 I/System.out(24074): I: t+82.05s : BroadcastMessageHandler Text-only broadcast ab4cdf84-580c-453d-b974-f10ea77e329b: sending metadata packet only
+phone_test.log:02-17 23:04:41.009 I/System.out(24074): I: t+82.06s : BroadcastMessageHandler Text-only broadcast ab4cdf84-580c-453d-b974-f10ea77e329b sent
+
+### MORE STEP 4 SAMPLES (Network Reception):
+phone_test2.log:02-17 23:04:29.317 I/System.out(29426): I: t+60.13s : [VirtualNodeDatagramSocket for 169.254.10.119 ]  ⬇️ RECEIVED packet from /192.168.66.198:12353 size=1093 bytes
+phone_test2.log:02-17 23:05:03.258 I/System.out(29426): I: t+94.07s : [VirtualNodeDatagramSocket for 169.254.10.119 ]  ⬇️ RECEIVED packet from /192.168.66.198:12353 size=1051 bytes
+phone_test2.log:02-17 23:05:03.311 I/System.out(29426): I: t+94.13s : [VirtualNodeDatagramSocket for 169.254.10.119 ]  ⬇️ RECEIVED packet from /192.168.66.198:12353 size=1051 bytes
+
+### MORE STEP 5 SAMPLES (Routing):
+phone_test2.log:02-17 23:04:29.320 I/System.out(29426): I: t+60.14s : [VirtualNode 169.254.10.119]: [PKT_CHECK] ✅ BROADCAST PACKET DETECTED (type=0x01) - routing to BroadcastMessageHandler
+phone_test2.log:02-17 23:05:03.261 I/System.out(29426): I: t+94.08s : [VirtualNode 169.254.10.119]: [PKT_CHECK] ✅ BROADCAST PACKET DETECTED (type=0x01) - routing to BroadcastMessageHandler
+phone_test2.log:02-17 23:04:29.394 I/System.out(29426): I: t+60.21s : BroadcastMessageHandler New incoming broadcast: id=ab4cdf84-580c-453d-b974-f10ea77e329b, file=, totalChunks=0, isTextOnly=true
+phone_test2.log:02-17 23:05:03.267 I/System.out(29426): I: t+94.08s : BroadcastMessageHandler New incoming broadcast: id=f6b31072-6793-46ad-acb4-f3180919c970, file=IMG_20220412_112527.jpg, totalChunks=4247, isTextOnly=false
+
+### MORE STEP 6 SAMPLES (Chunk Processing):
+phone_test2.log:02-17 23:04:29.394 I/System.out(29426): D: t+60.21s : BroadcastMessageHandler Received broadcast chunk: id=ab4cdf84-580c-453d-b974-f10ea77e329b, chunk=0/0
+phone_test2.log:02-17 23:05:03.267 I/System.out(29426): D: t+94.08s : BroadcastMessageHandler Received broadcast chunk: id=f6b31072-6793-46ad-acb4-f3180919c970, chunk=0/4247
+phone_test2.log:02-17 23:05:03.285 I/System.out(29426): D: t+94.1s : BroadcastMessageHandler Received broadcast chunk: id=f6b31072-6793-46ad-acb4-f3180919c970, chunk=1/4247
+phone_test2.log:02-17 23:05:03.294 I/System.out(29426): D: t+94.11s : BroadcastMessageHandler Broadcast f6b31072-6793-46ad-acb4-f3180919c970: 1/4247 chunks received
+phone_test2.log:02-17 23:05:03.307 I/System.out(29426): D: t+94.12s : BroadcastMessageHandler Broadcast f6b31072-6793-46ad-acb4-f3180919c970: 2/4247 chunks received
+phone_test2.log:02-17 23:05:03.336 I/System.out(29426): D: t+94.15s : BroadcastMessageHandler Broadcast f6b31072-6793-46ad-acb4-f3180919c970: 3/4247 chunks received
+
+### MORE STEP 7 SAMPLES (Completion Check):
+phone_test2.log:02-17 23:05:03.295 I/System.out(29426): D: t+94.11s : BroadcastMessageHandler [BROADCAST_COMPLETE_CHECK] broadcastId=f6b31072-6793-46ad-acb4-f3180919c970, receivedChunks=1, totalChunks=4247, isComplete=false
+phone_test2.log:02-17 23:05:03.308 I/System.out(29426): D: t+94.12s : BroadcastMessageHandler [BROADCAST_COMPLETE_CHECK] broadcastId=f6b31072-6793-46ad-acb4-f3180919c970, receivedChunks=2, totalChunks=4247, isComplete=false
+phone_test2.log:02-17 23:05:03.318 I/System.out(29426): D: t+94.13s : BroadcastMessageHandler [BROADCAST_COMPLETE_CHECK] broadcastId=f6b31072-6793-46ad-acb4-f3180919c970, receivedChunks=2, totalChunks=4247, isComplete=false
+phone_test2.log:02-17 23:05:03.336 I/System.out(29426): D: t+94.15s : BroadcastMessageHandler [BROADCAST_COMPLETE_CHECK] broadcastId=f6b31072-6793-46ad-acb4-f3180919c970, receivedChunks=3, totalChunks=4247, isComplete=false
+
+### MORE STEP 8 SAMPLES (File Reassembly):
+phone_test2.log:02-17 23:04:29.395 I/System.out(29426): I: t+60.21s : BroadcastMessageHandler ✅ Text-only broadcast received: id=ab4cdf84-580c-453d-b974-f10ea77e329b, message='Test'
+phone_test.log:02-17 23:04:41.041 I/System.out(24074): I: t+82.09s : BroadcastMessageHandler ✅ Text-only broadcast received: id=ab4cdf84-580c-453d-b974-f10ea77e329b, message='Test'
+phone_test2.log:02-17 23:04:29.395 I/System.out(29426): I: t+60.21s : BroadcastMessageHandler [TEXT_ONLY_COMPLETE] Broadcast ab4cdf84-580c-453d-b974-f10ea77e329b: message='Test'
+phone_test.log:02-17 23:04:41.043 I/System.out(24074): I: t+82.09s : BroadcastMessageHandler [TEXT_ONLY_COMPLETE] Broadcast ab4cdf84-580c-453d-b974-f10ea77e329b: message='Test'
+
+### MORE STEP 9 SAMPLES (Folder Creation):
+phone_test2.log:02-17 23:05:25.438 I/System.out(29426): I: t+116.25s : BroadcastMessageHandler [SHARED_FOLDER] Drop folder path: /tree/primary:abhaya2/document/primary:abhaya2, exists=false, isDir=false
+phone_test2.log:02-17 23:05:25.439 I/System.out(29426): I: t+116.25s : BroadcastMessageHandler [SHARED_FOLDER] 📁 Creating SharedWithMe folder: /tree/primary:abhaya2/document/primary:abhaya2/SharedWithMe
+phone_test2.log:02-17 23:05:25.441 I/System.out(29426): I: t+116.26s : BroadcastMessageHandler [SHARED_FOLDER] mkdirs() result=false, exists now=false, canWrite=false
+phone_test2.log:02-17 23:05:25.441 I/System.out(29426): E: t+116.26s : BroadcastMessageHandler [SHARED_FOLDER] ❌ mkdirs() FAILED - folder creation returned false
+
+### MORE STEP 10 SAMPLES (File Writing):
+phone_test2.log:02-17 23:05:25.446 I/System.out(29426): E: t+116.26s : BroadcastMessageHandler ❌ [BROADCAST_COMPLETE] Broadcast f6b31072-6793-46ad-acb4-f3180919c970: failed to write file java.lang.IllegalArgumentException: SharedWithMe path exists but is not a directory: /tree/primary:abhaya2/document/primary:abhaya2/SharedWithMe
+phone_test2.log:02-17 23:05:25.446 I/System.out(29426): D: t+116.26s : BroadcastMessageHandler [BROADCAST_COMPLETE] Creating notification DTO with hasError=true, errorMessage=Failed to save file: SharedWithMe path exists but is not a directory: /tree/primary:abhaya2/document/primary:abhaya2/SharedWithMe
+
+### MORE STEP 11 SAMPLES (Notification/UI):
+phone_test.log:02-17 23:04:41.050 E/EnhancedMeshFragment(24074): [BROADCAST_LISTENER] ⚡ Callback invoked: id=ab4cdf84-580c-453d-b974-f10ea77e329b, sender=-1442955857, message='Test', fileName='', filePath='', hasError=false
+phone_test2.log:02-17 23:04:29.396 E/EnhancedMeshFragment(29426): [BROADCAST_LISTENER] ⚡ Callback invoked: id=ab4cdf84-580c-453d-b974-f10ea77e329b, sender=-1442955857, message='Test', fileName='', filePath='', hasError=false
+phone_test.log:02-17 23:04:41.204 D/EnhancedMeshFragment(24074): Broadcast sent: ab4cdf84-580c-453d-b974-f10ea77e329b, 0 nodes reached
+phone_test.log:02-17 23:05:37.053 D/EnhancedMeshFragment(24074): Broadcast sent: f6b31072-6793-46ad-acb4-f3180919c970, 0 nodes reached
+phone_test.log:02-17 23:04:41.221 E/EnhancedMeshFragment(24074): Broadcast ab4cdf84-580c-453d-b974-f10ea77e329b: file saved to 
+phone_test2.log:02-17 23:05:25.462 E/EnhancedMeshFragment(29426): Broadcast error: Failed to save file: SharedWithMe path exists but is not a directory: /tree/primary:abhaya2/document/primary:abhaya2/SharedWithMe
+phone_test.log:02-17 23:04:41.206 D/EnhancedMeshFragment(24074): [BROADCAST_LISTENER] List updated - size=1
+phone_test.log:02-17 23:04:41.208 D/EnhancedMeshFragment(24074): [BROADCAST_LISTENER] Badge updated: count=1
+phone_test.log:02-17 23:04:41.208 D/EnhancedMeshFragment(24074): [BROADCAST_LISTENER] Final message: 'Message from node -1442955857: Test'
+phone_test.log:02-17 23:04:41.208 D/EnhancedMeshFragment(24074): [BROADCAST_LISTENER] Showing Toast: message='Message from node -1442955857: Test'
+phone_test.log:02-17 23:04:41.221 D/EnhancedMeshFragment(24074): [BROADCAST_LISTENER] ✅ Toast shown successfully
+phone_test.log:02-17 23:04:41.253 D/EnhancedMeshFragment(24074): [BROADCAST_LISTENER] ✅ Snackbar shown successfully
+
+## KEY FILTERING INSIGHTS FROM ACTUAL LOGS:
+
+### Tags that SHOULD be included:
+1. **System.out with "BroadcastMessageHandler"** - ALL broadcast operations log here
+2. **System.out with "[VirtualNode ...]" AND broadcast UUID** - Packet routing
+3. **System.out with "[VirtualNodeDatagramSocket ...]"** - Only when context indicates broadcast
+4. **EnhancedMeshFragment** - Only lines containing "BROADCAST" or "[BROADCAST_LISTENER]"
+
+### Tags that should be EXCLUDED:
+1. **Nightwatch** - Facebook error reporting (54d9dda5-...)
+2. **Camera2CameraImpl** - Camera component UUID (645531cf-...)  
+3. **Generic VirtualNode** - Lines without broadcast UUID or "BROADCAST PACKET DETECTED"
+4. **Generic System.out** - Lines without broadcast context
+
+### Pattern Matching Notes:
+- UUIDs appear in multiple formats: full UUID, truncated (f6b31072...), or embedded
+- "BroadcastMessageHandler" appears in message body, NOT as log tag (all go to System.out)
+- Workflow patterns may appear WITHOUT explicit UUID in message (need tag correlation)
+- Steps 9-10 only appear on receiver side when broadcast completes successfully
+- Text-only broadcasts skip Steps 2, 9-10 (no file operations)
+

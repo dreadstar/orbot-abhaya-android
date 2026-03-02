@@ -29,37 +29,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // --- Handle drop folder selection intent ---
-        handleDropFolderIntent(intent)
-    }
-
-    // --- NEW CODE: Handle drop folder selection from UI or external intent ---
-    private fun handleDropFolderIntent(intent: Intent?) {
-        intent?.data?.let { uri ->
-            val folderPath = getFolderPathFromUri(uri)
-            if (folderPath != null) {
-                meshrabiyaApi.selectDropFolder(folderPath) { result ->
-                    if (result.isSuccess) {
-                        Toast.makeText(this, "Drop folder set: $folderPath", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this, "Failed to set drop folder: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-        }
-    }
-
-    // --- NEW CODE: Utility to convert Uri to file system path ---
-    private fun getFolderPathFromUri(uri: Uri): String? {
-        // Implementation depends on Android version and storage access framework
-        // For SAF, you may need to use DocumentFile or ContentResolver
-        // This is a stub for demonstration; replace with actual logic
-        return uri.path
+        // Drop folder selection moved to EnhancedMeshFragment using URI-based approach
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // --- NEW CODE: Handle new drop folder selection while app is running ---
-        handleDropFolderIntent(intent)
+        // Drop folder selection moved to EnhancedMeshFragment using URI-based approach
     }
 }

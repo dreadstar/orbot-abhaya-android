@@ -26,6 +26,7 @@ object MeshUIBindings {
     lateinit var gatewayToggle: SwitchMaterial
     lateinit var internetGatewayToggle: SwitchMaterial
     lateinit var refreshButton: MaterialButton
+    lateinit var sendBroadcastButton: MaterialButton
     lateinit var meshToggleButton: MaterialButton
     
     // Mesh control card and new buttons
@@ -87,6 +88,7 @@ object MeshUIBindings {
         meshRolesText = view.findViewById(R.id.meshRolesText)
         lastUpdateText = view.findViewById(R.id.lastUpdateText)
         refreshButton = view.findViewById(R.id.refreshButton)
+        sendBroadcastButton = view.findViewById(R.id.sendBroadcastButton)
         meshToggleButton = view.findViewById(R.id.meshToggleButton)
         
         // Mesh control card and new buttons
