@@ -26,7 +26,6 @@
             android:scrollbars="vertical" />
 
     </com.google.android.material.textfield.TextInputLayout>
-
     <!-- Character Counter -->
     <TextView
         android:id="@+id/messageCharacterCounter"
@@ -37,6 +36,27 @@
         android:text="0 / 500"
         android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
         android:textColor="?android:attr/textColorSecondary" />
+
+    <!-- GPS option -->
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/includeLocationCheckbox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Include GPS location" />
+
+    <!-- GPS Location Error (shown when location unavailable) -->
+    <TextView
+        android:id="@+id/gpsLocationDisplay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="4dp"
+        android:text="Location Unavailable"
+        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+        android:textColor="@android:color/holo_red_dark"
+        android:visibility="gone"
+        tools:visibility="visible" />
 
     <!-- File Selection Section -->
     <TextView
@@ -105,6 +125,18 @@
         android:layout_marginTop="24dp"
         android:orientation="horizontal"
         android:gravity="end">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/cancelBroadcastDialogButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cancel"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
 
         <com.google.android.material.progressindicator.CircularProgressIndicator
             android:id="@+id/sendProgressIndicator"

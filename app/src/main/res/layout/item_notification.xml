@@ -29,7 +29,7 @@
                 android:text="From: Node 123"
                 android:textStyle="bold"
                 android:textSize="14sp" />
-
+            
             <TextView
                 android:id="@+id/notificationTimestampText"
                 android:layout_width="wrap_content"
@@ -37,6 +37,13 @@
                 android:text="Feb 08, 15:18"
                 android:textSize="12sp"
                 android:textColor="?android:attr/textColorSecondary" />
+            <ImageButton
+                android:id="@+id/notificationCloseButton"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Close notification" />
 
         </LinearLayout>
 
@@ -47,6 +54,16 @@
             android:layout_marginTop="4dp"
             android:text="Message text"
             android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/notificationLocationText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="📍 0.000, 0.000"
+            android:textSize="12sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/notificationFileText"

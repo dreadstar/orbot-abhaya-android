@@ -475,7 +475,11 @@ class OrbotActivity : BaseActivity() {
         notificationBadge = actionView?.findViewById(R.id.notification_badge)
 
         // start with an empty adapter; the fragment will populate its own instance
-        notificationsAdapter = NotificationsAdapter(emptyList())
+        notificationsAdapter = NotificationsAdapter(emptyList()) { entry ->
+            val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_fragment) as? androidx.navigation.fragment.NavHostFragment
+            val fragment = navHostFragment?.childFragmentManager?.fragments?.firstOrNull() as? EnhancedMeshFragment
+            fragment?.removeNotification(entry)
+        }
         android.util.Log.d("OrbotActivity", "[DROPDOWN] initial adapter created, size=${notificationsAdapter.itemCount}")
 
         // Prepare dropdown layout and popup
@@ -531,7 +535,9 @@ class OrbotActivity : BaseActivity() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_notifications, null)
         val recyclerView = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.notificationsRecyclerView)
         recyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
-        recyclerView.adapter = NotificationsAdapter(notifications)
+        recyclerView.adapter = NotificationsAdapter(notifications) { entry ->
+            fragment?.removeNotification(entry)
+        }
         
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("Broadcast Notifications (${notifications.size})")

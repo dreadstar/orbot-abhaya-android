@@ -236,7 +236,7 @@
     <string name="mesh_status_connected">Connected</string>
     <string name="mesh_peers_none">No peers connected</string>
     <string name="mesh_peers_count">Connected to %d peers</string>
-    <string name="refresh_mesh_status">Refresh Status</string>
+    <string name="refresh_mesh_status">Refresh</string>
     <string name="send_broadcast">Send Broadcast</string>
     <string name="pref_detect_root_title">Root Detection</string>
 

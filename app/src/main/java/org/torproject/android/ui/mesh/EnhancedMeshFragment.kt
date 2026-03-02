@@ -71,6 +71,10 @@ import org.torproject.android.ui.mesh.model.NotificationType
 import org.torproject.android.ui.mesh.model.toFeedEntry
 import kotlinx.coroutines.flow.stateIn
 
+interface EnhancedMeshFragmentHost {
+    fun getFilePathFromUri(uri: Uri): String?
+}
+
 /**
  * EnhancedMeshFragment: Mesh UI fragment using MeshrabiyaApi for all mesh logic.
  * All mesh operations are routed through MeshrabiyaApi. No deprecated logic is used.
@@ -79,6 +83,8 @@ class EnhancedMeshFragment : Fragment() {
 
 	private lateinit var meshrabiyaApi: MeshrabiyaApi
 	private lateinit var broadcastListener: (com.ustadmobile.meshrabiya.api.model.BroadcastReceivedDto) -> Unit
+	private enum class LocationRequestOrigin { NONE, START_MESH, BROADCAST }
+	private var locationRequestOrigin = LocationRequestOrigin.NONE
 
 	// Notification storage for broadcast messages (NEW)
     private val broadcastNotifications = MutableStateFlow<List<BroadcastNotification>>(emptyList())
@@ -94,7 +100,11 @@ class EnhancedMeshFragment : Fragment() {
 	// Folder picker for storage allocation
 	private lateinit var folderPickerLauncher: ActivityResultLauncher<Uri?>
 	private var selectedFolderUri: Uri? = null
-	
+	// keep coordinates until send is tapped
+	private var pendingLatitude: Double? = null
+	private var pendingLongitude: Double? = null
+	private var locationRequestJob: Job? = null
+	private var activeLocationListener: android.location.LocationListener? = null
 	// File picker for broadcast attachments (must be registered before onCreate)
 	private val broadcastFilePicker = registerForActivityResult(
 		ActivityResultContracts.OpenDocument()
@@ -134,88 +144,90 @@ class EnhancedMeshFragment : Fragment() {
 		private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
 	}
 
-private var pendingFolderName: String? = null
+	private var pendingFolderName: String? = null
 
-private val requestWritePermissionLauncher = registerForActivityResult(
-    ActivityResultContracts.RequestPermission()
-) { isGranted ->
-    if (isGranted && pendingFolderName != null) {
-        createStorageFolder(pendingFolderName!!)
-        pendingFolderName = null
-    } else {
-        Snackbar.make(requireView(), "Write permission is required to create folders", Snackbar.LENGTH_LONG).show()
-        pendingFolderName = null
-    }
-}
-
-private fun hasWritePermission(): Boolean {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        // App-specific storage: permission not required
-        true
-    } else {
-        ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-    }
-}
-
-private fun ensureWritePermissionAndCreateFolder(folderName: String) {
-    if (!hasWritePermission()) {
-        pendingFolderName = folderName
-        requestWritePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        return
-    }
-    createStorageFolder(folderName)
-}
+	private val requestWritePermissionLauncher = registerForActivityResult(
+		ActivityResultContracts.RequestPermission()
+	) { isGranted ->
+		if (isGranted && pendingFolderName != null) {
+			createStorageFolder(pendingFolderName!!)
+			pendingFolderName = null
+		} else {
+			Snackbar.make(requireView(), "Write permission is required to create folders", Snackbar.LENGTH_LONG).show()
+			pendingFolderName = null
+		}
+	}
 
 	/**
-     * Convert content:// URI to file system path
-     * Required for configuring drop folder with meshrabiya API
-     */
-    private fun getFilePathFromUri(uri: Uri): String? {
-        return try {
-            // For DocumentTree URIs (from folder picker), use the tree document ID
-            val docId = android.provider.DocumentsContract.getTreeDocumentId(uri)
-            
-            // Try to get real path from document provider
-            val contentResolver = requireContext().contentResolver
-            val cursor = contentResolver.query(
-                android.provider.DocumentsContract.buildDocumentUriUsingTree(uri, docId),
-                arrayOf(android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME),
-                null, null, null
-            )
-            
-            cursor?.use {
-                if (it.moveToFirst()) {
-                    // For now, use the app's external files directory + folder name
-                    // This is a workaround since content:// URIs don't map directly to filesystem paths
-                    val folderName = it.getString(0)
-                    val appFolder = requireContext().getExternalFilesDir(null)
-                    val broadcastFolder = java.io.File(appFolder, "broadcasts")
-                    if (!broadcastFolder.exists()) {
-                        ensureWritePermissionAndCreateFolder("broadcasts")
-                    }
-                    android.util.Log.d("EnhancedMeshFragment", "Using broadcast folder: ${broadcastFolder.absolutePath}")
-                    return broadcastFolder.absolutePath
-                }
-            }
-            
-            // Fallback: use app's external files directory
-            val fallbackFolder = java.io.File(requireContext().getExternalFilesDir(null), "broadcasts")
-            if (!fallbackFolder.exists()) {
-                ensureWritePermissionAndCreateFolder("broadcasts")
-            }
-            android.util.Log.d("EnhancedMeshFragment", "Using fallback broadcast folder: ${fallbackFolder.absolutePath}")
-            fallbackFolder.absolutePath
-            
-        } catch (e: Exception) {
-            android.util.Log.e("EnhancedMeshFragment", "Error converting URI to path: ${e.message}")
-            // Last resort fallback
-            val fallbackFolder = java.io.File(requireContext().getExternalFilesDir(null), "broadcasts")
-            if (!fallbackFolder.exists()) {
-                ensureWritePermissionAndCreateFolder("broadcasts")
-            }
-            fallbackFolder.absolutePath
-        }
-    }
+	 * Convert content:// URI to file system path
+	 * Required for configuring drop folder with meshrabiya API
+	 */
+	fun getFilePathFromUri(uri: Uri): String? {
+		return try {
+			// For DocumentTree URIs (from folder picker), use the tree document ID
+			val docId = android.provider.DocumentsContract.getTreeDocumentId(uri)
+			
+			// Try to get real path from document provider
+			val contentResolver = requireContext().contentResolver
+			val cursor = contentResolver.query(
+				android.provider.DocumentsContract.buildDocumentUriUsingTree(uri, docId),
+				arrayOf(android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+				null, null, null
+			)
+			
+			cursor?.use {
+				if (it.moveToFirst()) {
+					// For now, use the app's external files directory + folder name
+					// This is a workaround since content:// URIs don't map directly to filesystem paths
+					val folderName = it.getString(0)
+					val appFolder = requireContext().getExternalFilesDir(null)
+					val broadcastFolder = java.io.File(appFolder, "broadcasts")
+					if (!broadcastFolder.exists()) {
+						ensureWritePermissionAndCreateFolder("broadcasts")
+					}
+					android.util.Log.d("EnhancedMeshFragment", "Using broadcast folder: ${broadcastFolder.absolutePath}")
+					return broadcastFolder.absolutePath
+				}
+			}
+			
+			// Fallback: use app's external files directory
+			val fallbackFolder = java.io.File(requireContext().getExternalFilesDir(null), "broadcasts")
+			if (!fallbackFolder.exists()) {
+				ensureWritePermissionAndCreateFolder("broadcasts")
+			}
+			android.util.Log.d("EnhancedMeshFragment", "Using fallback broadcast folder: ${fallbackFolder.absolutePath}")
+			fallbackFolder.absolutePath
+			
+		} catch (e: Exception) {
+			android.util.Log.e("EnhancedMeshFragment", "Error converting URI to path: ${e.message}")
+			// Last resort fallback
+			val fallbackFolder = java.io.File(requireContext().getExternalFilesDir(null), "broadcasts")
+			if (!fallbackFolder.exists()) {
+				ensureWritePermissionAndCreateFolder("broadcasts")
+			}
+			fallbackFolder.absolutePath
+		}
+	}
+
+	private fun hasWritePermission(): Boolean {
+		return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+			// App-specific storage: permission not required
+			true
+		} else {
+			ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+		}
+	}
+
+	private fun ensureWritePermissionAndCreateFolder(folderName: String) {
+		if (!hasWritePermission()) {
+			pendingFolderName = folderName
+			requestWritePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+			return
+		}
+		createStorageFolder(folderName)
+	}
+
+	
 	
 	// Permission launcher for runtime location permission requests
 	private val requestLocationPermissionLauncher = registerForActivityResult(
@@ -223,11 +235,38 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 	) { permissions ->
 		val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
 		val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
-		
+
 		if (fineLocationGranted && coarseLocationGranted) {
-			// Permissions granted, retry starting mesh
-			android.util.Log.d("EnhancedMeshFragment", "Location permissions granted, retrying startMesh()")
-			startMeshWithPermissionCheck()
+			when (locationRequestOrigin) {
+				LocationRequestOrigin.START_MESH -> {
+					android.util.Log.d("EnhancedMeshFragment",
+						"Permissions granted (origin=START_MESH) – retrying startMesh()")
+					startMeshWithPermissionCheck()
+				}
+				LocationRequestOrigin.BROADCAST -> {
+					android.util.Log.d("EnhancedMeshFragment",
+						"Permissions granted (origin=BROADCAST) – acquiring location for pending broadcast")
+					// duplicate the acquisition code from the checkbox listener:
+					try {
+						val lm = requireContext().getSystemService(Context.LOCATION_SERVICE)
+								as android.location.LocationManager
+						val loc = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+							?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+						if (loc != null) {
+							// store in the vars defined in showBroadcastDialog()
+							pendingLatitude = loc.latitude
+							pendingLongitude = loc.longitude
+							Log.d("EnhancedMeshFragment",
+								"location acquired after permission: $pendingLatitude,$pendingLongitude")
+						}
+					} catch (e: Exception) {
+						Log.e("EnhancedMeshFragment", "Failed to get location after permission", e)
+					}
+				}
+				LocationRequestOrigin.NONE -> {
+					// should never happen
+				}
+			}
 		} else {
 			// Permissions denied, show message
 			android.util.Log.w("EnhancedMeshFragment", "Location permissions denied by user")
@@ -239,6 +278,7 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 					.show()
 			}
 		}
+		locationRequestOrigin = LocationRequestOrigin.NONE
 	}
 
 	override fun onCreate(savedInstanceState: Bundle?) {
@@ -285,7 +325,7 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 		MeshUIBindings.bindImmediateViews(view)
 
 		// Initialize notifications adapter and bind to RecyclerView
-        notificationsAdapter = NotificationsAdapter(emptyList())
+        notificationsAdapter = NotificationsAdapter(emptyList()) { entry -> removeNotification(entry) }
         android.util.Log.d("EnhancedMeshFragment", "[DROPDOWN] adapter created in fragment, size=${notificationsAdapter.itemCount}")
 		val notificationsRecyclerView = view.findViewById<RecyclerView>(R.id.notificationsDropdownRecyclerView)
 		notificationsRecyclerView.adapter = notificationsAdapter
@@ -419,13 +459,15 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 					else -> {
 						// Add broadcast notification
 						val newItem = BroadcastNotification(
-							id = broadcast.broadcastId,
-							title = "Broadcast Rcvd: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())}",
-							createdAt = System.currentTimeMillis(),
-							message = broadcast.messageText,
-							filePath = broadcast.filePath,
-							senderNodeId = broadcast.senderNodeId.toString()
-						)
+                            id = broadcast.broadcastId,
+                            title = "Broadcast Rcvd: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())}",
+                            createdAt = System.currentTimeMillis(),
+                            message = broadcast.messageText,
+                            filePath = broadcast.filePath,
+                            senderNodeId = broadcast.senderNodeId.toString(),
+                            latitude = broadcast.latitude,
+                            longitude = broadcast.longitude
+                        )
 						broadcastNotifications.value = broadcastNotifications.value + newItem
 						android.util.Log.d(tag, "[UI_CALLBACK] ✅ Added to broadcastNotifications (size=${broadcastNotifications.value.size})")
 
@@ -460,7 +502,10 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 		// Register broadcast success handler
 		meshrabiyaApi.setOnBroadcastSent { result ->
 			activity?.runOnUiThread {
-				android.util.Log.d("EnhancedMeshFragment", "Broadcast sent: ${result.broadcastId}, ${result.successNodeIds.size} nodes reached")
+				val coords = if (result.latitude != null && result.longitude != null) {
+					" [coords=${result.latitude},${result.longitude}]"
+				} else ""
+				android.util.Log.d("EnhancedMeshFragment", "Broadcast sent: ${result.broadcastId}, ${result.successNodeIds.size} nodes reached$coords")
 			}
 		}
 		
@@ -874,6 +919,11 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 	 */
 	private fun requestLocationPermissions() {
 		android.util.Log.d("EnhancedMeshFragment", "Requesting location permissions")
+		if (!checkLocationPermissions()) {
+			android.util.Log.d("EnhancedMeshFragment", "Permissions not granted, requesting now")
+			locationRequestOrigin = LocationRequestOrigin.START_MESH
+			requestLocationPermissions()
+		}
 		requestLocationPermissionLauncher.launch(
 			arrayOf(
 				Manifest.permission.ACCESS_FINE_LOCATION,
@@ -1240,25 +1290,118 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 		
 		// Find views
 		val messageInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.broadcastMessageInput)
-		val messageCounterText = dialogView.findViewById<TextView>(R.id.messageCharacterCounter)
-		val fileNameText = dialogView.findViewById<TextView>(R.id.selectedFileNameText)
-		 val selectFileButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.selectFileButton)
+        val messageCounterText = dialogView.findViewById<TextView>(R.id.messageCharacterCounter)
+        val fileNameText = dialogView.findViewById<TextView>(R.id.selectedFileNameText)
+        val includeLocationCheckbox = dialogView.findViewById<android.widget.CheckBox>(R.id.includeLocationCheckbox)
+        val gpsLocationDisplay = dialogView.findViewById<TextView>(R.id.gpsLocationDisplay)
+        val selectFileButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.selectFileButton)
         val clearFileButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.clearFileButton)
         val selectedFileContainer = dialogView.findViewById<android.view.ViewGroup>(R.id.selectedFileContainer)
         val sendButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.sendBroadcastDialogButton)
-		val progressBar = dialogView.findViewById<com.google.android.material.progressindicator.CircularProgressIndicator>(R.id.sendProgressIndicator)
-		val errorText = dialogView.findViewById<TextView>(R.id.errorMessageText)
+		val cancelButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.cancelBroadcastDialogButton)
+        val progressBar = dialogView.findViewById<com.google.android.material.progressindicator.CircularProgressIndicator>(R.id.sendProgressIndicator)
+        val errorText = dialogView.findViewById<TextView>(R.id.errorMessageText)
+        
+        // Track selected file
+        var selectedFileUri: Uri? = null
+        
+        // Local function to update send button state
+        fun updateSendButtonState() {
+			val messageLength = messageInput.text?.length ?: 0
+			val hasMessage = messageLength > 0 && messageLength <= 500
+			val hasFile = selectedFileUri != null
+			val locationPending = includeLocationCheckbox.isChecked && pendingLatitude == null
+			sendButton.isEnabled = (hasMessage || hasFile) && !locationPending
+		}
+        
+        // Capture location immediately when checkbox checked (emergency use case - use cached location)
+        includeLocationCheckbox.setOnCheckedChangeListener { _, isChecked ->
+			Log.d("EnhancedMeshFragment", "includeLocationCheckbox toggled: $isChecked")
+			if (!isChecked) {
+				// Cancel any pending location request
+				cancelPendingLocationRequest()
+				
+				// Clear location data and reset UI
+				pendingLatitude = null
+				pendingLongitude = null
+				gpsLocationDisplay.visibility = View.GONE
+				progressBar.visibility = View.GONE
+				updateSendButtonState()
+				Log.d("EnhancedMeshFragment", "[LOCATION] Checkbox unchecked - cleared coordinates")
+				return@setOnCheckedChangeListener
+			}
+
+			// When checked, try IMMEDIATE cached location first (fast path)
+			try {
+				val lm = requireContext().getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+				
+				Log.d("EnhancedMeshFragment", "[LOCATION] Checkbox checked - attempting to get cached location")
+				
+				// Try GPS provider first, then NETWORK provider
+				var location: android.location.Location? = null
+				try {
+					location = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+					if (location != null) {
+						Log.d("EnhancedMeshFragment", "[LOCATION] GPS cached location available")
+					}
+				} catch (e: SecurityException) {
+					Log.w("EnhancedMeshFragment", "[LOCATION] GPS location permission denied")
+				}
+				
+				// Fallback to NETWORK if GPS unavailable
+				if (location == null) {
+					try {
+						location = lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+						if (location != null) {
+							Log.d("EnhancedMeshFragment", "[LOCATION] NETWORK cached location available")
+						}
+					} catch (e: SecurityException) {
+						Log.w("EnhancedMeshFragment", "[LOCATION] NETWORK location permission denied")
+					}
+				}
+				
+				if (location != null) {
+					// FAST PATH: Cached location available - display immediately
+					pendingLatitude = location.latitude
+					pendingLongitude = location.longitude
+					gpsLocationDisplay.text = String.format("📍 %.6f, %.6f", pendingLatitude, pendingLongitude)
+					gpsLocationDisplay.setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
+					gpsLocationDisplay.visibility = View.VISIBLE
+					progressBar.visibility = View.GONE
+					updateSendButtonState()
+					Log.d("EnhancedMeshFragment", 
+						"[LOCATION] ✅ Cached location captured: lat=$pendingLatitude, lon=$pendingLongitude, " +
+						"accuracy=${location.accuracy}m, age=${(System.currentTimeMillis() - location.time)/1000}s old")
+				} else {
+					// SLOW PATH: No cached location - start async GPS request
+					Log.w("EnhancedMeshFragment", "[LOCATION] No cached location - starting async GPS request")
+					
+					// Show acquiring state
+					pendingLatitude = null
+					pendingLongitude = null
+					gpsLocationDisplay.text = "Acquiring GPS..."
+					gpsLocationDisplay.setTextColor(resources.getColor(android.R.color.holo_orange_dark, null))
+					gpsLocationDisplay.visibility = View.VISIBLE
+					progressBar.visibility = View.VISIBLE
+					updateSendButtonState()
+					
+					// Start async location request with timeout
+					startAsyncLocationRequest(lm, progressBar, gpsLocationDisplay, sendButton, ::updateSendButtonState)
+				}
+			} catch (e: Exception) {
+				// Unexpected error - show error message and disable send button
+				Log.e("EnhancedMeshFragment", "[LOCATION] Failed to get location", e)
+				pendingLatitude = null
+				pendingLongitude = null
+				gpsLocationDisplay.text = "Location Error"
+				gpsLocationDisplay.setTextColor(resources.getColor(android.R.color.holo_red_dark, null))
+				gpsLocationDisplay.visibility = View.VISIBLE
+				progressBar.visibility = View.GONE
+				updateSendButtonState()
+			}
+		}
+
 		
-		// Track selected file
-		var selectedFileUri: Uri? = null
-		
-		// Local function to update send button state
-		fun updateSendButtonState() {
-            val messageLength = messageInput.text?.length ?: 0
-            val hasMessage = messageLength > 0 && messageLength <= 500
-            val hasFile = selectedFileUri != null
-            sendButton.isEnabled = hasMessage || hasFile
-        }
         
         // Initialize button state immediately
         updateSendButtonState()
@@ -1316,92 +1459,239 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 		
 		
 		// Create dialog
-		        // Create dialog
         val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle("Send Broadcast")
             .setView(dialogView)
-            .setPositiveButton("Cancel", null)
             .create()
 
-		// Clean up callback when dialog is dismissed
+        // Clean up callback and location request when dialog is dismissed
         dialog.setOnDismissListener {
             pendingFileCallback = null
+            cancelPendingLocationRequest()
         }
 		
 		// Send button
 		sendButton.setOnClickListener {
-			val messageText = messageInput.text?.toString() ?: ""
-			
-			// Validate input
-			if (messageText.isEmpty() && selectedFileUri == null) {
-				errorText.text = "Please enter a message or select a file"
-				errorText.visibility = View.VISIBLE
-				return@setOnClickListener
-			}
-			
-			if (messageText.length > 500) {
-				errorText.text = "Message exceeds 500 character limit"
-				errorText.visibility = View.VISIBLE
-				return@setOnClickListener
-			}
-			
-			// Get file path from URI (if file selected)
-			var filePath = ""
-			selectedFileUri?.let { uri ->
-				try {
-					// Copy file to cache directory to get absolute path
-					val inputStream = requireContext().contentResolver.openInputStream(uri)
-					val fileName = DocumentFile.fromSingleUri(requireContext(), uri)?.name ?: "broadcast_file"
-					val cacheFile = java.io.File(requireContext().cacheDir, fileName)
-					inputStream?.use { input ->
-						cacheFile.outputStream().use { output ->
-							input.copyTo(output)
-						}
-					}
-					filePath = cacheFile.absolutePath
-				} catch (e: Exception) {
-					errorText.text = "Failed to access file: ${e.message}"
-					errorText.visibility = View.VISIBLE
-					return@setOnClickListener
-				}
-			}
-			
-			// Show progress indicator
-			progressBar.visibility = View.VISIBLE
-			sendButton.isEnabled = false
-			errorText.visibility = View.GONE
-			
-			// Call API (using lifecycle scope to launch coroutine)
-			viewLifecycleOwner.lifecycleScope.launch {
-				try {
-					meshrabiyaApi.broadcastMessageAndFile(messageText, filePath)
-					// Success - close dialog (handler will show notification)
-					activity?.runOnUiThread {
-						dialog.dismiss()
-						view?.let { v ->
-							Snackbar.make(v, "Broadcast sent successfully", Snackbar.LENGTH_SHORT).show()
-						}
-					}
-				} catch (e: Exception) {
-					// Error - show in dialog (stay open)
-					activity?.runOnUiThread {
-						progressBar.visibility = View.GONE
-						sendButton.isEnabled = true
-						errorText.text = "Failed to send: ${e.message}"
-						errorText.visibility = View.VISIBLE
-					}
-				}
-			}
-		}
+            val messageText = messageInput.text?.toString() ?: ""
+
+            // basic validation
+            if (messageText.isEmpty() && selectedFileUri == null) {
+                errorText.text = "Please enter a message or select a file"
+                errorText.visibility = View.VISIBLE
+                return@setOnClickListener
+            }
+            if (messageText.length > 500) {
+                errorText.text = "Message exceeds 500 character limit"
+                errorText.visibility = View.VISIBLE
+                return@setOnClickListener
+            }
+
+            // resolve file URI to path if needed
+            var filePath = ""
+            selectedFileUri?.let { uri ->
+                try {
+                    val inputStream = requireContext().contentResolver.openInputStream(uri)
+                    val fileName = DocumentFile.fromSingleUri(requireContext(), uri)?.name ?: "broadcast_file"
+                    val cacheFile = java.io.File(requireContext().cacheDir, fileName)
+                    inputStream?.use { input ->
+                        cacheFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    filePath = cacheFile.absolutePath
+                } catch (e: Exception) {
+                    errorText.text = "Failed to access file: ${e.message}"
+                    errorText.visibility = View.VISIBLE
+                    return@setOnClickListener
+                }
+            }
+
+            
+
+            // latitude/longitude will be whatever was stored above
+            // ========================================
+            // LOCATION DIAGNOSTICS - PRE-SEND
+            // ========================================
+            Log.d("EnhancedMeshFragment", "[SEND] ========== BROADCAST SEND DIAGNOSTICS ==========")
+            Log.d("EnhancedMeshFragment", "[SEND] Checkbox state: isChecked=${includeLocationCheckbox.isChecked}")
+            Log.d("EnhancedMeshFragment", "[SEND] pendingLatitude (raw): $pendingLatitude")
+            Log.d("EnhancedMeshFragment", "[SEND] pendingLongitude (raw): $pendingLongitude")
+            
+            // latitude/longitude will be whatever was stored above
+            val latitude: Double? = if (includeLocationCheckbox.isChecked) pendingLatitude else null
+            val longitude: Double? = if (includeLocationCheckbox.isChecked) pendingLongitude else null
+            
+            Log.d("EnhancedMeshFragment", "[SEND] latitude (after ?:): $latitude")
+            Log.d("EnhancedMeshFragment", "[SEND] longitude (after ?:): $longitude")
+            Log.d("EnhancedMeshFragment", "[SEND] message: '$messageText'")
+            Log.d("EnhancedMeshFragment", "[SEND] filePath: '$filePath'")
+            Log.d("EnhancedMeshFragment", "[SEND] ======================================================")
+
+            // show spinner and send
+            progressBar.visibility = View.VISIBLE
+            sendButton.isEnabled = false
+            errorText.visibility = View.GONE
+
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    meshrabiyaApi.broadcastMessageAndFile(messageText, filePath, latitude, longitude)
+                    activity?.runOnUiThread {
+                        dialog.dismiss()
+                        view?.let { v ->
+                            Snackbar.make(v, "Broadcast sent successfully", Snackbar.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    activity?.runOnUiThread {
+                        progressBar.visibility = View.GONE
+                        sendButton.isEnabled = true
+                        errorText.text = "Failed to send: ${e.message}"
+                        errorText.visibility = View.VISIBLE
+                    }
+                }
+            }
+        }
 		
 		
 		// Initial button state
 		updateSendButtonState()
 		
+		// Cancel button dismisses dialog
+        cancelButton.setOnClickListener {
+            dialog.dismiss()
+        }
 		// Show dialog
 		dialog.show()
 	}
 	
+	private fun startAsyncLocationRequest(
+        locationManager: android.location.LocationManager,
+        progressIndicator: com.google.android.material.progressindicator.CircularProgressIndicator,
+        locationDisplay: TextView,
+        sendBtn: com.google.android.material.button.MaterialButton,
+        updateButtonState: () -> Unit
+    ) {
+		// Cancel any existing request first
+		cancelPendingLocationRequest()
+		
+		Log.d("EnhancedMeshFragment", "[LOCATION] Starting async GPS request (60s timeout) with HIGH_ACCURACY priority")
+		
+		// Create location listener for callback
+		val listener = object : android.location.LocationListener {
+			override fun onLocationChanged(location: android.location.Location) {
+				Log.d("EnhancedMeshFragment", "[LOCATION] ✅ Async location received: lat=${location.latitude}, lon=${location.longitude}")
+				
+				// Store coordinates
+				pendingLatitude = location.latitude
+				pendingLongitude = location.longitude
+				
+				// Update UI on main thread
+				activity?.runOnUiThread {
+                    locationDisplay.text = String.format("📍 %.6f, %.6f", pendingLatitude, pendingLongitude)
+                    locationDisplay.setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
+                    locationDisplay.visibility = View.VISIBLE
+                    progressIndicator.visibility = View.GONE
+                    updateButtonState()
+                }
+				
+				// Clean up listener
+				cancelPendingLocationRequest()
+			}
+			
+			@Deprecated("Deprecated in Java")
+			override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
+			}
+			
+			override fun onProviderEnabled(provider: String) {
+				Log.d("EnhancedMeshFragment", "[LOCATION] Provider enabled: $provider")
+			}
+			
+			override fun onProviderDisabled(provider: String) {
+				Log.w("EnhancedMeshFragment", "[LOCATION] Provider disabled: $provider")
+			}
+		}
+		
+		// Store listener reference for cancellation
+        activeLocationListener = listener
+        
+        // Request location update from GPS with HIGH_ACCURACY priority
+        try {
+            // Use Criteria to force GPS satellite usage (not WiFi/cell tower fallback)
+            // This is compatible with API 24+ (minSdk)
+            val criteria = android.location.Criteria().apply {
+                accuracy = android.location.Criteria.ACCURACY_FINE  // Forces GPS satellites
+                powerRequirement = android.location.Criteria.POWER_HIGH  // Allow high power for GPS
+                isAltitudeRequired = false
+                isBearingRequired = false
+                isSpeedRequired = false
+            }
+            
+            locationManager.requestSingleUpdate(
+                criteria,
+                listener,
+                android.os.Looper.getMainLooper()
+            )
+            Log.d("EnhancedMeshFragment", "[LOCATION] GPS request registered successfully (ACCURACY_FINE - GPS satellites forced)")
+        } catch (e: SecurityException) {
+            Log.e("EnhancedMeshFragment", "[LOCATION] Permission denied for async GPS request", e)
+            activity?.runOnUiThread {
+                locationDisplay.text = "Permission Denied"
+                locationDisplay.setTextColor(resources.getColor(android.R.color.holo_red_dark, null))
+                progressIndicator.visibility = View.GONE
+                updateButtonState()
+            }
+            activeLocationListener = null
+			return
+		} catch (e: Exception) {
+            Log.e("EnhancedMeshFragment", "[LOCATION] Failed to start async GPS request", e)
+            activity?.runOnUiThread {
+                locationDisplay.text = "Location Error"
+                locationDisplay.setTextColor(resources.getColor(android.R.color.holo_red_dark, null))
+                progressIndicator.visibility = View.GONE
+                updateButtonState()
+            }
+            activeLocationListener = null
+            return
+		}
+		
+		// Start timeout timer (60 seconds)
+		locationRequestJob = viewLifecycleOwner.lifecycleScope.launch {
+			delay(60000)
+			
+			// Timeout - check if location still not acquired
+			if (pendingLatitude == null && activeLocationListener != null) {
+				Log.w("EnhancedMeshFragment", "[LOCATION] ❌ GPS request timed out after 60s")
+                
+                activity?.runOnUiThread {
+                    locationDisplay.text = "GPS Timeout - Try outside"
+                    locationDisplay.setTextColor(resources.getColor(android.R.color.holo_red_dark, null))
+                    progressIndicator.visibility = View.GONE
+                    updateButtonState()
+                }
+				
+				// Cancel listener
+				cancelPendingLocationRequest()
+			}
+		}
+	}
+
+	private fun cancelPendingLocationRequest() {
+		// Cancel timeout job
+		locationRequestJob?.cancel()
+		locationRequestJob = null
+		
+		// Remove location listener
+		activeLocationListener?.let { listener ->
+			try {
+				val lm = requireContext().getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+				lm.removeUpdates(listener)
+				Log.d("EnhancedMeshFragment", "[LOCATION] Location request cancelled")
+			} catch (e: Exception) {
+				Log.e("EnhancedMeshFragment", "[LOCATION] Failed to cancel location request", e)
+			}
+			activeLocationListener = null
+		}
+	}
 	
 	
 	private fun showCurrentNetworkQR() {
@@ -1997,8 +2287,8 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
      * own copy. The adapter is initialized in onCreateView.
      */
     fun getNotificationsAdapter(): NotificationsAdapter =
-        if (this::notificationsAdapter.isInitialized) notificationsAdapter
-        else NotificationsAdapter(emptyList())
+		if (this::notificationsAdapter.isInitialized) notificationsAdapter
+		else NotificationsAdapter(emptyList()) { entry -> removeNotification(entry) }
 
 	fun clearNotifications() {
 		broadcastNotifications.value = emptyList()
@@ -2007,5 +2297,15 @@ private fun ensureWritePermissionAndCreateFolder(folderName: String) {
 		(activity as? org.torproject.android.OrbotActivity)?.updateNotificationBadge(0)
 	}
 
-	
+	fun removeNotification(entry: NotificationFeedEntry) {
+		when (entry.type) {
+			NotificationType.BROADCAST ->
+				broadcastNotifications.value = broadcastNotifications.value.filter { it.id != entry.id }
+			NotificationType.STATUS ->
+				statusNotifications.value = statusNotifications.value.filter { it.id != entry.id }
+			NotificationType.STORAGE ->
+				storageNotifications.value = storageNotifications.value.filter { it.id != entry.id }
+			else -> {}
+		}
+	}
 }

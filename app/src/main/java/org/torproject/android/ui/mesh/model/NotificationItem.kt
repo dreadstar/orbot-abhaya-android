@@ -17,7 +17,9 @@ data class BroadcastNotification(
     override val createdAt: Long,
     val message: String,
     val filePath: String?,
-    val senderNodeId: String
+    val senderNodeId: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 ) : NotificationSource
 
 data class StatusNotification(
@@ -53,6 +55,8 @@ data class NotificationFeedEntry(
     val message: String? = null,
     val filePath: String? = null,
     val senderNodeId: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
 
     val folderPath: String? = null
 )
@@ -64,7 +68,9 @@ fun BroadcastNotification.toFeedEntry() = NotificationFeedEntry(
     createdAt = createdAt,
     message = message,
     filePath = filePath,
-    senderNodeId = senderNodeId
+    senderNodeId = senderNodeId,
+    latitude = latitude,
+    longitude = longitude
 )
 
 fun StatusNotification.toFeedEntry() = NotificationFeedEntry(
