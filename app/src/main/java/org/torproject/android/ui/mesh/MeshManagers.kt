@@ -5,7 +5,7 @@ package org.torproject.android.ui.mesh
 import org.torproject.android.service.routing.MeshTrafficRouter
 import org.torproject.android.service.routing.MeshTrafficRouterImpl
 // import org.torproject.android.service.storage.StorageDropFolderManager
-import com.ustadmobile.meshrabiya.vnet.AndroidVirtualNode
+
 import android.content.Context
 import androidx.recyclerview.widget.RecyclerView
 import org.torproject.android.ui.mesh.adapter.FolderContentsAdapter

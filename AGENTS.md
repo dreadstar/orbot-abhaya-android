@@ -1,6 +1,6 @@
 ## 🚨 RULE ZERO: PROMPT COMPLIANCE VERIFICATION (2026-02-19)
 
-**CRITICAL: This rule is ALWAYS READ FIRST and ALWAYS ENFORCED before any agent begins work on a user prompt.**
+**CRITICAL: UNLESS THE USER STATES "ignore rule zero"  this rule is ALWAYS READ FIRST and ALWAYS ENFORCED in the prompt before any agent begins work on a user prompt.**
 
 ### The Meta-Rule
 

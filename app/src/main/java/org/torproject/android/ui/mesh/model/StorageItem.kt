@@ -2,7 +2,9 @@ package org.torproject.android.ui.mesh.model
 
 import java.util.*
 import java.io.File
-import com.ustadmobile.meshrabiya.vnet.MeshFile
+import com.ustadmobile.meshrabiya.api.model.MeshFileDto 
+
+
 
 /**
  * Represents a file or folder in the storage drop folder
@@ -21,7 +23,7 @@ data class StorageItem(
         /**
          * Convert a MeshFile to a StorageItem for UI display.
          */
-        fun fromMeshFile(meshFile: MeshFile): StorageItem {
+        fun fromMeshFileDto(meshFile: MeshFileDto): StorageItem {
             return StorageItem(
                 name = meshFile.fileName,
                 path = meshFile.fileId,
@@ -47,7 +49,7 @@ data class StorageItem(
  * Universal conversion helper: Converts any supported mesh file type to StorageItem.
  */
 fun Any.toStorageItem(): StorageItem = when (this) {
-    is com.ustadmobile.meshrabiya.vnet.MeshFile -> StorageItem.fromMeshFile(this)
+    is MeshFileDto -> StorageItem.fromMeshFileDto(this)
     is java.io.File -> StorageItem(
         name = this.name,
         path = this.absolutePath,
@@ -63,7 +65,7 @@ fun Any.toStorageItem(): StorageItem = when (this) {
 /**
  * Extension function to convert MeshFile to StorageItem
  */
-fun MeshFile.toStorageItem(): StorageItem = StorageItem.fromMeshFile(this)
+fun MeshFileDto.toStorageItem(): StorageItem = StorageItem.fromMeshFileDto(this)
 /**
     * Get formatted file size string
     */
