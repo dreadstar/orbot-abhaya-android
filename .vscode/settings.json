@@ -1,0 +1,15 @@
+{
+  "github.copilot.chat.codeGeneration.instructions": [
+    {
+      "text": "🚨 RULE ZERO ENFORCEMENT: Before processing ANY user prompt, you MUST first analyze it against ALL rules in AGENTS.md attached to this workspace. Output the RULE ZERO COMPLIANCE CHECK checklist at the start of your response. If the prompt involves code edits, file creation, builds, terminal operations, code generation, multi-step workflows, or steering prompts about methodology/verification, you MUST present a refactored approach and wait for user approval before proceeding. Exceptions: read-only queries, clarification questions about user requirements, status checks, and user explicit exemptions. This is a MANDATORY pre-processing step - no work begins until compliance is verified."
+    },
+    {
+      "text": "Always consult AGENTS.md for all operational rules and protocols. Follow the verification protocols rigorously: read actual code before editing, verify API signatures, test pattern uniqueness with grep_search before any file edit, and document all verification steps."
+    },
+    {
+      "text": "Use internal file manipulation tools (create_file, read_file, replace_string_in_file) instead of terminal commands whenever functionally equivalent. Terminal should only be used for builds, deployments, git operations, and tasks with no internal tool equivalent."
+    }
+  ],
+  "github.copilot.chat.localeOverride": "en",
+  "github.copilot.chat.scopeSelection": true
+}

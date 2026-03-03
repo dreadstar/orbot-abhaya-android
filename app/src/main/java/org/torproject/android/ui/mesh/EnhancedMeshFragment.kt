@@ -26,6 +26,8 @@ import com.ustadmobile.meshrabiya.api.model.MeshStateDto
 import com.ustadmobile.meshrabiya.api.model.DropFolderItemDto
 import com.ustadmobile.meshrabiya.api.model.NetworkInfoDto
 import com.ustadmobile.meshrabiya.api.model.BroadcastReceivedDto
+import com.ustadmobile.meshrabiya.api.model.MeshRoleDto
+import org.torproject.android.ui.mesh.model.BroadcastNotification
 import android.net.Uri
 import androidx.activity.result.ActivityResultLauncher
 import androidx.documentfile.provider.DocumentFile
@@ -63,7 +65,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.SharingStarted
-import org.torproject.android.ui.mesh.model.BroadcastNotification
+
 import org.torproject.android.ui.mesh.model.StatusNotification
 import org.torproject.android.ui.mesh.model.StorageNotification
 import org.torproject.android.ui.mesh.model.NotificationFeedEntry
@@ -401,6 +403,11 @@ class EnhancedMeshFragment : Fragment() {
 		
 		// Broadcast listener - receives broadcasts from the mesh network
         broadcastListener = { broadcast: BroadcastReceivedDto ->
+			// diagnostics: record each invocation and state
+            android.util.Log.d("EnhancedMeshFragment",
+                "[BROADCAST] callback entry id=${broadcast.broadcastId.take(8)} " +
+                "sender=${broadcast.senderNodeId} hasError=${broadcast.hasError} " +
+                "filePath='${broadcast.filePath}' viewState=${viewLifecycleOwner.lifecycle.currentState}")
 			val tag = "EnhancedMeshFragment[${broadcast.broadcastId.take(8)}]"
 			lifecycleScope.launch(Dispatchers.Main) {
 				val myNodeId = meshrabiyaApi.getNodeId().toString()
@@ -468,6 +475,7 @@ class EnhancedMeshFragment : Fragment() {
                             latitude = broadcast.latitude,
                             longitude = broadcast.longitude
                         )
+						android.util.Log.d(tag, "[BROADCAST] about to add notification, currentSize=${broadcastNotifications.value.size}")
 						broadcastNotifications.value = broadcastNotifications.value + newItem
 						android.util.Log.d(tag, "[UI_CALLBACK] ✅ Added to broadcastNotifications (size=${broadcastNotifications.value.size})")
 
@@ -497,6 +505,9 @@ class EnhancedMeshFragment : Fragment() {
 			}
 		}
 
+
+		// add diagnostics prior to registration
+        android.util.Log.d("EnhancedMeshFragment", "[BROADCAST] registerBroadcastListener (viewState=${viewLifecycleOwner.lifecycle.currentState})")
 		meshrabiyaApi.registerBroadcastListener(broadcastListener)
 		
 		// Register broadcast success handler
@@ -617,6 +628,7 @@ class EnhancedMeshFragment : Fragment() {
 		
 		// Unregister broadcast listener
 		if (this::broadcastListener.isInitialized) {
+			android.util.Log.d("EnhancedMeshFragment", "[BROADCAST] unregisterBroadcastListener (viewState=${viewLifecycleOwner.lifecycle.currentState})")
 			meshrabiyaApi.unregisterBroadcastListener(broadcastListener)
 		}
 		
@@ -635,31 +647,46 @@ class EnhancedMeshFragment : Fragment() {
 		android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Setting up role observer")
 		var lastRoleUpdate = 0L
 		var roleUpdateCount = 0
+		var previousRolesDto: Set<MeshRoleDto> = emptySet()
 		
 		viewLifecycleOwner.lifecycleScope.launch {
-			(meshrabiyaApi as? MeshrabiyaApiImpl)?.currentMeshRolesFlow?.collect { roles ->
-				val now = System.currentTimeMillis()
-				val timeSinceLastUpdate = if (lastRoleUpdate > 0) now - lastRoleUpdate else 0
-				roleUpdateCount++
-				
-				android.util.Log.e("EnhancedMeshFragment", "[ROLE_OBSERVER] ⚡ ROLE UPDATE #$roleUpdateCount: roles=$roles, timeSinceLastUpdate=${timeSinceLastUpdate}ms")
-				lastRoleUpdate = now
-				
-				activity?.runOnUiThread {
-					val uiUpdateStart = System.currentTimeMillis()
-					
-					// Update roles text - show "Roles: --" when mesh not started or no roles determined yet
-					val meshState = meshrabiyaApi.getMeshStatus()
-					val meshStarted = meshState == MeshStateDto.CONNECTED || meshState == MeshStateDto.CONNECTING
-					
-					android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Updating meshRolesText (meshState=$meshState, meshStarted=$meshStarted)")
-					MeshUIBindings.meshRolesText.text = if (!meshStarted) {
-						"Roles: --" // Show label with placeholder when mesh not started
-					} else if (roles.isNotEmpty()) {
-						"Roles: ${roles.joinToString(", ")}"
-					} else {
-						"Roles: --" // Show label with placeholder when no roles determined yet
-					}
+            (meshrabiyaApi as? MeshrabiyaApiImpl)?.currentMeshRolesFlow?.collect { rolesDto ->
+                val now = System.currentTimeMillis()
+                val timeSinceLastUpdate = if (lastRoleUpdate > 0) now - lastRoleUpdate else 0
+                roleUpdateCount++
+                
+                // convert DTOs back to strings for logging/logic
+                val roles = rolesDto.map { it.name }.toSet()
+                
+                // log when router bit changes
+                if (rolesDto != previousRolesDto) {
+                    if (MeshRoleDto.MESH_ROUTER in rolesDto && MeshRoleDto.MESH_ROUTER !in previousRolesDto) {
+                        android.util.Log.d("EnhancedMeshFragment","[ROLE_OBSERVER] 🎯 MESH_ROUTER role appeared")
+                    }
+                    if (MeshRoleDto.MESH_ROUTER !in rolesDto && MeshRoleDto.MESH_ROUTER in previousRolesDto) {
+                        android.util.Log.d("EnhancedMeshFragment","[ROLE_OBSERVER] ⚠️ MESH_ROUTER role removed")
+                    }
+                    previousRolesDto = rolesDto
+                }
+                
+                android.util.Log.e("EnhancedMeshFragment", "[ROLE_OBSERVER] ⚡ ROLE UPDATE #$roleUpdateCount: roles=$roles, timeSinceLastUpdate=${timeSinceLastUpdate}ms")
+                lastRoleUpdate = now
+                
+                activity?.runOnUiThread {
+                    val uiUpdateStart = System.currentTimeMillis()
+                    
+                    // Update roles text - show "Roles: --" when mesh not started or no roles determined yet
+                    val meshState = meshrabiyaApi.getMeshStatus()
+                    val meshStarted = meshState == MeshStateDto.CONNECTED || meshState == MeshStateDto.CONNECTING
+                    
+                    android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Updating meshRolesText (meshState=$meshState, meshStarted=$meshStarted)")
+                    MeshUIBindings.meshRolesText.text = if (!meshStarted) {
+                        "Roles: --" // Show label with placeholder when mesh not started
+                    } else if (roles.isNotEmpty()) {
+                        "Roles: ${roles.joinToString(", ")}"
+                    } else {
+                        "Roles: --" // Show label with placeholder when no roles determined yet
+                    }
 					
 					// Only update deferred views if they're initialized (after ViewStub inflation)
 					if (deferredViewsInitialized) {
@@ -992,23 +1019,23 @@ class EnhancedMeshFragment : Fragment() {
 			val meshState = meshrabiyaApi.getMeshStatus()
 			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Current mesh state: $meshState")
 			MeshUIBindings.meshStatusText.text = meshState.toString()
-			
-			// Update button states based on mesh status
-			updateButtonStates(meshState)
-			
-			// Update button text based on current mesh state
-			// Show "Stop Mesh" when mesh is active (CONNECTING or CONNECTED), "Start Mesh" when DISCONNECTED
-			val meshActive = meshState == MeshStateDto.CONNECTED || meshState == MeshStateDto.CONNECTING
-			MeshUIBindings.meshToggleButton.text = if (meshActive) "Stop Mesh" else "Start Mesh"
-			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Button text updated to: ${MeshUIBindings.meshToggleButton.text}")
+            
+            // Update button states based on mesh status
+            updateButtonStates(meshState)
+            
+            // Update button text based on current mesh state
+            // Show "Stop Mesh" when mesh is active (CONNECTING or CONNECTED), "Start Mesh" when DISCONNECTED
+            val meshActive = meshState == MeshStateDto.CONNECTED || meshState == MeshStateDto.CONNECTING
+            MeshUIBindings.meshToggleButton.text = if (meshActive) "Stop Mesh" else "Start Mesh"
+            android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Button text updated to: ${MeshUIBindings.meshToggleButton.text}")
 
-			// Mesh Roles - show current node roles with label (immediate view)
-			val roles = meshrabiyaApi.getNodeRoleNames()
-			MeshUIBindings.meshRolesText.text = if (!meshActive) {
-				"Roles: --" // Show label with placeholder when mesh not started
-			} else if (roles.isNotEmpty()) {
-				"Roles: ${roles.joinToString(", ")}"
-			} else {
+            // Mesh Roles - show current node roles with label (immediate view)
+            val roles = meshrabiyaApi.getNodeRoleNames()
+            MeshUIBindings.meshRolesText.text = if (!meshActive) {
+                "Roles: --" // Show label with placeholder when mesh not started
+            } else if (roles.isNotEmpty()) {
+                "Roles: ${roles.joinToString(", ")}"
+            } else {
 				"Roles: --" // Show label with placeholder when no roles determined yet
 			}
 
