@@ -34,6 +34,7 @@ object MeshUIBindings {
     lateinit var meshControlHeader: LinearLayout
     lateinit var joinMeshButton: MaterialButton
     lateinit var mergeMeshButton: MaterialButton
+    lateinit var wifiApConnectionButton: MaterialButton
     lateinit var expandCollapseIndicator: ImageView
     
     // Expandable content
@@ -96,6 +97,7 @@ object MeshUIBindings {
         meshControlHeader = view.findViewById(R.id.meshControlHeader)
         joinMeshButton = view.findViewById(R.id.joinMeshButton)
         mergeMeshButton = view.findViewById(R.id.mergeMeshButton)
+        wifiApConnectionButton = view.findViewById(R.id.wifiApConnectionButton)
         expandCollapseIndicator = view.findViewById(R.id.expandCollapseIndicator)
         
         // Expandable content

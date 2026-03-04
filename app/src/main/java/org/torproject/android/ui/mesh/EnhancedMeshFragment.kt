@@ -23,6 +23,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.ustadmobile.meshrabiya.api.MeshrabiyaApi
 import com.ustadmobile.meshrabiya.api.MeshrabiyaApiImpl
 import com.ustadmobile.meshrabiya.api.model.MeshStateDto
+import com.ustadmobile.meshrabiya.api.model.NonMeshWifiNetworkDto
 import com.ustadmobile.meshrabiya.api.model.DropFolderItemDto
 import com.ustadmobile.meshrabiya.api.model.NetworkInfoDto
 import com.ustadmobile.meshrabiya.api.model.BroadcastReceivedDto
@@ -706,13 +707,22 @@ class EnhancedMeshFragment : Fragment() {
 					android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] ✓ UI update completed in ${uiUpdateDuration}ms")
 					
 					android.util.Log.e("EnhancedMeshFragment", "[ROLE_OBSERVER] UI updated - meshStarted: $meshStarted, roles: ${roles.joinToString(", ")}")
-				}
-			}
-		}
-	}
 
-	/**
-	 * Setup observer for network info StateFlow to automatically update UI when network state changes
+                    // isInternetWifiFeatureAvailable() encapsulates AP+STA (hotspot running + API 30+)
+                    // and STA/STA (Join Mesh + API 31+ dual-STA) into a single checked query.
+                    // MESH_ROUTER role is NOT AND-ed here: it is assigned only when
+                    // concurrentApStationSupported=true, which would incorrectly block STA/STA-only
+                    // devices (staStaConcurrencySupported=true, concurrentApStationSupported=false).
+                    val featureAvailable = meshrabiyaApi.isInternetWifiFeatureAvailable()
+                    MeshUIBindings.wifiApConnectionButton.visibility =
+                        if (featureAvailable) View.VISIBLE else View.GONE
+                }
+            }
+        }
+    }
+
+    /**
+     * Setup observer for network info StateFlow
 	 */
 	private var latestNetworkInfo: NetworkInfoDto? = null
 	
@@ -881,6 +891,13 @@ class EnhancedMeshFragment : Fragment() {
 			startQRScanning()
 		}
 		
+		// ========================================
+        // WIFI INTERNET CONNECTION BUTTON HANDLER
+        // ========================================
+        MeshUIBindings.wifiApConnectionButton.setOnClickListener {
+            showInternetWifiConnectionDialog()
+        }
+
 		// ========================================
 		// CANCEL SCAN BUTTON HANDLER
 		// ========================================
@@ -2318,21 +2335,85 @@ class EnhancedMeshFragment : Fragment() {
 		else NotificationsAdapter(emptyList()) { entry -> removeNotification(entry) }
 
 	fun clearNotifications() {
-		broadcastNotifications.value = emptyList()
-		statusNotifications.value = emptyList()
-		storageNotifications.value = emptyList()
-		(activity as? org.torproject.android.OrbotActivity)?.updateNotificationBadge(0)
-	}
+        broadcastNotifications.value = emptyList()
+        statusNotifications.value = emptyList()
+        storageNotifications.value = emptyList()
+        (activity as? org.torproject.android.OrbotActivity)?.updateNotificationBadge(0)
+    }
 
-	fun removeNotification(entry: NotificationFeedEntry) {
-		when (entry.type) {
-			NotificationType.BROADCAST ->
-				broadcastNotifications.value = broadcastNotifications.value.filter { it.id != entry.id }
-			NotificationType.STATUS ->
-				statusNotifications.value = statusNotifications.value.filter { it.id != entry.id }
-			NotificationType.STORAGE ->
-				storageNotifications.value = storageNotifications.value.filter { it.id != entry.id }
-			else -> {}
-		}
-	}
+    fun removeNotification(entry: NotificationFeedEntry) {
+        when (entry.type) {
+            NotificationType.BROADCAST ->
+                broadcastNotifications.value = broadcastNotifications.value.filter { it.id != entry.id }
+            NotificationType.STATUS ->
+                statusNotifications.value = statusNotifications.value.filter { it.id != entry.id }
+            NotificationType.STORAGE ->
+                storageNotifications.value = storageNotifications.value.filter { it.id != entry.id }
+            else -> {}
+        }
+    }
+
+    // ========================================
+    // WiFi Internet Connection (WIFI_AP_CON / Change 16)
+    // ========================================
+
+    private fun showInternetWifiConnectionDialog() {
+        lifecycleScope.launch {
+            val networks = meshrabiyaApi.scanAvailableWifiNetworks()
+            if (networks.isEmpty()) {
+                Toast.makeText(
+                    requireContext(),
+                    "No WiFi networks found. Ensure location permission is granted.",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@launch
+            }
+
+            val ssidList = networks.map { "${it.ssid} (${it.signalStrength} dBm)" }.toTypedArray()
+            var selectedIndex = 0
+
+            androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Connect to Internet WiFi")
+                .setSingleChoiceItems(ssidList, 0) { _, which -> selectedIndex = which }
+                .setPositiveButton("Connect") { _, _ ->
+                    val selected = networks[selectedIndex]
+                    if (selected.isSecured) {
+                        showPassphraseDialog(selected.ssid)
+                    } else {
+                        connectToInternetWifi(selected.ssid, "")
+                    }
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+    }
+
+    private fun showPassphraseDialog(ssid: String) {
+        val input = android.widget.EditText(requireContext()).apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                        android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            hint = "WiFi Password"
+        }
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Connect to $ssid")
+            .setView(input)
+            .setPositiveButton("Connect") { _, _ ->
+                connectToInternetWifi(ssid, input.text.toString())
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun connectToInternetWifi(ssid: String, passphrase: String) {
+        lifecycleScope.launch {
+            val result = meshrabiyaApi.connectToNonMeshWifi(ssid, passphrase)
+            // Avoid importing NonMeshWifiStatus enum — use DTO field checks instead.
+            val message = when {
+                result.connectedSsid != null -> "Connected to $ssid"
+                result.errorMessage != null  -> "Connection failed: ${result.errorMessage}"
+                else                         -> "Connecting to $ssid..."
+            }
+            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+        }
+    }
 }

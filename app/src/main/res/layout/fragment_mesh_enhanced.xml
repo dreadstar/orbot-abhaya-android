@@ -80,6 +80,23 @@
                         app:strokeWidth="1dp"
                         style="@style/Widget.Material3.Button.OutlinedButton" />
 
+                    <!-- WiFi Internet Connection Button (shown when AP+STA or STA/STA is available) -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/wifiApConnectionButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/wifi_internet"
+                        android:enabled="true"
+                        android:paddingVertical="12dp"
+                        android:visibility="gone"
+                        app:icon="@drawable/ic_wifi"
+                        app:cornerRadius="8dp"
+                        app:strokeColor="?attr/colorPrimary"
+                        app:strokeWidth="1dp"
+                        style="@style/Widget.Material3.Button.OutlinedButton" />
+
                     <!-- Expand/Collapse Indicator (initially hidden) -->
                     <ImageView
                         android:id="@+id/expandCollapseIndicator"
