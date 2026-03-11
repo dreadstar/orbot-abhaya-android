@@ -28,6 +28,8 @@ import com.ustadmobile.meshrabiya.api.model.DropFolderItemDto
 import com.ustadmobile.meshrabiya.api.model.NetworkInfoDto
 import com.ustadmobile.meshrabiya.api.model.BroadcastReceivedDto
 import com.ustadmobile.meshrabiya.api.model.MeshRoleDto
+import com.ustadmobile.meshrabiya.api.model.MeshExtenderHotspotStateDto
+import com.ustadmobile.meshrabiya.ext.addressToDotNotation
 import org.torproject.android.ui.mesh.model.BroadcastNotification
 import android.net.Uri
 import androidx.activity.result.ActivityResultLauncher
@@ -86,7 +88,7 @@ class EnhancedMeshFragment : Fragment() {
 
 	private lateinit var meshrabiyaApi: MeshrabiyaApi
 	private lateinit var broadcastListener: (com.ustadmobile.meshrabiya.api.model.BroadcastReceivedDto) -> Unit
-	private enum class LocationRequestOrigin { NONE, START_MESH, BROADCAST }
+	private enum class LocationRequestOrigin { NONE, START_MESH, BROADCAST, JOIN_MESH }
 	private var locationRequestOrigin = LocationRequestOrigin.NONE
 
 	// Notification storage for broadcast messages (NEW)
@@ -266,13 +268,19 @@ class EnhancedMeshFragment : Fragment() {
 						Log.e("EnhancedMeshFragment", "Failed to get location after permission", e)
 					}
 				}
-				LocationRequestOrigin.NONE -> {
-					// should never happen
-				}
-			}
-		} else {
-			// Permissions denied, show message
-			android.util.Log.w("EnhancedMeshFragment", "Location permissions denied by user")
+				LocationRequestOrigin.JOIN_MESH -> {
+                    android.util.Log.d("EnhancedMeshFragment",
+                        "Permissions granted (origin=JOIN_MESH) – starting QR scan")
+                    expandPane(showCamera = true)
+                    startQRScanning()
+                }
+                LocationRequestOrigin.NONE -> {
+                    // should never happen
+                }
+            }
+        } else {
+            // Permissions denied, show message
+            android.util.Log.w("EnhancedMeshFragment", "Location permissions denied by user")
 			view?.let { v ->
 				Snackbar.make(v, "Location permissions are required to start mesh networking", Snackbar.LENGTH_LONG)
 					.setAction("Settings") {
@@ -357,9 +365,8 @@ class EnhancedMeshFragment : Fragment() {
 		// Fragment just uses the already-initialized mesh infrastructure.
 		
 		// Setup all UI event listeners (button clicks, toggles, etc.)
-		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Setting up listeners...")
-		setupListeners()
-		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Listeners setup complete")
+        // listeners will be installed later once deferred views are inflated
+        // (see coroutine below).
 		
 		// Setup observer for mesh roles StateFlow - auto-updates UI when roles change
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Setting up role observer...")
@@ -369,29 +376,62 @@ class EnhancedMeshFragment : Fragment() {
 		// Setup observer for mesh status StateFlow - auto-updates UI when status changes
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Setting up mesh status observer...")
 		viewLifecycleOwner.lifecycleScope.launch {
-			meshrabiyaApi.meshStatusFlow.collect { status ->
-				activity?.runOnUiThread {
-					MeshUIBindings.meshStatusText.text = status.toString()
-					updateButtonStates(status)
-					// Optionally update other UI elements as needed
-				}
+            meshrabiyaApi.meshStatusFlow.collect { status ->
+                activity?.runOnUiThread {
+                    MeshUIBindings.meshStatusText.text = status.toString()
+                    updateButtonStates(status)
+                    if (status == MeshStateDto.DISCONNECTED) {
+						if (deferredViewsInitialized &&
+							MeshUIBindings.meshExpandableContent.visibility == View.VISIBLE) {
+							if (isCameraActive) stopQRScanning()
+							MeshUIBindings.meshExpandableContent.visibility = View.GONE
+							MeshUIBindings.expandCollapseIndicator.rotation = 0f
+						}
+					}
+					// Refresh chip row immediately when mesh becomes connected (avoids 2s polling delay)
+					if (status == MeshStateDto.CONNECTED && deferredViewsInitialized) {
+						updateUI()
+					}
+					// Auto-expand the "Scan to Join" pane when the mesh hotspot becomes active
+                    // (status transitions to CONNECTING = hotspot up, no peers yet).
+                    // Guard: only expand if THIS device is hosting a hotspot (AP role).
+                    // Do NOT expand when this device has joined as a station (hotspot=false, station=true).
+                    if ((status == MeshStateDto.CONNECTING || status == MeshStateDto.CONNECTED)
+                        && !isJoinMeshMode && !isMergeMeshMode
+                        && deferredViewsInitialized
+                        && MeshUIBindings.meshExpandableContent.visibility != View.VISIBLE) {
+                        val wifiState = meshrabiyaApi.getLocalNodeState().wifiState
+                        val isHostingHotspot = wifiState.wifiDirectState.hotspotStatus == "STARTED"
+                            || wifiState.localOnlyHotspotState.status == "STARTED"
+                        if (isHostingHotspot) {
+                            android.util.Log.d("EnhancedMeshFragment", "[MESH_STATUS] Hotspot active ($status) — auto-expanding QR pane")
+                            expandPane(showCamera = false)
+                            showCurrentNetworkQR()
+                        } else {
+                            android.util.Log.d("EnhancedMeshFragment", "[MESH_STATUS] status=$status but device is station (not hosting hotspot) — skipping QR pane expand")
+                        }
+                    }
+                }
 
-				if (status == MeshStateDto.CONNECTED) {
-					Log.d("EnhancedMeshFragment", "[MESH_STATUS] Connected - role updates now automatic")
-					// Role updates happen automatically via EmergentRoleManager.startWifiStateMonitoring()
-				}
-			}
-		}
+                if (status == MeshStateDto.CONNECTED) {
+                    Log.d("EnhancedMeshFragment", "[MESH_STATUS] Connected - role updates now automatic")
+                    // Role updates happen automatically via EmergentRoleManager.startWifiStateMonitoring()
+                }
+            }
+        }
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Mesh status observer setup complete")
 		
 		
 		// Setup observer for network info StateFlow - auto-updates peer count and network stats
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Setting up network info observer...")
 		setupNetworkInfoObserver()
-		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Network info observer setup complete")
-		
-		// Initial UI update to show current mesh state
-		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Calling updateUI()...")
+        android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Network info observer setup complete")
+
+        setupNonMeshWifiObserver()
+        setupMeshExtenderObserver()
+
+        // Initial UI update to show current mesh state
+        android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Calling updateUI()...")
 		updateUI()
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] ===== onViewCreated() COMPLETE =====")
 
@@ -533,43 +573,53 @@ class EnhancedMeshFragment : Fragment() {
 		
 		// Defer inflation of cards 4-9 to prevent UI thread blocking (async after 300ms)
 		android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Scheduling deferred card inflation...")
-		viewLifecycleOwner.lifecycleScope.launch {
-			delay(300) // Allow initial UI to render first
-			try {
-				val stub = view.findViewById<android.view.ViewStub>(R.id.deferredCardsStub)
-				if (stub != null) {
-					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Inflating deferred cards...")
-					stub.inflate()
-					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Deferred cards inflated successfully")
-					// Bind newly inflated deferred views (cards 4-9)
-					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Binding deferred views...")
-					MeshUIBindings.bindDeferredViews(view)
-					// Mark deferred views as initialized
-					deferredViewsInitialized = true
-					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Deferred views bound, flag set to true")
-					
-					// Update network info UI with cached value if available
-					latestNetworkInfo?.let { networkInfo: NetworkInfoDto ->
-						android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Updating network info UI with cached value: connectedPeers=${networkInfo.connectedPeers}")
-						MeshUIBindings.nodeInfoText.text = "IP: ${networkInfo.ipAddress}"
-						MeshUIBindings.networkStatsText.text =
-							"Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
-					}
-					
-					// Setup listeners for deferred cards
-					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Setting up deferred card listeners...")
-					setupDeferredCardListeners()
-					// Update UI for deferred cards
-					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Updating deferred card UI...")
-					updateDeferredCardUI()
-					android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Deferred card initialization complete")
-				} else {
-					android.util.Log.w("EnhancedMeshFragment", "[LIFECYCLE] ViewStub not found!")
-				}
-			} catch (e: Exception) {
-				android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Failed to inflate deferred cards", e)
-			}
-		}
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val stub = view.findViewById<android.view.ViewStub>(R.id.deferredCardsStub)
+                if (stub != null) {
+                    android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Inflating deferred cards...")
+                    stub.setOnInflateListener { _, _ ->
+                        android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Deferred cards inflated successfully")
+
+                        // Bind newly inflated deferred views (cards 4-9)
+                        android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Binding deferred views...")
+                        MeshUIBindings.bindDeferredViews(view)
+
+                        // Mark deferred views as initialized
+                        deferredViewsInitialized = true
+                        android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Deferred views bound, flag set to true")
+
+                        // Now that all views exist, wire up event listeners.
+                        android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Setting up listeners...")
+                        setupListeners()
+                        android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Listeners setup complete")
+
+                        // Update network info UI with cached value if available
+                        (meshrabiyaApi.getNetworkInfo())?.let { networkInfo ->
+                            android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Inflated – getNetworkInfo() returned peers=${networkInfo.connectedPeers}")
+                            MeshUIBindings.meshIpAddressText.text = networkInfo.ipAddress
+                            MeshUIBindings.networkStatsText.text =
+                                "Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
+                        }
+
+                        // Setup listeners for deferred cards
+                        android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Setting up deferred card listeners...")
+                        setupDeferredCardListeners()
+                       // Update UI for deferred cards
+                        android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Updating deferred card UI...")
+                        updateDeferredCardUI()
+                        // also refresh overall UI; this applies any cached Wi‑Fi state
+                        updateUI()
+                        android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Deferred card initialization complete")
+                    }
+                    stub.inflate()
+                } else {
+                    android.util.Log.w("EnhancedMeshFragment", "[LIFECYCLE] ViewStub not found!")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Failed to inflate deferred cards", e)
+            }
+        }
 
 		// Observe notificationFeed and update both badge and dropdown adapter
 		viewLifecycleOwner.lifecycleScope.launch {
@@ -677,17 +727,10 @@ class EnhancedMeshFragment : Fragment() {
                     val uiUpdateStart = System.currentTimeMillis()
                     
                     // Update roles text - show "Roles: --" when mesh not started or no roles determined yet
-                    val meshState = meshrabiyaApi.getMeshStatus()
-                    val meshStarted = meshState == MeshStateDto.CONNECTED || meshState == MeshStateDto.CONNECTING
-                    
-                    android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Updating meshRolesText (meshState=$meshState, meshStarted=$meshStarted)")
-                    MeshUIBindings.meshRolesText.text = if (!meshStarted) {
-                        "Roles: --" // Show label with placeholder when mesh not started
-                    } else if (roles.isNotEmpty()) {
-                        "Roles: ${roles.joinToString(", ")}"
-                    } else {
-                        "Roles: --" // Show label with placeholder when no roles determined yet
-                    }
+                    android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] Updating meshRolesText")
+                    MeshUIBindings.meshRolesText.text =
+                        if (roles.isNotEmpty()) "Roles: ${roles.joinToString(", ")}"
+                        else "Roles: --"
 					
 					// Only update deferred views if they're initialized (after ViewStub inflation)
 					if (deferredViewsInitialized) {
@@ -704,52 +747,104 @@ class EnhancedMeshFragment : Fragment() {
 					}
 					
 					val uiUpdateDuration = System.currentTimeMillis() - uiUpdateStart
-					android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] ✓ UI update completed in ${uiUpdateDuration}ms")
-					
-					android.util.Log.e("EnhancedMeshFragment", "[ROLE_OBSERVER] UI updated - meshStarted: $meshStarted, roles: ${roles.joinToString(", ")}")
+                    android.util.Log.d("EnhancedMeshFragment", "[ROLE_OBSERVER] ✓ UI update completed in ${uiUpdateDuration}ms")
+                    
+                    // compute meshStarted for logging (matches updateButtonStates logic)
+                    val meshState = meshrabiyaApi.getMeshStatus()
+                    val meshStarted = meshState == MeshStateDto.CONNECTED || meshState == MeshStateDto.CONNECTING
+                    android.util.Log.e("EnhancedMeshFragment", "[ROLE_OBSERVER] UI updated - meshStarted: $meshStarted, roles: ${roles.joinToString(", ")}")
 
-                    // isInternetWifiFeatureAvailable() encapsulates AP+STA (hotspot running + API 30+)
-                    // and STA/STA (Join Mesh + API 31+ dual-STA) into a single checked query.
-                    // MESH_ROUTER role is NOT AND-ed here: it is assigned only when
-                    // concurrentApStationSupported=true, which would incorrectly block STA/STA-only
-                    // devices (staStaConcurrencySupported=true, concurrentApStationSupported=false).
-                    val featureAvailable = meshrabiyaApi.isInternetWifiFeatureAvailable()
+                    val isMeshRouter = MeshRoleDto.MESH_ROUTER in rolesDto
+                    val isSta =
+                        meshrabiyaApi.getNonMeshWifiStateFlow().value.status.name == "CONNECTED"
+
+                    
+                    val showButtons = isMeshRouter && isSta
+                    val isWifiConcurrentCapable = meshrabiyaApi.isApStaConcurrentCapable() || meshrabiyaApi.isStaStaConcurrentCapable()
                     MeshUIBindings.wifiApConnectionButton.visibility =
-                        if (featureAvailable) View.VISIBLE else View.GONE
+                        if (isWifiConcurrentCapable) View.VISIBLE else View.GONE
+                    MeshUIBindings.meshExtenderApButton.visibility =
+                        if (showButtons) View.VISIBLE else View.GONE
                 }
-            }
+			}
         }
     }
 
     /**
      * Setup observer for network info StateFlow
 	 */
-	private var latestNetworkInfo: NetworkInfoDto? = null
-	
 	private fun setupNetworkInfoObserver() {
-		android.util.Log.d("EnhancedMeshFragment", "[NETWORK_INFO_OBSERVER] Setting up network info observer")
-		viewLifecycleOwner.lifecycleScope.launch {
-			(meshrabiyaApi as? MeshrabiyaApiImpl)?.networkInfoFlow?.collect { networkInfo ->
-				android.util.Log.d("EnhancedMeshFragment", "[NETWORK_INFO_OBSERVER] Network info changed: connectedPeers=${networkInfo?.connectedPeers}, deferredViewsInitialized=$deferredViewsInitialized")
-				
-				// Store latest value for when deferred views are initialized
-				latestNetworkInfo = networkInfo
-				
-				// Update UI if deferred views are ready
-				if (deferredViewsInitialized && networkInfo != null) {
-					activity?.runOnUiThread {
-						android.util.Log.d("EnhancedMeshFragment", "[NETWORK_INFO_OBSERVER] Updating UI with connectedPeers=${networkInfo.connectedPeers}")
-						MeshUIBindings.nodeInfoText.text = "IP: ${networkInfo.ipAddress}"
-						MeshUIBindings.networkStatsText.text = 
-							"Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
-					}
-				}
-			}
-		}
-	}
+        android.util.Log.d("EnhancedMeshFragment", "[NETWORK_INFO_OBSERVER] Setting up network info observer")
+        viewLifecycleOwner.lifecycleScope.launch {
+            (meshrabiyaApi as? MeshrabiyaApiImpl)?.networkInfoFlow?.collect { networkInfo ->
+                // flow emits null until the library can supply a real value
+                if (networkInfo == null) {
+                    android.util.Log.d("EnhancedMeshFragment", "[NETWORK_INFO_OBSERVER] value==null – waiting for first emission")
+                    return@collect
+                }
 
-	private fun setupListeners() {
-		// Mesh toggle button with debouncing and permission checks
+                // drop logs if you prefer
+                android.util.Log.d("EnhancedMeshFragment", "[NETWORK_INFO_OBSERVER] Network info received: "
+                    + "peers=${networkInfo.connectedPeers}, ssid=${networkInfo.nonMeshSsid}")
+
+                if (deferredViewsInitialized) {
+                    activity?.runOnUiThread {
+                        MeshUIBindings.meshIpAddressText.text = networkInfo.ipAddress
+                        MeshUIBindings.networkStatsText.text =
+                            "Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
+                        if (!networkInfo.nonMeshSsid.isNullOrEmpty()) {
+                            android.util.Log.d("EnhancedMeshFragment", "[NETWORK_INFO_OBSERVER] non‑mesh SSID present: ${networkInfo.nonMeshSsid}")
+                            MeshUIBindings.internetWifiRow.visibility = View.VISIBLE
+                            MeshUIBindings.internetWifiIpText.text = networkInfo.nonMeshIpAddress ?: "--"
+                            MeshUIBindings.internetWifiChipSta.visibility =
+                                if (networkInfo.nonMeshHasInternet == true) View.VISIBLE else View.GONE
+                            MeshUIBindings.internetWifiChipWeb.visibility =
+                                if (networkInfo.nonMeshHasInternet == true) View.VISIBLE else View.GONE
+                        } else {
+                            android.util.Log.d("EnhancedMeshFragment", "[NETWORK_INFO_OBSERVER] non‑mesh SSID empty – hiding row")
+                            MeshUIBindings.internetWifiRow.visibility = View.GONE
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun setupNonMeshWifiObserver() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            meshrabiyaApi.getNonMeshWifiStateFlow().collect {
+                if (!deferredViewsInitialized) return@collect
+                activity?.runOnUiThread { updateUI() }
+            }
+        }
+    }
+
+    private fun setupMeshExtenderObserver() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            meshrabiyaApi.meshExtenderHotspotStateFlow.collect { state ->
+                if (!deferredViewsInitialized) return@collect
+                val hotspotInfo = meshrabiyaApi.getHotspotInfo()
+                activity?.runOnUiThread {
+                    val isActive = state == MeshExtenderHotspotStateDto.ACTIVE
+                    MeshUIBindings.meshExtenderApRow.visibility =
+                        if (isActive) View.VISIBLE else View.GONE
+                    if (isActive) {
+                        val apIp = hotspotInfo?.nodeAddress?.addressToDotNotation() ?: "--"
+                        MeshUIBindings.meshExtenderApIpText.text = apIp
+                        // Show chevron + QR pane so extender can share its QR code for joining
+                        MeshUIBindings.expandCollapseIndicator.visibility = View.VISIBLE
+                        if (MeshUIBindings.meshExpandableContent.visibility != View.VISIBLE) {
+                            expandPane(showCamera = false)
+                            showCurrentNetworkQR()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun setupListeners() {
+        // Mesh toggle button with debouncing and permission checks
 		var meshOperationInProgress = false
 		
 		// Add touch listener to detect ALL touch events
@@ -840,10 +935,7 @@ class EnhancedMeshFragment : Fragment() {
 			}
 		}
 
-		// Refresh button
-		MeshUIBindings.refreshButton.setOnClickListener {
-			updateUI()
-		}
+		
 		
 		// Send Broadcast button
 		MeshUIBindings.sendBroadcastButton.setOnClickListener {
@@ -851,19 +943,56 @@ class EnhancedMeshFragment : Fragment() {
 		}
 		
 		// ========================================
-		// JOIN MESH BUTTON HANDLER
-		// ========================================
-		MeshUIBindings.joinMeshButton.setOnClickListener {
-			android.util.Log.d("EnhancedMeshFragment", "Join Mesh button clicked")
-			
-			// Set mode: Join (not merge)
-			isJoinMeshMode = true
-			isMergeMeshMode = false
-			
-			// Expand pane and start camera for QR scanning
-			expandPane(showCamera = true)
-			startQRScanning()
-		}
+        // JOIN MESH BUTTON HANDLER
+        // ========================================
+        MeshUIBindings.joinMeshButton.setOnClickListener {
+            android.util.Log.d("EnhancedMeshFragment", "Join Mesh button clicked (isJoinMeshMode=$isJoinMeshMode)")
+
+            if (isJoinMeshMode) {
+                // Already scanning — cancel the join process
+                collapsePane()
+            } else {
+                // Pre-flight: WiFi must be enabled to join
+                if (!meshrabiyaApi.isWifiEnabled()) {
+                    androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                        .setTitle("⚠️ WiFi Required")
+                        .setMessage("Wifi must be enabled to Join Mesh")
+                        .setPositiveButton("Open WiFi Settings") { _, _ ->
+                            try {
+                                startActivity(android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS))
+                            } catch (e: Exception) {
+                                view?.let { v -> com.google.android.material.snackbar.Snackbar.make(v, "Could not open WiFi settings", com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show() }
+                            }
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                    return@setOnClickListener
+                }
+
+                // Set mode: Join (not merge)
+                isJoinMeshMode = true
+                isMergeMeshMode = false
+
+                // Change label to signal cancellation is available
+                MeshUIBindings.joinMeshButton.text = "Cancel Join"
+
+                // Location permission required on SDK < 29: enableNetwork() internally calls
+                // getConfiguredNetworkWithPassword() which requires ACCESS_FINE_LOCATION.
+                // Without it the WiFi supplicant never receives credentials → no association.
+                if (checkLocationPermissions()) {
+                    expandPane(showCamera = true)
+                    startQRScanning()
+                } else {
+                    locationRequestOrigin = LocationRequestOrigin.JOIN_MESH
+                    requestLocationPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                }
+            }
+        }
 		
 		// ========================================
 		// MERGE MESH BUTTON HANDLER
@@ -895,7 +1024,38 @@ class EnhancedMeshFragment : Fragment() {
         // WIFI INTERNET CONNECTION BUTTON HANDLER
         // ========================================
         MeshUIBindings.wifiApConnectionButton.setOnClickListener {
-            showInternetWifiConnectionDialog()
+            val wifiStatus = meshrabiyaApi.getNonMeshWifiStateFlow().value.status
+            if (wifiStatus.name == "CONNECTED") {
+                lifecycleScope.launch {
+                    meshrabiyaApi.disconnectFromNonMeshWifi()
+                }
+            } else {
+                showInternetWifiConnectionDialog()
+            }
+        }
+
+        // ========================================
+        // MESH EXTENDER AP BUTTON HANDLER
+        // ========================================
+        MeshUIBindings.meshExtenderApButton.setOnClickListener {
+            val currentState = meshrabiyaApi.meshExtenderHotspotStateFlow.value
+            if (currentState == MeshExtenderHotspotStateDto.ACTIVE) {
+                meshrabiyaApi.stopMeshExtenderHotspot { result ->
+                    if (result.isSuccess) {
+                        Log.i("EnhancedMeshFragment", "[EXTENDER] Mesh extender hotspot stopped")
+                    } else {
+                        Log.e("EnhancedMeshFragment", "[EXTENDER] Failed to stop: ${result.exceptionOrNull()?.message}")
+                    }
+                }
+            } else if (currentState == MeshExtenderHotspotStateDto.INACTIVE) {
+                meshrabiyaApi.startMeshExtenderHotspot { result ->
+                    if (result.isSuccess) {
+                        Log.i("EnhancedMeshFragment", "[EXTENDER] Mesh extender hotspot started")
+                    } else {
+                        Log.e("EnhancedMeshFragment", "[EXTENDER] Failed to start: ${result.exceptionOrNull()?.message}")
+                    }
+                }
+            }
         }
 
 		// ========================================
@@ -924,18 +1084,22 @@ class EnhancedMeshFragment : Fragment() {
 		// HEADER CLICK TO TOGGLE EXPANSION
 		// ========================================
 		MeshUIBindings.meshControlHeader.setOnClickListener {
-			// Only allow expansion if mesh is CONNECTED or CONNECTING
-			val meshStatus = meshrabiyaApi.getMeshStatus()
-			if (meshStatus == MeshStateDto.CONNECTED || meshStatus == MeshStateDto.CONNECTING) {
-				if (MeshUIBindings.meshExpandableContent.visibility == View.VISIBLE) {
-					collapsePane()
-				} else {
-					// Show QR code (not camera)
-					expandPane(showCamera = false)
-					showCurrentNetworkQR()
-				}
-			}
-		}
+            val meshStatus = meshrabiyaApi.getMeshStatus()
+            val paneVisible = MeshUIBindings.meshExpandableContent.visibility == View.VISIBLE
+
+            if (paneVisible && (isJoinMeshMode || isMergeMeshMode)) {
+                // Pane is open for scanning — collapsing stops the join/merge process
+                collapsePane()
+            } else if (meshStatus == MeshStateDto.CONNECTED || meshStatus == MeshStateDto.CONNECTING) {
+                if (paneVisible) {
+                    collapsePane()
+                } else {
+                    // Show QR code (not camera)
+                    expandPane(showCamera = false)
+                    showCurrentNetworkQR()
+                }
+            }
+        }
 	}
 	
 	/**
@@ -1028,33 +1192,30 @@ class EnhancedMeshFragment : Fragment() {
 	}
 
 	private fun updateUI() {
-		android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Called (deferredViewsInitialized=$deferredViewsInitialized)")
+		android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] ▶ enter updateUI(deferred=$deferredViewsInitialized)")
 		
 		// Ensure all UI updates happen on the main thread
 		activity?.runOnUiThread {
+			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] ◇ inside runOnUiThread")
 			// Mesh status
 			val meshState = meshrabiyaApi.getMeshStatus()
 			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Current mesh state: $meshState")
 			MeshUIBindings.meshStatusText.text = meshState.toString()
-            
-            // Update button states based on mesh status
-            updateButtonStates(meshState)
-            
-            // Update button text based on current mesh state
-            // Show "Stop Mesh" when mesh is active (CONNECTING or CONNECTED), "Start Mesh" when DISCONNECTED
-            val meshActive = meshState == MeshStateDto.CONNECTED || meshState == MeshStateDto.CONNECTING
-            MeshUIBindings.meshToggleButton.text = if (meshActive) "Stop Mesh" else "Start Mesh"
-            android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Button text updated to: ${MeshUIBindings.meshToggleButton.text}")
+			
+			// Update button states based on mesh status
+			updateButtonStates(meshState)
+			
+			// Update button text based on current mesh state
+			// Show "Stop Mesh" when mesh is active (CONNECTING or CONNECTED), "Start Mesh" when DISCONNECTED
+			val meshActive = meshState == MeshStateDto.CONNECTED || meshState == MeshStateDto.CONNECTING
+			MeshUIBindings.meshToggleButton.text = if (meshActive) "Stop Mesh" else "Start Mesh"
+			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Button text updated to: ${MeshUIBindings.meshToggleButton.text}")
 
-            // Mesh Roles - show current node roles with label (immediate view)
-            val roles = meshrabiyaApi.getNodeRoleNames()
-            MeshUIBindings.meshRolesText.text = if (!meshActive) {
-                "Roles: --" // Show label with placeholder when mesh not started
-            } else if (roles.isNotEmpty()) {
-                "Roles: ${roles.joinToString(", ")}"
-            } else {
-				"Roles: --" // Show label with placeholder when no roles determined yet
-			}
+			// Mesh Roles - show current node roles with label (immediate view)
+			val roles = meshrabiyaApi.getNodeRoleNames()
+			MeshUIBindings.meshRolesText.text =
+				if (roles.isNotEmpty()) "Roles: ${roles.joinToString(", ")}"
+				else "Roles: --"
 
 			// Last update
 			val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.getDefault())
@@ -1062,59 +1223,93 @@ class EnhancedMeshFragment : Fragment() {
 
 			// Only update deferred views if they're initialized
 			if (deferredViewsInitialized) {
-				android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Updating deferred views...")
-				
-				// Network Status - show local node IP address (deferred view)
-				val networkInfo = meshrabiyaApi.getNetworkInfo()
-				MeshUIBindings.nodeInfoText.text = if (networkInfo != null) {
-					"IP: ${networkInfo.ipAddress}"
+				android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] ▷ deferred block start")
+
+				// Network Status – rely solely on the flow’s current value.
+				// If the flow hasn’t emitted yet we do **nothing** (no fake
+				// DTOs, no API call).  This keeps the frontend honest.
+				val networkInfo = (meshrabiyaApi as? MeshrabiyaApiImpl)
+					?.networkInfoFlow
+					?.value
+
+				if (networkInfo != null) {
+					android.util.Log.d("EnhancedMeshFragment",
+						"[UPDATE_UI] Applying networkInfo: peers=${networkInfo.connectedPeers}, " +
+						"ssid=${networkInfo.nonMeshSsid}")
+
+					MeshUIBindings.meshIpAddressText.text = networkInfo.ipAddress
+					MeshUIBindings.networkStatsText.text =
+						"Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
+					if (!networkInfo.nonMeshSsid.isNullOrEmpty()) {
+						MeshUIBindings.internetWifiRow.visibility = View.VISIBLE
+						MeshUIBindings.internetWifiIpText.text = networkInfo.nonMeshIpAddress ?: "--"
+						MeshUIBindings.internetWifiChipSta.visibility =
+							if (networkInfo.nonMeshHasInternet == true) View.VISIBLE else View.GONE
+						MeshUIBindings.internetWifiChipWeb.visibility =
+							if (networkInfo.nonMeshHasInternet == true) View.VISIBLE else View.GONE
+					} else {
+						MeshUIBindings.internetWifiRow.visibility = View.GONE
+					}
 				} else {
-					"Mesh not initialized"
+					// still waiting for first emission – clear fields
+					android.util.Log.d("EnhancedMeshFragment",
+						"[UPDATE_UI] networkInfoFlow.value == null; deferring update")
+					MeshUIBindings.meshIpAddressText.text = "–"
+					MeshUIBindings.networkStatsText.text = ""
+					MeshUIBindings.internetWifiRow.visibility = View.GONE
 				}
 
-				// Network Information - show detailed network stats (deferred view)
-				MeshUIBindings.networkStatsText.text = if (networkInfo != null) {
-					"Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
-				} else {
-					"No network data"
+				// the remainder of deferred updates stays unchanged:
+				val wifiStateDto = try {
+					meshrabiyaApi.getLocalNodeState().wifiState
+				} catch (e: Exception) {
+					null
 				}
+				val isActingAsSta = wifiStateDto?.wifiStationState?.status == "AVAILABLE"
+				val isActingAsAp = wifiStateDto?.wifiDirectState?.hotspotStatus == "STARTED"
+					|| wifiStateDto?.localOnlyHotspotState?.status == "STARTED"
+				MeshUIBindings.meshChipMesh.visibility = View.VISIBLE
+				MeshUIBindings.meshChipSta.visibility = if (isActingAsSta) View.VISIBLE else View.GONE
+				MeshUIBindings.meshChipAp.visibility = if (isActingAsAp) View.VISIBLE else View.GONE
 
-				// Gateway status text (read from dataStore, not active roles)
-				val torGatewayEnabled = meshrabiyaApi.getTorGatewayStatus()
-				// Only update toggle if it doesn't match (avoid triggering listener)
-				if (MeshUIBindings.gatewayToggle.isChecked != torGatewayEnabled) {
-					MeshUIBindings.gatewayToggle.isChecked = torGatewayEnabled
-				}
-				MeshUIBindings.torGatewayStatus.text = if (torGatewayEnabled) "Enabled" else "Disabled"
-				
-				val internetGatewayEnabled = meshrabiyaApi.getInternetGatewayStatus()
-				if (MeshUIBindings.internetGatewayToggle.isChecked != internetGatewayEnabled) {
-					MeshUIBindings.internetGatewayToggle.isChecked = internetGatewayEnabled
-				}
-				MeshUIBindings.internetGatewayStatus.text = if (internetGatewayEnabled) "Enabled" else "Disabled"
+				android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] ◁ deferred block end")
 
-				// Storage participation toggle (read from persisted dataStore)
-				val storageEnabled = meshrabiyaApi.getStorageParticipationStatus()
-				if (MeshUIBindings.storageParticipationToggle.isChecked != storageEnabled) {
-					isStorageToggleProgrammatic = true
-					MeshUIBindings.storageParticipationToggle.isChecked = storageEnabled
-					isStorageToggleProgrammatic = false
-					android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Storage toggle loaded from dataStore: $storageEnabled")
-				}
-				MeshUIBindings.storageStatusText.text = if (storageEnabled) "Storage participation is enabled" else "Storage participation is disabled"
-				
-				// Service participation toggle (read from persisted dataStore)
-				val serviceEnabled = meshrabiyaApi.getServiceParticipationStatus("compute_node")
-				if (MeshUIBindings.serviceLayerParticipationSwitch.isChecked != serviceEnabled) {
-					isServiceToggleProgrammatic = true
-					MeshUIBindings.serviceLayerParticipationSwitch.isChecked = serviceEnabled
-					isServiceToggleProgrammatic = false
-					android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Service toggle loaded from dataStore: $serviceEnabled")
-				}
-				MeshUIBindings.serviceLayerStatusText.text = if (serviceEnabled) "Service Layer active..." else "Service Layer inactive..."
-				
-				// Storage allocation slider and folder path (load from persisted values)
+            // Gateway status text (read from dataStore, not active roles)
+            val torGatewayEnabled = meshrabiyaApi.getTorGatewayStatus()
+			// Only update toggle if it doesn't match (avoid triggering listener)
+			if (MeshUIBindings.gatewayToggle.isChecked != torGatewayEnabled) {
+				MeshUIBindings.gatewayToggle.isChecked = torGatewayEnabled
+			}
+			MeshUIBindings.torGatewayStatus.text = if (torGatewayEnabled) "Enabled" else "Disabled"
 			
+			val internetGatewayEnabled = meshrabiyaApi.getInternetGatewayStatus()
+			if (MeshUIBindings.internetGatewayToggle.isChecked != internetGatewayEnabled) {
+				MeshUIBindings.internetGatewayToggle.isChecked = internetGatewayEnabled
+			}
+			MeshUIBindings.internetGatewayStatus.text = if (internetGatewayEnabled) "Enabled" else "Disabled"
+
+			// Storage participation toggle (read from persisted dataStore)
+			val storageEnabled = meshrabiyaApi.getStorageParticipationStatus()
+			if (MeshUIBindings.storageParticipationToggle.isChecked != storageEnabled) {
+				isStorageToggleProgrammatic = true
+				MeshUIBindings.storageParticipationToggle.isChecked = storageEnabled
+				isStorageToggleProgrammatic = false
+				android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Storage toggle loaded from dataStore: $storageEnabled")
+			}
+			MeshUIBindings.storageStatusText.text = if (storageEnabled) "Storage participation is enabled" else "Storage participation is disabled"
+			
+			// Service participation toggle (read from persisted dataStore)
+			val serviceEnabled = meshrabiyaApi.getServiceParticipationStatus("compute_node")
+			if (MeshUIBindings.serviceLayerParticipationSwitch.isChecked != serviceEnabled) {
+				isServiceToggleProgrammatic = true
+				MeshUIBindings.serviceLayerParticipationSwitch.isChecked = serviceEnabled
+				isServiceToggleProgrammatic = false
+				android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Service toggle loaded from dataStore: $serviceEnabled")
+			}
+			MeshUIBindings.serviceLayerStatusText.text = if (serviceEnabled) "Service Layer active..." else "Service Layer inactive..."
+			
+			// Storage allocation slider and folder path (load from persisted values)
+		
 			val quotaBytes = meshrabiyaApi.getStorageQuotaBytes()
 			val quotaGB = quotaBytes / (1024.0 * 1024.0 * 1024.0)
 			// Clamp to slider's valid range (1-50 GB)
@@ -1124,32 +1319,34 @@ class EnhancedMeshFragment : Fragment() {
 			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Loaded storage quota from preferences: ${quotaGB}GB (clamped to ${clampedQuotaGB}GB)")
 
 			// Update folder path display using URI-based storage
-            val savedUri = meshrabiyaApi.getDropFolderUri()
-            if (savedUri != null) {
-                try {
-                    val uri = Uri.parse(savedUri)
-                    val docFile = DocumentFile.fromTreeUri(requireContext(), uri)
-                    val displayName = docFile?.name ?: uri.lastPathSegment ?: savedUri
-                    MeshUIBindings.selectedFolderText.text = displayName
-                    android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Displaying drop folder: $displayName")
-                } catch (e: Exception) {
-                    android.util.Log.e("EnhancedMeshFragment", "[UPDATE_UI] Error parsing folder URI: ${e.message}")
-                    MeshUIBindings.selectedFolderText.text = "No folder selected"
-                }
-            } else {
-                MeshUIBindings.selectedFolderText.text = "No folder selected"
-            }
+			val savedUri = meshrabiyaApi.getDropFolderUri()
+			if (savedUri != null) {
+				try {
+					val uri = Uri.parse(savedUri)
+					val docFile = DocumentFile.fromTreeUri(requireContext(), uri)
+					val displayName = docFile?.name ?: uri.lastPathSegment ?: savedUri
+					MeshUIBindings.selectedFolderText.text = displayName
+					android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Displaying drop folder: $displayName")
+				} catch (e: Exception) {
+					android.util.Log.e("EnhancedMeshFragment", "[UPDATE_UI] Error parsing folder URI: ${e.message}")
+					MeshUIBindings.selectedFolderText.text = "No folder selected"
+				}
+			} else {
+				MeshUIBindings.selectedFolderText.text = "No folder selected"
+			}
 
 			// Mesh files
 			val meshFiles = meshrabiyaApi.getAllMeshFiles()
 			// TODO: Update folderContentsAdapter with meshFiles
 			
 			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Deferred views updated successfully")
-		} else {
-			android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Skipping deferred view updates - not yet initialized")
-		}
-		} // End runOnUiThread
-	} // End updateUI
+        	} else {
+                android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] Skipping deferred view updates - not yet initialized")
+            }
+            android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] ◀ exit runOnUiThread")
+        } // End runOnUiThread
+		android.util.Log.d("EnhancedMeshFragment", "[UPDATE_UI] ◀ exit updateUI()")
+	}
 	
 	/**
 	 * Update storage allocation for the selected folder URI
@@ -1245,21 +1442,26 @@ class EnhancedMeshFragment : Fragment() {
 	 * Collapse the mesh control pane
 	 */
 	private fun collapsePane() {
-		android.util.Log.d("EnhancedMeshFragment", "collapsePane()")
-		
-		// Stop camera if active
-		if (isCameraActive) {
-			stopQRScanning()
-		}
-		
-		// Hide expandable content
-		MeshUIBindings.meshExpandableContent.visibility = View.GONE
-		MeshUIBindings.expandCollapseIndicator.rotation = 0f  // Point down
-		
-		// Reset mode flags
-		isJoinMeshMode = false
-		isMergeMeshMode = false
-	}
+        android.util.Log.d("EnhancedMeshFragment", "collapsePane()")
+        
+        // Stop camera if active
+        if (isCameraActive) {
+            stopQRScanning()
+        }
+        
+        // Hide expandable content
+        MeshUIBindings.meshExpandableContent.visibility = View.GONE
+        MeshUIBindings.expandCollapseIndicator.rotation = 0f  // Point down
+        
+        // Restore Join button label if we were in join mode
+        if (isJoinMeshMode) {
+            MeshUIBindings.joinMeshButton.text = "Join Mesh"
+        }
+        
+        // Reset mode flags
+        isJoinMeshMode = false
+        isMergeMeshMode = false
+    }
 	
 	// ========================================
 	// BUTTON STATE MANAGEMENT
@@ -1270,20 +1472,29 @@ class EnhancedMeshFragment : Fragment() {
 	 * Only displays Join or Merge button based on state (not both)
 	 */
 	private fun updateButtonStates(meshStatus: MeshStateDto) {
-		android.util.Log.d("EnhancedMeshFragment", "[BUTTON_STATE] updateButtonStates called with status: $meshStatus")
-		when (meshStatus) {
-			MeshStateDto.DISCONNECTED -> {
-				MeshUIBindings.meshToggleButton.text = "Start Mesh"
-				MeshUIBindings.meshToggleButton.isEnabled = true
+        // hide the mesh toggle on AP‑incapable devices, but keep processing
+        if (!meshrabiyaApi.isApCapable()) {
+            MeshUIBindings.meshToggleButton.visibility = View.GONE
+        } else {
+            MeshUIBindings.meshToggleButton.visibility = View.VISIBLE
+        }
+
+        android.util.Log.d("EnhancedMeshFragment", "[BUTTON_STATE] updateButtonStates called with status: $meshStatus")
+        when (meshStatus) {
+            MeshStateDto.DISCONNECTED -> {
+                MeshUIBindings.meshToggleButton.text = "Start Mesh"
+                MeshUIBindings.meshToggleButton.isEnabled = true
 				android.util.Log.d("EnhancedMeshFragment", "[BUTTON_STATE] DISCONNECTED - button enabled, text='Start Mesh'")
 				// Show only Join button when disconnected
 				MeshUIBindings.joinMeshButton.visibility = View.VISIBLE
 				MeshUIBindings.joinMeshButton.isEnabled = true
 				MeshUIBindings.mergeMeshButton.visibility = View.GONE
-				// Hide expand indicator when disconnected
-				MeshUIBindings.expandCollapseIndicator.visibility = View.GONE
-				// Disable broadcast button when disconnected
-				MeshUIBindings.sendBroadcastButton.isEnabled = false
+				// Hide expand indicator when disconnected, unless extender hotspot is keeping it alive
+                val extenderActive = meshrabiyaApi.meshExtenderHotspotStateFlow.value == MeshExtenderHotspotStateDto.ACTIVE
+                MeshUIBindings.expandCollapseIndicator.visibility =
+                    if (extenderActive) View.VISIBLE else View.GONE
+                // Disable broadcast button when disconnected
+                MeshUIBindings.sendBroadcastButton.isEnabled = false
 			}
 			MeshStateDto.CONNECTING -> {
 				MeshUIBindings.meshToggleButton.text = "Stop Mesh"
@@ -2377,6 +2588,8 @@ class EnhancedMeshFragment : Fragment() {
                 .setSingleChoiceItems(ssidList, 0) { _, which -> selectedIndex = which }
                 .setPositiveButton("Connect") { _, _ ->
                     val selected = networks[selectedIndex]
+                    android.util.Log.d("EnhancedMeshFragment",
+                        "[WIFI] user selected SSID=${selected.ssid}, secured=${selected.isSecured}")
                     if (selected.isSecured) {
                         showPassphraseDialog(selected.ssid)
                     } else {

@@ -97,6 +97,17 @@
                         app:strokeWidth="1dp"
                         style="@style/Widget.Material3.Button.OutlinedButton" />
 
+                    <!-- AP Extender button moved here (was previously deferred) -->
+                    <ImageButton
+                        android:id="@+id/meshExtenderApButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:src="@drawable/ic_cell_tower"
+                        android:contentDescription="Start AP Extension"
+                        android:visibility="gone"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginBottom="8dp" />
+
                     <!-- Expand/Collapse Indicator (initially hidden) -->
                     <ImageView
                         android:id="@+id/expandCollapseIndicator"
@@ -324,7 +335,7 @@
                     android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                     android:layout_marginBottom="12dp" />
 
-                <!-- Button row for Refresh Status and Send Broadcast -->
+                <!-- Button row -->
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -332,18 +343,9 @@
                     android:gravity="start">
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/refreshButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/refresh_mesh_status"
-                        android:icon="@drawable/ic_refresh"
-                        style="@style/Widget.Material3.Button.OutlinedButton" />
-
-                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/sendBroadcastButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
                         android:text="@string/send_broadcast"
                         android:icon="@drawable/ic_broadcast"
                         android:enabled="false"

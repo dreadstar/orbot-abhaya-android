@@ -19,13 +19,26 @@ object MeshUIBindings {
         lateinit var textDownloadBitrate: TextView
         lateinit var textActiveNodeCount: TextView
     lateinit var meshStatusText: TextView
-    lateinit var nodeInfoText: TextView
+    lateinit var nodeInfoText: TextView  // kept for backward compat; not updated post-C4
+    lateinit var meshIpAddressText: TextView
+    lateinit var meshChipMesh: com.google.android.material.chip.Chip
+    lateinit var meshChipSta: com.google.android.material.chip.Chip
+    lateinit var meshChipAp: com.google.android.material.chip.Chip
+    lateinit var internetWifiRow: android.widget.LinearLayout
+    lateinit var internetWifiIpText: TextView
+    lateinit var internetWifiChipSta: com.google.android.material.chip.Chip
+    lateinit var internetWifiChipWeb: com.google.android.material.chip.Chip
+    lateinit var meshExtenderApButton: android.widget.ImageButton
+    lateinit var meshExtenderApRow: android.widget.LinearLayout
+    lateinit var meshExtenderApIpText: TextView
+    lateinit var meshExtenderApChipAp: com.google.android.material.chip.Chip
+    lateinit var meshExtenderApChipMesh: com.google.android.material.chip.Chip
     lateinit var meshRolesText: TextView
     lateinit var networkStatsText: TextView
     lateinit var lastUpdateText: TextView
     lateinit var gatewayToggle: SwitchMaterial
     lateinit var internetGatewayToggle: SwitchMaterial
-    lateinit var refreshButton: MaterialButton
+    
     lateinit var sendBroadcastButton: MaterialButton
     lateinit var meshToggleButton: MaterialButton
     
@@ -88,7 +101,7 @@ object MeshUIBindings {
         meshStatusText = view.findViewById(R.id.meshStatusText)
         meshRolesText = view.findViewById(R.id.meshRolesText)
         lastUpdateText = view.findViewById(R.id.lastUpdateText)
-        refreshButton = view.findViewById(R.id.refreshButton)
+        
         sendBroadcastButton = view.findViewById(R.id.sendBroadcastButton)
         meshToggleButton = view.findViewById(R.id.meshToggleButton)
         
@@ -98,6 +111,8 @@ object MeshUIBindings {
         joinMeshButton = view.findViewById(R.id.joinMeshButton)
         mergeMeshButton = view.findViewById(R.id.mergeMeshButton)
         wifiApConnectionButton = view.findViewById(R.id.wifiApConnectionButton)
+        // AP extender button is now part of the immediate mesh control header
+        meshExtenderApButton = view.findViewById(R.id.meshExtenderApButton)
         expandCollapseIndicator = view.findViewById(R.id.expandCollapseIndicator)
         
         // Expandable content
@@ -130,7 +145,21 @@ object MeshUIBindings {
     
     fun bindDeferredViews(view: View) {
         // Cards 4-9: Loaded from ViewStub after 300ms
-        nodeInfoText = view.findViewById(R.id.nodeInfoText)
+        // nodeInfoText id removed from XML in C4; keep field for compile compat but do not bind
+        // nodeInfoText = view.findViewById(R.id.nodeInfoText)
+        meshIpAddressText = view.findViewById(R.id.meshIpAddressText)
+        meshChipMesh = view.findViewById(R.id.meshChipMesh)
+        meshChipSta = view.findViewById(R.id.meshChipSta)
+        meshChipAp = view.findViewById(R.id.meshChipAp)
+        internetWifiRow = view.findViewById(R.id.internetWifiRow)
+        internetWifiIpText = view.findViewById(R.id.internetWifiIpText)
+        internetWifiChipSta = view.findViewById(R.id.internetWifiChipSta)
+        internetWifiChipWeb = view.findViewById(R.id.internetWifiChipWeb)
+        // AP extender button is bound immediately; remaining deferred elements may still exist
+        meshExtenderApRow = view.findViewById(R.id.meshExtenderApRow)
+        meshExtenderApIpText = view.findViewById(R.id.meshExtenderApIpText)
+        meshExtenderApChipAp = view.findViewById(R.id.meshExtenderApChipAp)
+        meshExtenderApChipMesh = view.findViewById(R.id.meshExtenderApChipMesh)
         networkStatsText = view.findViewById(R.id.networkStatsText)
         
         torGatewayCard = view.findViewById(R.id.torGatewayCard)

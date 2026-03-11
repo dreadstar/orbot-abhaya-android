@@ -153,7 +153,7 @@ This rule is enforced through:
 ---
 
 ## LARGE FILE MANUAL EDIT RULE (2026-02-02)
-
+**TAG: BOILERPLATE
 **RULE: For any file exceeding 800 lines, agents must NOT attempt direct edits using replace_string_in_file or multi_replace_string_in_file tools.**
 
 When a file is longer than 800 lines and requires modification, agents must:
@@ -195,7 +195,7 @@ When a file is longer than 800 lines and requires modification, agents must:
 ---
 
 ## 🚨 MANDATORY CODE VERIFICATION BEFORE GENERATION (2026-02-13)
-
+**TAG: BOILERPLATE
 **CRITICAL RULE: NEVER write code fixes or proposals WITHOUT reading the actual current code first.**
 
 This rule has been violated REPEATEDLY. Each violation wastes user time and breaks trust.
@@ -256,7 +256,7 @@ This rule has been violated REPEATEDLY. Each violation wastes user time and brea
   1. **Perform exhaustive, codebase-driven research** to verify the existence, location, and signature of every class, method, property, and integration point referenced in the plan.
   2. **Enumerate every file, field, and method** to be created or modified, specifying exact file paths and code snippets or signatures.
   3. **Describe all wiring and propagation steps** (e.g., DTO conversion, StateFlow updates, UI observer changes) with concrete, code-level details.
-  4. **Explicitly state any assumptions** and verify them with codebase evidence before including them in the plan.
+  4. **Explicitly ssupport all statements with evidence and verify them with codebase evidence on disk before including them in the plan.
   5. **Never omit or generalize steps**—all logic, data flow, and integration must be described at the level of actual code changes, not just high-level intent.
   6. **Append new plans** to existing documentation without erasing or replacing prior content, unless explicitly instructed.
   7. **Cite verification steps** for every referenced symbol, showing that each has been checked for existence and correctness.
@@ -268,7 +268,7 @@ Guarantee that every plan is actionable, codebase-verified, and ready for direct
 ---
 
 ## NEVER ASSUME USER ERROR - CRITICAL RULE (2026-01-23)
-
+**TAG: BOILERPLATE
 **RULE: NEVER assume the user made a testing error (not rebuilding, not deploying, cached build, wrong QR code, improper procedure, etc.)**
 
 - If you think the user may not have rebuilt/deployed correctly, perform a DEEPER ANALYSIS of the actual issue instead of asking
@@ -304,7 +304,7 @@ Guarantee that every plan is actionable, codebase-verified, and ready for direct
 ---
 
 ## PATCH ANCHORING AND IMPORT PLACEMENT RULE (2025-12-100)
-
+**TAG: BOILERPLATE
 ### 100. PATCH ANCHORING FOR ALL CODE EDITS
 
 **RULE: All code patches, regardless of language or tool, MUST anchor new code insertions and edits to the correct syntactic location in the file.**
@@ -328,6 +328,7 @@ Guarantee that every plan is actionable, codebase-verified, and ready for direct
   - Refuse to insert imports or code before the package/module declaration.
   - Refuse to insert code at the file's start unless it is valid for the language.
   - If the patch context is ambiguous, the agent must re-read the file and anchor the patch explicitly after the package/module declaration.
+  - ensure any replacmeent is unique meaning it will only cause a single change
 
 ### 400. GENERALIZATION
 
@@ -377,7 +378,7 @@ Guarantee that every plan is actionable, codebase-verified, and ready for direct
 **Date Added:** 2025-12-10
 **Trigger:** Multiple build failures and syntax errors due to imports/code being placed before the package line by patch tools and agents.
 ## IMPLEMENTATION VERIFICATION BEFORE CODE GENERATION PROTOCOL (2025-12-06)
-
+**TAG: BOILERPLATE
 **CRITICAL: Before writing ANY implementation code, agents MUST verify the actual current state of all touchpoints.**
 
 When planning or implementing code that refactors existing functionality or integrates with existing APIs:
@@ -488,7 +489,7 @@ This protocol eliminates the discrepancy between planned implementations and act
 ---
 
 ## MANDATORY PRE-EDIT VERIFICATION PROTOCOL (2026-02-19)
-
+**TAG: BOILERPLATE
 **RULE: Before ANY code edit (regardless of file size), agents MUST perform literal verification of ALL code to be modified AND verify pattern uniqueness.**
 
 This protocol extends and refines the "IMPLEMENTATION VERIFICATION BEFORE CODE GENERATION PROTOCOL" by adding explicit pattern testing requirements.
@@ -649,6 +650,41 @@ Mandatory pattern testing catches these issues BEFORE executing edits:
 **Intent:**
 This protocol transforms code editing from "guess and retry" into "verify and execute once." Every edit is preceded by verification that the pattern is correct, unique, and will change exactly what's intended. The pattern uniqueness requirement (Step 3) is the critical addition that prevents the most common edit failures: multi-location matches and whitespace mismatches.
 
+---
+
+## CHANGES  RULE  alias:BEFORE/AFTER SNIPPET REQUIREMENT RULE (2026-03-07)
+
+**RULE:** Any agent response that produces or proposes *code changes*,
+*solutions*, *patches*, or any equivalent modifications **must** include the
+following in the same message:
+
+1. **Literal verification**: the agent must read the current file(s) involved
+   using `read_file` and confirm the exact text to be replaced exists on disk.
+2. **BEFORE and AFTER snippets**: show the entire code segment before the
+   change and the entire code segment after the change, with no ellipses or
+   truncation.  Snippets must include all surrounding context lines used to
+   anchor the edit.
+3. **File path and line numbers**: each snippet must be annotated with the
+   absolute file path and the start–end line numbers of the region being
+   modified.
+4. **Pattern uniqueness check**: run `grep_search` on the target file using the
+   BEFORE text and ensure exactly one match; extend context if necessary.
+5. **Evidence-based statements**: any claim about where a change belongs or
+   what code contains must cite the line numbers or grep results from the
+   workspace; guesses are prohibited.
+
+This rule applies to every request that would normally return code or
+suggested edits.  Violations of this rule constitute a failure to comply with
+workspace standards and must be corrected before any code is actually
+introduced.
+
+**Intent:** Guarantee that all proposed code modifications are fully
+specified and verifiable, enabling developers to implement them manually or
+automatically without ambiguity.
+
+**Date Added:** 2026-03-07  
+**Trigger:** User requirement to formalize BEFORE/AFTER snippet protocol.
+
 **Date Added:** 2026-02-19  
 **Trigger:** User asked how to memorialize the verification steps that made large file edits succeed. Analysis revealed pattern uniqueness testing was the missing enforcement mechanism. User refined rule to include explicit pattern testing requirement.
 
@@ -723,7 +759,7 @@ This document defines the effective operational rules and protocols for all AI a
 ## 🚨 CRITICAL AGENT PROTOCOLS (HIGHEST PRIORITY)
 
 ### 0. MINIMIZE TERMINAL INTERACTIONS - USE INTERNAL TOOLS FIRST (2026-02-16)
-
+**TAG: BOLIERPLATE
 **RULE: Agents MUST prefer internal file manipulation tools over terminal commands whenever functionally equivalent.**
 
 **Rationale:**
