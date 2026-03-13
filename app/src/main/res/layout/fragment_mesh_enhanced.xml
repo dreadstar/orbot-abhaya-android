@@ -331,7 +331,7 @@
                     android:id="@+id/lastUpdateText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Last updated: --:--:--"
+                    android:text="Status: Live"
                     android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                     android:layout_marginBottom="12dp" />
 
