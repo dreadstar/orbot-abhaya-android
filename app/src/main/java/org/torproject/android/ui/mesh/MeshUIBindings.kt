@@ -27,7 +27,9 @@ object MeshUIBindings {
     lateinit var internetWifiRow: android.widget.LinearLayout
     lateinit var internetWifiIpText: TextView
     lateinit var internetWifiChipSta: com.google.android.material.chip.Chip
-    lateinit var internetWifiChipWeb: com.google.android.material.chip.Chip
+    lateinit var internetWifiGreenDot: View
+    lateinit var internetWifiChipWifi: com.google.android.material.chip.Chip
+    
     lateinit var meshExtenderApButton: android.widget.ImageButton
     lateinit var meshExtenderApRow: android.widget.LinearLayout
     lateinit var meshExtenderApIpText: TextView
@@ -153,8 +155,10 @@ object MeshUIBindings {
         meshChipAp = view.findViewById(R.id.meshChipAp)
         internetWifiRow = view.findViewById(R.id.internetWifiRow)
         internetWifiIpText = view.findViewById(R.id.internetWifiIpText)
+        internetWifiGreenDot = view.findViewById(R.id.internetWifiGreenDot)
+        internetWifiChipWifi = view.findViewById(R.id.internetWifiChipWifi)
         internetWifiChipSta = view.findViewById(R.id.internetWifiChipSta)
-        internetWifiChipWeb = view.findViewById(R.id.internetWifiChipWeb)
+        
         // AP extender button is bound immediately; remaining deferred elements may still exist
         meshExtenderApRow = view.findViewById(R.id.meshExtenderApRow)
         meshExtenderApIpText = view.findViewById(R.id.meshExtenderApIpText)

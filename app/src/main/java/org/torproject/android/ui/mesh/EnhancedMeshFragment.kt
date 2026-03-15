@@ -621,7 +621,8 @@ class EnhancedMeshFragment : Fragment() {
 
 	override fun onResume() {
         super.onResume()
-        // One-time refresh when fragment becomes visible (tab switch, rotation, etc.)
+        // Force-sync meshStatusFlow with actual WiFi state (catches stale CONNECTED after sleep)
+        meshrabiyaApi.refreshMeshStatus()
         updateUI()
     }
 	
@@ -763,10 +764,10 @@ class EnhancedMeshFragment : Fragment() {
                         if (!networkInfo.nonMeshSsid.isNullOrEmpty()) {
                             android.util.Log.d("EnhancedMeshFragment", "[NETWORK_INFO_OBSERVER] non‑mesh SSID present: ${networkInfo.nonMeshSsid}")
                             MeshUIBindings.internetWifiRow.visibility = View.VISIBLE
-							MeshUIBindings.internetWifiIpText.text = networkInfo.nonMeshIpAddress ?: "--"
-							MeshUIBindings.internetWifiChipSta.visibility = View.VISIBLE
-							MeshUIBindings.internetWifiChipWeb.visibility =
-								if (networkInfo.nonMeshHasInternet == true) View.VISIBLE else View.GONE
+                            MeshUIBindings.internetWifiIpText.text = networkInfo.nonMeshIpAddress ?: "--"
+                            MeshUIBindings.internetWifiChipSta.visibility = View.VISIBLE
+                            MeshUIBindings.internetWifiGreenDot.visibility =
+                                if (networkInfo.nonMeshHasInternet == true) View.VISIBLE else View.GONE
                         } else {
                             android.util.Log.d("EnhancedMeshFragment", "[NETWORK_INFO_OBSERVER] non‑mesh SSID empty – hiding row")
                             MeshUIBindings.internetWifiRow.visibility = View.GONE
@@ -784,8 +785,12 @@ class EnhancedMeshFragment : Fragment() {
                 activity?.runOnUiThread {
                     val connected = nonMeshState.status.name == "CONNECTED"
                     if (connected) {
-                        MeshUIBindings.wifiApConnectionButton.text = "Disconnect WiFi"
+                        MeshUIBindings.wifiApConnectionButton.setText(R.string.wifi_internet)
+                        
                         MeshUIBindings.wifiApConnectionButton.setIconResource(R.drawable.ic_stop)
+                        MeshUIBindings.wifiApConnectionButton.backgroundTintList =
+                            android.content.res.ColorStateList.valueOf(android.graphics.Color.RED)
+                        MeshUIBindings.wifiApConnectionButton.setTextColor(android.graphics.Color.WHITE)
                     } else {
                         MeshUIBindings.wifiApConnectionButton.setText(R.string.wifi_internet)
                         MeshUIBindings.wifiApConnectionButton.setIconResource(R.drawable.ic_wifi)
@@ -1259,15 +1264,14 @@ class EnhancedMeshFragment : Fragment() {
 					MeshUIBindings.networkStatsText.text =
 						"Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
 					if (!networkInfo.nonMeshSsid.isNullOrEmpty()) {
-						MeshUIBindings.internetWifiRow.visibility = View.VISIBLE
-						MeshUIBindings.internetWifiIpText.text = networkInfo.nonMeshIpAddress ?: "--"
-						MeshUIBindings.internetWifiChipSta.visibility =
-							if (networkInfo.nonMeshHasInternet == true) View.VISIBLE else View.GONE
-						MeshUIBindings.internetWifiChipWeb.visibility =
-							if (networkInfo.nonMeshHasInternet == true) View.VISIBLE else View.GONE
-					} else {
-						MeshUIBindings.internetWifiRow.visibility = View.GONE
-					}
+                        MeshUIBindings.internetWifiRow.visibility = View.VISIBLE
+                        MeshUIBindings.internetWifiIpText.text = networkInfo.nonMeshIpAddress ?: "--"
+                        MeshUIBindings.internetWifiChipSta.visibility = View.VISIBLE
+                        MeshUIBindings.internetWifiGreenDot.visibility =
+                            if (networkInfo.nonMeshHasInternet == true) View.VISIBLE else View.GONE
+                    } else {
+                        MeshUIBindings.internetWifiRow.visibility = View.GONE
+                    }
 				} else {
 					// still waiting for first emission – clear fields
 					android.util.Log.d("EnhancedMeshFragment",
@@ -2577,8 +2581,15 @@ class EnhancedMeshFragment : Fragment() {
     // ========================================
 
     private fun showInternetWifiConnectionDialog() {
+        val scanningDialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Scanning for networks…")
+            .setMessage("Please wait")
+            .setCancelable(false)
+            .create()
+        scanningDialog.show()
         lifecycleScope.launch {
             val networks = meshrabiyaApi.scanAvailableWifiNetworks()
+            scanningDialog.dismiss()
             if (networks.isEmpty()) {
                 Toast.makeText(
                     requireContext(),

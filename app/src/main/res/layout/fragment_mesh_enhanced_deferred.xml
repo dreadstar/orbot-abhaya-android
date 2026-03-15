@@ -38,7 +38,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
+                android:layout_marginBottom="2dp">
 
                 <TextView
                     android:id="@+id/meshIpAddressText"
@@ -100,7 +100,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="8dp"
+                android:layout_marginBottom="2dp"
                 android:visibility="gone">
 
                 <TextView
@@ -112,13 +112,33 @@
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:fontFamily="monospace" />
 
+                <!-- Green dot: shown directly left of chips when NET_CAPABILITY_VALIDATED confirms internet access -->
+                <View
+                    android:id="@+id/internetWifiGreenDot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="6dp"
+                    android:background="@android:color/holo_green_light"
+                    android:visibility="gone" />
+
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/internetWifiChipGroup"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="0dp"
                     app:singleLine="true"
                     app:chipSpacingHorizontal="4dp">
+
+                    <!-- Always visible: type label chip -->
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/internetWifiChipWifi"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="WiFi"
+                        android:textSize="10sp"
+                        app:chipMinHeight="24dp"
+                        style="@style/Widget.Material3.Chip.Assist" />
 
                     <!-- Always visible for internet WiFi connection (device is STA to internet AP) -->
                     <com.google.android.material.chip.Chip
@@ -127,17 +147,6 @@
                         android:layout_height="wrap_content"
                         android:text="STA"
                         android:textSize="10sp"
-                        app:chipMinHeight="24dp"
-                        style="@style/Widget.Material3.Chip.Assist" />
-
-                    <!-- Visible when NET_CAPABILITY_VALIDATED confirms internet access -->
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/internetWifiChipWeb"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Web"
-                        android:textSize="10sp"
-                        android:visibility="gone"
                         app:chipMinHeight="24dp"
                         style="@style/Widget.Material3.Chip.Assist" />
 
@@ -153,7 +162,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="8dp"
+                android:layout_marginBottom="2dp"
                 android:visibility="gone">
 
                 <TextView
