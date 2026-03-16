@@ -89,6 +89,11 @@
             android:theme="@style/OrbotActivityTheme" />
 
         <activity
+            android:name=".ui.MeshProxyAppManagerActivity"
+            android:label="@string/title_mesh_proxy_apps"
+            android:theme="@style/OrbotActivityTheme" />
+
+        <activity
             android:name=".ui.v3onionservice.OnionServiceActivity"
             android:label="@string/v3_hosted_services" />
 

@@ -120,6 +120,12 @@ object OrbotConstants {
     const val LOCAL_EXTRA_BOOTSTRAP_PERCENT = "percent"
     const val LOCAL_ACTION_PORTS = "ports"
     const val LOCAL_ACTION_V3_NAMES_UPDATED = "V3_NAMES_UPDATED"
+
+    // Mesh proxy mode broadcast (sent by OrbotMeshService → received by OrbotService)
+    const val LOCAL_ACTION_MESH_PROXY_CHANGED = "mesh_proxy_changed"
+    const val EXTRA_MESH_PROXY_ACTIVE = "mesh_proxy_active"
+    const val EXTRA_MESH_PROXY_SOCKS_PORT = "mesh_proxy_socks_port"
+    const val EXTRA_MESH_PROXY_PACKAGES = "mesh_proxy_packages"
     const val LOCAL_ACTION_NOTIFICATION_START = "notification_start"
 
 
@@ -166,6 +172,7 @@ object OrbotConstants {
         "org.onionshare.android.fdroid",
         "org.briarproject.briar.android",  // https://github.com/guardianproject/orbot/issues/474
         "im.cwtch.flwtch",
+        "com.ustadmobile.meshrabiya",  // Prevent mesh UDP from being Tor-tunneled in all-traffic VPN mode
     )
 
     val VPN_SUGGESTED_APPS = mutableListOf(

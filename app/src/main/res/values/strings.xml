@@ -161,6 +161,8 @@
     <string name="btn_configure">Choose How To Connect</string>
     <string name="trying_to_connect_title">Connecting…</string>
     <string name="btn_choose_apps">Choose apps</string>
+    <string name="btn_mesh_proxy_apps">Mesh Proxy Apps</string>
+    <string name="title_mesh_proxy_apps">Mesh Proxy Apps</string>
     <string name="btn_change_exit">Change exit</string>
     <string name="btn_refresh">Refresh</string>
     <string name="btn_tor_off">Turn Tor off</string>

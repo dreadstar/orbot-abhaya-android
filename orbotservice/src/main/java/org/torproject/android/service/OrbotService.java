@@ -379,6 +379,15 @@ public class OrbotService extends VpnService {
                 }
 
                 mVpnManager = new OrbotVpnManager(this);
+                // Register receiver so mesh proxy state changes rebuild the VPN
+                LocalBroadcastHelper.registerReceiver(this, new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        if (mVpnManager != null) {
+                            mVpnManager.handleIntent(new Builder(), intent);
+                        }
+                    }
+                }, new IntentFilter(OrbotConstants.LOCAL_ACTION_MESH_PROXY_CHANGED));
                 loadCdnFronts(this);
             } catch (Exception e) {
                 Log.e(TAG, "Error setting up Orbot", e);
