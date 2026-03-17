@@ -408,6 +408,7 @@ class EnhancedMeshFragment : Fragment() {
 		android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Setting up network info observer...")
 		setupNetworkInfoObserver()
         android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Network info observer setup complete")
+        observeGatewayAvailability()
 
         setupNonMeshWifiObserver()
         setupMeshExtenderObserver()
@@ -742,7 +743,25 @@ class EnhancedMeshFragment : Fragment() {
     /**
      * Setup observer for network info StateFlow
 	 */
-	private fun setupNetworkInfoObserver() {
+	private fun observeGatewayAvailability() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            var previouslyAvailable = false
+            meshrabiyaApi.getMeshInternetGatewayAvailableFlow().collect { available ->
+                if (available && !previouslyAvailable) {
+                    activity?.runOnUiThread {
+                        android.widget.Toast.makeText(
+                            requireContext(),
+                            "Internet available via mesh gateway",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                previouslyAvailable = available
+            }
+        }
+    }
+
+    private fun setupNetworkInfoObserver() {
         android.util.Log.d("EnhancedMeshFragment", "[NETWORK_INFO_OBSERVER] Setting up network info observer")
         viewLifecycleOwner.lifecycleScope.launch {
             (meshrabiyaApi as? MeshrabiyaApiImpl)?.networkInfoFlow?.collect { networkInfo ->
