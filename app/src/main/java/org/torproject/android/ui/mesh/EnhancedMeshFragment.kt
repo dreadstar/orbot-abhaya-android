@@ -409,7 +409,8 @@ class EnhancedMeshFragment : Fragment() {
 		setupNetworkInfoObserver()
         android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Network info observer setup complete")
         observeGatewayAvailability()
-
+		setupNetworkInfoObserver()
+        setupMeshInternetGreenDotObserver()
         setupNonMeshWifiObserver()
         setupMeshExtenderObserver()
 		setupWifiStateObserver()
@@ -780,6 +781,10 @@ class EnhancedMeshFragment : Fragment() {
                         MeshUIBindings.meshIpAddressText.text = networkInfo.ipAddress
                         MeshUIBindings.networkStatsText.text =
                             "Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
+                        val gatewayAvailable = meshrabiyaApi.getMeshInternetGatewayAvailableFlow().value
+                        val hasAnyInternet = (networkInfo.nonMeshHasInternet == true) || gatewayAvailable
+                        MeshUIBindings.meshInternetGreenDot.visibility =
+                            if (hasAnyInternet) View.VISIBLE else View.GONE
                         if (!networkInfo.nonMeshSsid.isNullOrEmpty()) {
                             android.util.Log.d("EnhancedMeshFragment", "[NETWORK_INFO_OBSERVER] non‑mesh SSID present: ${networkInfo.nonMeshSsid}")
                             MeshUIBindings.internetWifiRow.visibility = View.VISIBLE
@@ -792,6 +797,20 @@ class EnhancedMeshFragment : Fragment() {
                             MeshUIBindings.internetWifiRow.visibility = View.GONE
                         }
                     }
+                }
+            }
+        }
+    }
+
+	private fun setupMeshInternetGreenDotObserver() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            meshrabiyaApi.getMeshInternetGatewayAvailableFlow().collect { gatewayAvailable ->
+                if (!deferredViewsInitialized) return@collect
+                activity?.runOnUiThread {
+                    val networkInfo = (meshrabiyaApi as? MeshrabiyaApiImpl)?.networkInfoFlow?.value
+                    val hasAnyInternet = (networkInfo?.nonMeshHasInternet == true) || gatewayAvailable
+                    MeshUIBindings.meshInternetGreenDot.visibility =
+                        if (hasAnyInternet) View.VISIBLE else View.GONE
                 }
             }
         }
@@ -1282,6 +1301,10 @@ class EnhancedMeshFragment : Fragment() {
 					MeshUIBindings.meshIpAddressText.text = networkInfo.ipAddress
 					MeshUIBindings.networkStatsText.text =
 						"Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
+					val gatewayAvailable = meshrabiyaApi.getMeshInternetGatewayAvailableFlow().value
+					val hasAnyInternet = (networkInfo.nonMeshHasInternet == true) || gatewayAvailable
+					MeshUIBindings.meshInternetGreenDot.visibility =
+						if (hasAnyInternet) View.VISIBLE else View.GONE
 					if (!networkInfo.nonMeshSsid.isNullOrEmpty()) {
                         MeshUIBindings.internetWifiRow.visibility = View.VISIBLE
                         MeshUIBindings.internetWifiIpText.text = networkInfo.nonMeshIpAddress ?: "--"
@@ -1292,12 +1315,12 @@ class EnhancedMeshFragment : Fragment() {
                         MeshUIBindings.internetWifiRow.visibility = View.GONE
                     }
 				} else {
-					// still waiting for first emission – clear fields
 					android.util.Log.d("EnhancedMeshFragment",
 						"[UPDATE_UI] networkInfoFlow.value == null; deferring update")
 					MeshUIBindings.meshIpAddressText.text = "–"
 					MeshUIBindings.networkStatsText.text = ""
 					MeshUIBindings.internetWifiRow.visibility = View.GONE
+					MeshUIBindings.meshInternetGreenDot.visibility = View.GONE
 				}
 
 				// the remainder of deferred updates stays unchanged:

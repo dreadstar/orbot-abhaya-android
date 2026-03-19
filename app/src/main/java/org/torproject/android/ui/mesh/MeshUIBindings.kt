@@ -15,12 +15,13 @@ import android.widget.LinearLayout
 // import org.torproject.android.ui.mesh.adapter.FolderContentsAdapter
 
 object MeshUIBindings {
-        lateinit var textUploadBitrate: TextView
-        lateinit var textDownloadBitrate: TextView
-        lateinit var textActiveNodeCount: TextView
+    lateinit var textUploadBitrate: TextView
+    lateinit var textDownloadBitrate: TextView
+    lateinit var textActiveNodeCount: TextView
     lateinit var meshStatusText: TextView
     lateinit var nodeInfoText: TextView  // kept for backward compat; not updated post-C4
     lateinit var meshIpAddressText: TextView
+    lateinit var meshInternetGreenDot: View
     lateinit var meshChipMesh: com.google.android.material.chip.Chip
     lateinit var meshChipSta: com.google.android.material.chip.Chip
     lateinit var meshChipAp: com.google.android.material.chip.Chip
@@ -150,6 +151,7 @@ object MeshUIBindings {
         // nodeInfoText id removed from XML in C4; keep field for compile compat but do not bind
         // nodeInfoText = view.findViewById(R.id.nodeInfoText)
         meshIpAddressText = view.findViewById(R.id.meshIpAddressText)
+        meshInternetGreenDot = view.findViewById(R.id.meshInternetGreenDot)
         meshChipMesh = view.findViewById(R.id.meshChipMesh)
         meshChipSta = view.findViewById(R.id.meshChipSta)
         meshChipAp = view.findViewById(R.id.meshChipAp)

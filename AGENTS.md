@@ -742,6 +742,108 @@ Before updating or creating a KNOWLEDGE document, check the current date to be c
 
 # AGENTS.md - Operational Protocols for AI Agents
 
+## DEBUG STRATEGY RULE (2026-03-18)
+
+**RULE: All agents must follow a rigorous, error-driven, codebase-verified debugging and patching methodology for every error, bug, or build failure.**
+
+**MANDATORY BEFORE/AFTER SNIPPET CLARIFICATION (2026-03-18):**
+
+For every code change, solution, or recommendation, agents must:
+- **ALWAYS** deliver full BEFORE and AFTER code snippets for the affected region, with at least 5 lines of context before and after.
+- Annotate each snippet with the absolute file path and the start–end line numbers of the region being modified.
+- Ensure the BEFORE snippet is unique in the file (pattern uniqueness check with grep_search).
+- **NEVER** generate or apply the patch directly unless explicitly instructed.
+- **NEVER** ask the user if they want snippets—**always** deliver them.
+- Snippets must be presented in the same message as the solution, not as a follow-up or upon request.
+
+**Intent:**
+Guarantee that all code modifications are fully specified, verifiable, and ready for manual implementation, with no ambiguity or unnecessary questions. This maximizes the effectiveness of the rule and ensures agents never omit or delay snippet delivery.
+
+### 1. Error Enumeration and Mapping
+- Enumerate all errors from authoritative logs (e.g., build_output.log) and map each error to its exact code location, referenced symbol, and file.
+- Use internal tools (grep_search, read_file) to locate and verify every symbol, type, and method referenced in errors.
+
+### 2. Exhaustive Symbol and Type Verification
+- For every type, DTO, and method referenced in the error region, perform a literal, codebase-wide search to confirm:
+  - Existence and file location
+  - Full property/method list
+  - Required imports and package
+- For every conversion (e.g., toInternal()), verify the exact input and output types and ensure the correct conversion is used at every point.
+
+
+### 3. Explicit Type Annotation
+- For every lambda, parameter, and variable where type inference fails, explicitly annotate the type using the verified, correct type from the codebase.
+
+### 3a. Mandatory Overload and Lambda Signature Verification
+- For every higher-order function call (especially overloaded ones like combine), agents must:
+  - Verify the exact overload being called (by arity and types).
+  - Check the expected lambda signature for that overload.
+  - Ensure the lambda matches the expected collector type (e.g., Array<Any> for vararg, or explicit parameters for fixed arity).
+  - Require explicit overload and signature verification for all Flow combinators and similar APIs.
+- Never assume the lambda signature is correct just because DTOs and properties are correct; always check the overload and expected lambda signature for every higher-order function call.
+
+### 4. Import and Reference Validation
+- Ensure every referenced type, DTO, and method is imported at the top of the file, using the correct package and import style.
+- Remove any unused or incorrect imports.
+
+### 5. Upstream/Downstream Impact Tracing
+- Trace all usages of the affected functions, DTOs, and models both upstream (callers) and downstream (callees, property accesses) to ensure all type and property references are valid and consistent.
+
+### 6. Pattern Uniqueness and Context Anchoring
+- For every code change, use a unique, context-rich pattern for BEFORE/AFTER snippets, and verify with grep_search that the pattern matches exactly once.
+
+### 7. Iterative, Error-Driven Correction
+- After each patch, re-run the build and re-analyze the error log.
+- Repeat the process until all errors are resolved, with no new errors introduced.
+
+### 8. Documentation of Verification
+- For every change, document the verification steps: file, line, symbol, and property/method existence, with explicit evidence from the codebase.
+
+### 9. Task and Subtask Tracking
+- Use the manage_todo_list tool to break down debugging and patching into actionable tasks and subtasks.
+- Mark each as in-progress or completed as work proceeds, ensuring full process visibility and adherence.
+
+
+### 10. No Assumptions—Only Evidence
+- Never rely on assumptions about DTO/model structure, method availability, or type inference. All changes must be based on literal, line-by-line verification.
+
+### 11. MANDATORY EXTENSION FUNCTION VERIFICATION (2026-03-19)
+**RULE: Agents must NEVER propose, generate, or present an extension function unless ALL of the following are true:**
+
+1. **Pattern Verification:**
+  - Agent has searched the codebase for existing extension functions and copied the exact, idiomatic Kotlin syntax and placement used in this project.
+  - Agent must cite the file and line number of at least one valid extension function as a reference.
+
+2. **Function Body Requirement:**
+  - Agent must provide a complete, non-empty function body.
+  - No extension function may be presented as a stub, declaration-only, or with an incomplete body.
+
+3. **Idiomatic Syntax Enforcement:**
+  - Agent must use only idiomatic Kotlin extension function syntax:  
+    `fun ReceiverType.functionName(): ReturnType { ... }`
+  - Fully qualified receiver types (e.g., `fun com.example.Type.func()`) are strictly prohibited.
+
+4. **Contextual Anchoring:**
+  - Agent must present BEFORE/AFTER code snippets with at least 5 lines of context, file path, and line numbers for every proposed change.
+
+5. **Structural and Syntax Validation:**
+  - Agent must validate the proposed code for structural and syntactic correctness before presenting.
+  - Agent must not present code that would fail a basic Kotlin syntax or brace/paren check.
+
+6. **Explicit Evidence:**
+  - Agent must document all verification steps, including codebase search results, reference locations, and validation checks, in the response.
+
+**If any of these requirements are not met, the agent must NOT propose or generate the extension function.**
+
+**Intent:**
+Guarantee that all extension functions are idiomatic, complete, codebase-verified, and ready for production, preventing incomplete or invalid code from ever being proposed.
+
+**Intent:**
+Guarantee that all debugging and patching is literal, exhaustive, error-driven, and codebase-verified, with explicit documentation, iterative correction, and rigorous task tracking. This rule supersedes any shortcut or assumption-based debugging approaches.
+
+**Date Added:** 2026-03-18
+**Trigger:** User mandate to formalize a professional, iterative, error-driven debugging and patching methodology after incomplete fixes and missed errors.
+
 ## STATEMENT VERACITY RULE (2025-11-21)
 Agents must never present a claim about code structure, type existence, or file location as fact unless it is verified by direct codebase search or literal file read.
 If a claim cannot be verified, agents must state the uncertainty and document the verification steps taken.

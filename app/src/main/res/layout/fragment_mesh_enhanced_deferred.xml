@@ -49,6 +49,15 @@
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:fontFamily="monospace" />
 
+                <View
+                    android:id="@+id/meshInternetGreenDot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="6dp"
+                    android:background="@android:color/holo_green_light"
+                    android:visibility="gone" />
+
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/meshChipGroup"
                     android:layout_width="wrap_content"
