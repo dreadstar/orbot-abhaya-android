@@ -76,7 +76,9 @@
                         app:chipMinHeight="24dp"
                         style="@style/Widget.Material3.Chip.Assist" />
 
-                    <!-- Visible when device joined mesh as station (client) -->
+                    <!-- Visible whenever device is connected to the mesh as a station.
+                         Visibility set programmatically in setupNetworkInfoObserver()
+                         based on connectedPeers > 0. Default gone; shown at runtime. -->
                     <com.google.android.material.chip.Chip
                         android:id="@+id/meshChipSta"
                         android:layout_width="wrap_content"
