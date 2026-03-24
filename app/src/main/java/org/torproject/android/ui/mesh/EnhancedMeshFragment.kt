@@ -129,7 +129,8 @@ class EnhancedMeshFragment : Fragment() {
 	// Flags to prevent recursive toggle updates from programmatic changes
 	private var isStorageToggleProgrammatic = false
 	private var isServiceToggleProgrammatic = false
-	
+	private var meshOperationInProgress = false
+
 	// QR code and camera support
 	private lateinit var cameraExecutor: ExecutorService
 	private var isCameraActive = false
@@ -411,7 +412,6 @@ class EnhancedMeshFragment : Fragment() {
         android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Network info observer setup complete")
         observeGatewayAvailability()
 		// setupNetworkInfoObserver()
-        setupMeshInternetGreenDotObserver()
         setupNonMeshWifiObserver()
         setupMeshExtenderObserver()
 		setupWifiStateObserver()
@@ -937,61 +937,49 @@ class EnhancedMeshFragment : Fragment() {
     }
 
     private fun setupListeners() {
-        // Mesh toggle button with debouncing and permission checks
-		var meshOperationInProgress = false
-		
-		// Add touch listener to detect ALL touch events
 		MeshUIBindings.meshToggleButton.setOnTouchListener { v, event ->
 			android.util.Log.d("EnhancedMeshFragment", "[TOUCH] meshToggleButton touched: action=${event.action}, enabled=${v.isEnabled}, clickable=${v.isClickable}")
-			false // Return false to allow click listener to also fire
+			false
 		}
-		
+
 		MeshUIBindings.meshToggleButton.setOnClickListener {
 			android.util.Log.d("EnhancedMeshFragment", "[CLICK] Mesh toggle button clicked")
 			android.util.Log.d("EnhancedMeshFragment", "[CLICK] Button state: enabled=${MeshUIBindings.meshToggleButton.isEnabled}, clickable=${MeshUIBindings.meshToggleButton.isClickable}, meshOpInProgress=$meshOperationInProgress")
-			
-			// Prevent multiple concurrent operations
+
 			if (meshOperationInProgress) {
 				android.util.Log.w("EnhancedMeshFragment", "Mesh operation already in progress, ignoring click")
 				return@setOnClickListener
 			}
-			
+
 			val currentStatus = meshrabiyaApi.meshStatusFlow.value
-            val meshActive = currentStatus == MeshStateDto.CONNECTED || currentStatus == MeshStateDto.CONNECTING
-            android.util.Log.d("EnhancedMeshFragment", "Current mesh status: $currentStatus, meshActive=$meshActive")
-			
+			val meshActive = currentStatus == MeshStateDto.CONNECTED || currentStatus == MeshStateDto.CONNECTING
+			android.util.Log.d("EnhancedMeshFragment", "Current mesh status: $currentStatus, meshActive=$meshActive")
+
 			meshOperationInProgress = true
 			MeshUIBindings.meshToggleButton.isEnabled = false
 			android.util.Log.d("EnhancedMeshFragment", "Button disabled, operation marked in progress")
-			
+
 			if (meshActive) {
-				// Stopping mesh doesn't require permissions
 				android.util.Log.d("EnhancedMeshFragment", "Calling stopMesh()")
 				meshrabiyaApi.stopMesh { result ->
-					// Callback runs on background thread - must switch to main thread for UI updates
 					activity?.runOnUiThread {
 						android.util.Log.d("EnhancedMeshFragment", "stopMesh callback: success=${result.isSuccess}, error=${result.exceptionOrNull()}")
 						meshOperationInProgress = false
 						MeshUIBindings.meshToggleButton.isEnabled = true
-						
 					}
 				}
 			} else {
-				// Starting mesh requires location permissions - check first
 				android.util.Log.e("EnhancedMeshFragment", "========== START MESH BUTTON CLICKED ==========")
 				android.util.Log.e("EnhancedMeshFragment", "This log MUST appear when Start Mesh is pressed")
 				if (checkLocationPermissions()) {
 					android.util.Log.e("EnhancedMeshFragment", "Permissions granted, calling meshrabiyaApi.startMesh()")
 					meshrabiyaApi.startMesh { result ->
-						// Callback runs on background thread - must switch to main thread for UI updates
 						activity?.runOnUiThread {
 							android.util.Log.d("EnhancedMeshFragment", "startMesh callback: success=${result.isSuccess}, error=${result.exceptionOrNull()}")
 							if (result.isFailure) {
 								android.util.Log.e("EnhancedMeshFragment", "startMesh failed", result.exceptionOrNull())
 								view?.let { v ->
 									val errorMessage = result.exceptionOrNull()?.message ?: "Unknown error"
-									
-									// Show AlertDialog for WiFi-related errors (more prominent)
 									if (errorMessage.contains("WiFi") || errorMessage.contains("wifi")) {
 										androidx.appcompat.app.AlertDialog.Builder(requireContext())
 											.setTitle("⚠️ WiFi Must Be Disabled")
@@ -1006,18 +994,15 @@ class EnhancedMeshFragment : Fragment() {
 											.setNegativeButton("Cancel", null)
 											.show()
 									} else {
-										// Show Snackbar for other errors
 										Snackbar.make(v, "Failed to start mesh: $errorMessage", Snackbar.LENGTH_LONG).show()
 									}
 								}
 							}
 							meshOperationInProgress = false
 							MeshUIBindings.meshToggleButton.isEnabled = true
-							
 						}
 					}
 				} else {
-					// Permissions not granted, request them
 					android.util.Log.d("EnhancedMeshFragment", "Permissions not granted, requesting now")
 					meshOperationInProgress = false
 					MeshUIBindings.meshToggleButton.isEnabled = true
@@ -1026,171 +1011,130 @@ class EnhancedMeshFragment : Fragment() {
 			}
 		}
 
-		
-		
-		// Send Broadcast button
 		MeshUIBindings.sendBroadcastButton.setOnClickListener {
 			showBroadcastDialog()
 		}
-		
-		// ========================================
-        // JOIN MESH BUTTON HANDLER
-        // ========================================
-        MeshUIBindings.joinMeshButton.setOnClickListener {
-            android.util.Log.d("EnhancedMeshFragment", "Join Mesh button clicked (isJoinMeshMode=$isJoinMeshMode)")
 
-            if (isJoinMeshMode) {
-                // Already scanning — cancel the join process
-                collapsePane()
-            } else {
-                // Pre-flight: WiFi must be enabled to join
-                if (!meshrabiyaApi.isWifiEnabled()) {
-                    androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                        .setTitle("⚠️ WiFi Required")
-                        .setMessage("Wifi must be enabled to Join Mesh")
-                        .setPositiveButton("Open WiFi Settings") { _, _ ->
-                            try {
-                                startActivity(android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS))
-                            } catch (e: Exception) {
-                                view?.let { v -> com.google.android.material.snackbar.Snackbar.make(v, "Could not open WiFi settings", com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show() }
-                            }
-                        }
-                        .setNegativeButton("Cancel", null)
-                        .show()
-                    return@setOnClickListener
-                }
+		MeshUIBindings.joinMeshButton.setOnClickListener {
+			android.util.Log.d("EnhancedMeshFragment", "Join Mesh button clicked (isJoinMeshMode=$isJoinMeshMode)")
 
-                // Set mode: Join (not merge)
-                isJoinMeshMode = true
-                isMergeMeshMode = false
+			if (isJoinMeshMode) {
+				collapsePane()
+			} else {
+				if (!meshrabiyaApi.isWifiEnabled()) {
+					androidx.appcompat.app.AlertDialog.Builder(requireContext())
+						.setTitle("⚠️ WiFi Required")
+						.setMessage("Wifi must be enabled to Join Mesh")
+						.setPositiveButton("Open WiFi Settings") { _, _ ->
+							try {
+								startActivity(android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS))
+							} catch (e: Exception) {
+								view?.let { v -> com.google.android.material.snackbar.Snackbar.make(v, "Could not open WiFi settings", com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show() }
+							}
+						}
+						.setNegativeButton("Cancel", null)
+						.show()
+					return@setOnClickListener
+				}
 
-                // Change label to signal cancellation is available
-                MeshUIBindings.joinMeshButton.text = "Cancel Join"
+				isJoinMeshMode = true
+				isMergeMeshMode = false
+				MeshUIBindings.joinMeshButton.text = "Cancel Join"
 
-                // Location permission required on SDK < 29: enableNetwork() internally calls
-                // getConfiguredNetworkWithPassword() which requires ACCESS_FINE_LOCATION.
-                // Without it the WiFi supplicant never receives credentials → no association.
-                if (checkLocationPermissions()) {
-                    expandPane(showCamera = true)
-                    startQRScanning()
-                } else {
-                    locationRequestOrigin = LocationRequestOrigin.JOIN_MESH
-                    requestLocationPermissionLauncher.launch(
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION
-                        )
-                    )
-                }
-            }
-        }
-		
-		// ========================================
-		// MERGE MESH BUTTON HANDLER
-		// ========================================
+				if (checkLocationPermissions()) {
+					expandPane(showCamera = true)
+					startQRScanning()
+				} else {
+					locationRequestOrigin = LocationRequestOrigin.JOIN_MESH
+					requestLocationPermissionLauncher.launch(
+						arrayOf(
+							Manifest.permission.ACCESS_FINE_LOCATION,
+							Manifest.permission.ACCESS_COARSE_LOCATION
+						)
+					)
+				}
+			}
+		}
+
 		MeshUIBindings.mergeMeshButton.setOnClickListener {
-            android.util.Log.d("EnhancedMeshFragment", "Merge Mesh button clicked")
-            
-            val meshStatus = meshrabiyaApi.meshStatusFlow.value
-            
-            // Safety check: Should only be enabled when CONNECTED, but verify
-            if (meshStatus != MeshStateDto.CONNECTED) {
+			android.util.Log.d("EnhancedMeshFragment", "Merge Mesh button clicked")
+
+			val meshStatus = meshrabiyaApi.meshStatusFlow.value
+
+			if (meshStatus != MeshStateDto.CONNECTED) {
 				android.util.Log.w("EnhancedMeshFragment", "Merge Mesh clicked but not CONNECTED (status=$meshStatus)")
 				view?.let { v ->
 					Snackbar.make(v, "Cannot merge - not connected to a mesh", Snackbar.LENGTH_SHORT).show()
 				}
 				return@setOnClickListener
 			}
-			
-			// Set mode: Merge (not join)
+
 			isJoinMeshMode = false
 			isMergeMeshMode = true
-			
-			// Expand pane and start camera for QR scanning
 			expandPane(showCamera = true)
 			startQRScanning()
 		}
-		
-		// ========================================
-        // WIFI INTERNET CONNECTION BUTTON HANDLER
-        // ========================================
-        MeshUIBindings.wifiApConnectionButton.setOnClickListener {
-            val wifiStatus = meshrabiyaApi.getNonMeshWifiStateFlow().value.status
-            if (wifiStatus.name == "CONNECTED") {
-                lifecycleScope.launch {
-                    meshrabiyaApi.disconnectFromNonMeshWifi()
-                }
-            } else {
-                showInternetWifiConnectionDialog()
-            }
-        }
 
-        // ========================================
-        // MESH EXTENDER AP BUTTON HANDLER
-        // ========================================
-        MeshUIBindings.meshExtenderApButton.setOnClickListener {
-            val currentState = meshrabiyaApi.meshExtenderHotspotStateFlow.value
-            if (currentState == MeshExtenderHotspotStateDto.ACTIVE) {
-                meshrabiyaApi.stopMeshExtenderHotspot { result ->
-                    if (result.isSuccess) {
-                        Log.i("EnhancedMeshFragment", "[EXTENDER] Mesh extender hotspot stopped")
-                    } else {
-                        Log.e("EnhancedMeshFragment", "[EXTENDER] Failed to stop: ${result.exceptionOrNull()?.message}")
-                    }
-                }
-            } else if (currentState == MeshExtenderHotspotStateDto.INACTIVE) {
-                meshrabiyaApi.startMeshExtenderHotspot { result ->
-                    if (result.isSuccess) {
-                        Log.i("EnhancedMeshFragment", "[EXTENDER] Mesh extender hotspot started")
-                    } else {
-                        Log.e("EnhancedMeshFragment", "[EXTENDER] Failed to start: ${result.exceptionOrNull()?.message}")
-                    }
-                }
-            }
-        }
+		MeshUIBindings.wifiApConnectionButton.setOnClickListener {
+			val wifiStatus = meshrabiyaApi.getNonMeshWifiStateFlow().value.status
+			if (wifiStatus.name == "CONNECTED") {
+				lifecycleScope.launch {
+					meshrabiyaApi.disconnectFromNonMeshWifi()
+				}
+			} else {
+				showInternetWifiConnectionDialog()
+			}
+		}
 
-		// ========================================
-		// CANCEL SCAN BUTTON HANDLER
-		// ========================================
+		MeshUIBindings.meshExtenderApButton.setOnClickListener {
+			val currentState = meshrabiyaApi.meshExtenderHotspotStateFlow.value
+			if (currentState == MeshExtenderHotspotStateDto.ACTIVE) {
+				meshrabiyaApi.stopMeshExtenderHotspot { result ->
+					if (result.isSuccess) {
+						Log.i("EnhancedMeshFragment", "[EXTENDER] Mesh extender hotspot stopped")
+					} else {
+						Log.e("EnhancedMeshFragment", "[EXTENDER] Failed to stop: ${result.exceptionOrNull()?.message}")
+					}
+				}
+			} else if (currentState == MeshExtenderHotspotStateDto.INACTIVE) {
+				meshrabiyaApi.startMeshExtenderHotspot { result ->
+					if (result.isSuccess) {
+						Log.i("EnhancedMeshFragment", "[EXTENDER] Mesh extender hotspot started")
+					} else {
+						Log.e("EnhancedMeshFragment", "[EXTENDER] Failed to start: ${result.exceptionOrNull()?.message}")
+					}
+				}
+			}
+		}
+
 		MeshUIBindings.cancelScanButton.setOnClickListener {
 			android.util.Log.d("EnhancedMeshFragment", "Cancel scan button clicked")
 			collapsePane()
 		}
-		
-		// ========================================
-		// TOGGLE FLASHLIGHT BUTTON HANDLER
-		// ========================================
+
 		MeshUIBindings.toggleFlashlightButton.setOnClickListener {
 			toggleFlashlight()
 		}
-		
-		// ========================================
-		// COPY NETWORK INFO BUTTON HANDLER
-		// ========================================
+
 		MeshUIBindings.copyNetworkInfoButton.setOnClickListener {
 			copyNetworkInfoToClipboard()
 		}
-		
-		// ========================================
-		// HEADER CLICK TO TOGGLE EXPANSION
-		// ========================================
-		MeshUIBindings.meshControlHeader.setOnClickListener {
-            val meshStatus = meshrabiyaApi.meshStatusFlow.value
-            val paneVisible = MeshUIBindings.meshExpandableContent.visibility == View.VISIBLE
 
-            if (paneVisible && (isJoinMeshMode || isMergeMeshMode)) {
-                // Pane is open for scanning — collapsing stops the join/merge process
-                collapsePane()
-            } else if (meshStatus == MeshStateDto.CONNECTED || meshStatus == MeshStateDto.CONNECTING) {
-                if (paneVisible) {
-                    collapsePane()
-                } else {
-                    // Show QR code (not camera)
-                    expandPane(showCamera = false)
-                    showCurrentNetworkQR()
-                }
-            }
-        }
+		MeshUIBindings.meshControlHeader.setOnClickListener {
+			val meshStatus = meshrabiyaApi.meshStatusFlow.value
+			val paneVisible = MeshUIBindings.meshExpandableContent.visibility == View.VISIBLE
+
+			if (paneVisible && (isJoinMeshMode || isMergeMeshMode)) {
+				collapsePane()
+			} else if (meshStatus == MeshStateDto.CONNECTED || meshStatus == MeshStateDto.CONNECTING) {
+				if (paneVisible) {
+					collapsePane()
+				} else {
+					expandPane(showCamera = false)
+					showCurrentNetworkQR()
+				}
+			}
+		}
 	}
 	
 	/**
@@ -1221,7 +1165,6 @@ class EnhancedMeshFragment : Fragment() {
 		if (!checkLocationPermissions()) {
 			android.util.Log.d("EnhancedMeshFragment", "Permissions not granted, requesting now")
 			locationRequestOrigin = LocationRequestOrigin.START_MESH
-			requestLocationPermissions()
 		}
 		requestLocationPermissionLauncher.launch(
 			arrayOf(
@@ -1555,66 +1498,73 @@ class EnhancedMeshFragment : Fragment() {
 	 * Only displays Join or Merge button based on state (not both)
 	 */
 	private fun updateButtonStates(meshStatus: MeshStateDto) {
-        // hide the mesh toggle on AP‑incapable devices, but keep processing
-        if (!meshrabiyaApi.isApCapable()) {
-            MeshUIBindings.meshToggleButton.visibility = View.GONE
-        } else {
-            MeshUIBindings.meshToggleButton.visibility = View.VISIBLE
-        }
+		// Guard: immediate views only until deferred cards are inflated.
+		// meshStatusFlow collector fires before ViewStub inflation completes —
+		// accessing any deferred lateinit var here crashes with
+		// UninitializedPropertyAccessException.
+		if (!deferredViewsInitialized) {
+			if (!meshrabiyaApi.isApCapable()) {
+				MeshUIBindings.meshToggleButton.visibility = View.GONE
+			} else {
+				MeshUIBindings.meshToggleButton.visibility = View.VISIBLE
+			}
+			MeshUIBindings.meshToggleButton.text = when (meshStatus) {
+				MeshStateDto.CONNECTED, MeshStateDto.CONNECTING -> "Stop Mesh"
+				else -> "Start Mesh"
+			}
+			MeshUIBindings.meshToggleButton.isEnabled =
+				meshStatus != MeshStateDto.INITIALIZING &&
+				meshStatus != MeshStateDto.ERROR &&
+				meshStatus != MeshStateDto.UNKNOWN
+			MeshUIBindings.sendBroadcastButton.isEnabled =
+				meshStatus == MeshStateDto.CONNECTED
+			return  // bail — deferred views not yet bound
+		}
 
-        android.util.Log.d("EnhancedMeshFragment", "[BUTTON_STATE] updateButtonStates called with status: $meshStatus")
-        when (meshStatus) {
-            MeshStateDto.DISCONNECTED -> {
-                MeshUIBindings.meshToggleButton.text = "Start Mesh"
-                MeshUIBindings.meshToggleButton.isEnabled = true
-				android.util.Log.d("EnhancedMeshFragment", "[BUTTON_STATE] DISCONNECTED - button enabled, text='Start Mesh'")
-				// Show only Join button when disconnected
+		// All deferred views are now safe to access.
+		if (!meshrabiyaApi.isApCapable()) {
+			MeshUIBindings.meshToggleButton.visibility = View.GONE
+		} else {
+			MeshUIBindings.meshToggleButton.visibility = View.VISIBLE
+		}
+
+		when (meshStatus) {
+			MeshStateDto.DISCONNECTED -> {
+				MeshUIBindings.meshToggleButton.text = "Start Mesh"
+				MeshUIBindings.meshToggleButton.isEnabled = true
 				MeshUIBindings.joinMeshButton.visibility = View.VISIBLE
 				MeshUIBindings.joinMeshButton.isEnabled = true
 				MeshUIBindings.mergeMeshButton.visibility = View.GONE
-				// Hide expand indicator when disconnected, unless extender hotspot is keeping it alive
-                val extenderActive = meshrabiyaApi.meshExtenderHotspotStateFlow.value == MeshExtenderHotspotStateDto.ACTIVE
-                MeshUIBindings.expandCollapseIndicator.visibility =
-                    if (extenderActive) View.VISIBLE else View.GONE
-                // Disable broadcast button when disconnected
-                MeshUIBindings.sendBroadcastButton.isEnabled = false
+				val extenderActive = meshrabiyaApi.meshExtenderHotspotStateFlow.value ==
+					MeshExtenderHotspotStateDto.ACTIVE
+				MeshUIBindings.expandCollapseIndicator.visibility =
+					if (extenderActive) View.VISIBLE else View.GONE
+				MeshUIBindings.sendBroadcastButton.isEnabled = false
 			}
 			MeshStateDto.CONNECTING -> {
 				MeshUIBindings.meshToggleButton.text = "Stop Mesh"
 				MeshUIBindings.meshToggleButton.isEnabled = true
-				android.util.Log.d("EnhancedMeshFragment", "[BUTTON_STATE] CONNECTING - button enabled, text='Stop Mesh', clickable=${MeshUIBindings.meshToggleButton.isClickable}")
-				// Hide both buttons while connecting
 				MeshUIBindings.joinMeshButton.visibility = View.GONE
 				MeshUIBindings.mergeMeshButton.visibility = View.GONE
-				// Show expand indicator for QR code when connecting/connected
 				MeshUIBindings.expandCollapseIndicator.visibility = View.VISIBLE
-				// Disable broadcast button while connecting
 				MeshUIBindings.sendBroadcastButton.isEnabled = false
 			}
 			MeshStateDto.CONNECTED -> {
 				MeshUIBindings.meshToggleButton.text = "Stop Mesh"
 				MeshUIBindings.meshToggleButton.isEnabled = true
-				android.util.Log.d("EnhancedMeshFragment", "[BUTTON_STATE] CONNECTED - button enabled, text='Stop Mesh'")
-				// Show only Merge button when connected
 				MeshUIBindings.joinMeshButton.visibility = View.GONE
 				MeshUIBindings.mergeMeshButton.visibility = View.VISIBLE
 				MeshUIBindings.mergeMeshButton.isEnabled = true
-				// Show expand indicator for QR code when connected
 				MeshUIBindings.expandCollapseIndicator.visibility = View.VISIBLE
-				// Enable broadcast button when CONNECTED
 				MeshUIBindings.sendBroadcastButton.isEnabled = true
 			}
 			MeshStateDto.INITIALIZING,
 			MeshStateDto.ERROR,
 			MeshStateDto.UNKNOWN -> {
 				MeshUIBindings.meshToggleButton.isEnabled = false
-				android.util.Log.d("EnhancedMeshFragment", "[BUTTON_STATE] ${meshStatus} - button DISABLED")
-				// Hide both buttons in error/unknown states
 				MeshUIBindings.joinMeshButton.visibility = View.GONE
 				MeshUIBindings.mergeMeshButton.visibility = View.GONE
-				// Hide expand indicator in error states
 				MeshUIBindings.expandCollapseIndicator.visibility = View.GONE
-				// Disable broadcast button in error states
 				MeshUIBindings.sendBroadcastButton.isEnabled = false
 			}
 		}
