@@ -1162,10 +1162,15 @@ class EnhancedMeshFragment : Fragment() {
 	 */
 	private fun requestLocationPermissions() {
 		android.util.Log.d("EnhancedMeshFragment", "Requesting location permissions")
-		if (!checkLocationPermissions()) {
-			android.util.Log.d("EnhancedMeshFragment", "Permissions not granted, requesting now")
-			locationRequestOrigin = LocationRequestOrigin.START_MESH
+
+		if (checkLocationPermissions()) {
+			android.util.Log.d("EnhancedMeshFragment", "Location permissions already granted")
+			startMeshWithPermissionCheck()
+			return
 		}
+
+		android.util.Log.d("EnhancedMeshFragment", "Permissions not granted, requesting now")
+		locationRequestOrigin = LocationRequestOrigin.START_MESH
 		requestLocationPermissionLauncher.launch(
 			arrayOf(
 				Manifest.permission.ACCESS_FINE_LOCATION,
