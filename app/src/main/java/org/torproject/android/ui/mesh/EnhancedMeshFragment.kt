@@ -12,6 +12,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.UUID
 import java.util.Locale
 import android.view.LayoutInflater
 import android.view.View
