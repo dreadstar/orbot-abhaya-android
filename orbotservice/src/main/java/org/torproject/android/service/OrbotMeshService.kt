@@ -30,7 +30,10 @@ class OrbotMeshService : Service() {
     
     // Reference to MeshrabiyaApi for mesh operations
     private lateinit var meshrabiyaApi: MeshrabiyaApiImpl
-    
+
+    // Mesh proxy controller — observes mesh state and triggers VPN rebuild
+    private var meshProxyController: MeshProxyController? = null
+
     // Section 8: Binder interface for client access
     private val binder = MeshBinder()
     
@@ -60,10 +63,14 @@ class OrbotMeshService : Service() {
         // Get MeshrabiyaApi singleton and initialize if needed
         meshrabiyaApi = MeshrabiyaApiImpl.getInstance()
         meshrabiyaApi.initMesh(applicationContext)
-        
+
+        // Start mesh proxy controller
+        meshProxyController = MeshProxyController(applicationContext, meshrabiyaApi)
+        meshProxyController?.start()
+
         // Section 8.3: Register Tor port broadcast receiver
         registerTorPortReceiver()
-        
+
         Log.i(TAG, "OrbotMeshService created and initialized")
     }
     
@@ -100,7 +107,9 @@ class OrbotMeshService : Service() {
         portsReceiver?.let {
             LocalBroadcastManager.getInstance(this).unregisterReceiver(it)
         }
-        
+
+        meshProxyController?.stop()
+        meshProxyController = null
         Log.i(TAG, "OrbotMeshService destroyed")
         super.onDestroy()
     }

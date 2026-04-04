@@ -10,6 +10,7 @@
       "text": "Use internal file manipulation tools (create_file, read_file, replace_string_in_file) instead of terminal commands whenever functionally equivalent. Terminal should only be used for builds, deployments, git operations, and tasks with no internal tool equivalent."
     }
   ],
+  "workbench.colorTheme": "GitHub Dark High Contrast",
   "github.copilot.chat.localeOverride": "en",
   "github.copilot.chat.scopeSelection": true
 }

@@ -161,6 +161,8 @@
     <string name="btn_configure">Choose How To Connect</string>
     <string name="trying_to_connect_title">Connecting…</string>
     <string name="btn_choose_apps">Choose apps</string>
+    <string name="btn_mesh_proxy_apps">Mesh Proxy Apps</string>
+    <string name="title_mesh_proxy_apps">Mesh Proxy Apps</string>
     <string name="btn_change_exit">Change exit</string>
     <string name="btn_refresh">Refresh</string>
     <string name="btn_tor_off">Turn Tor off</string>
@@ -300,4 +302,6 @@
     <string name="pref_password_only_no_biometric_description">This forces Orbot Authentication to only require your device\'s password even if biometric authentication, such as fingerprint or face unlock, are configured on your device.</string>
     <string name="run_smart_connect_">Run Smart Connect to find the best way</string>
     <string name="scan_qr_code">Scan QR Code</string>
+    <!-- WiFi Internet Connection feature (WIFI_AP_CON) -->
+    <string name="wifi_internet">WiFi</string>
 </resources>

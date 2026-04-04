@@ -81,6 +81,26 @@ public class OrbotService extends VpnService {
     Handler mHandler;
     ActionBroadcastReceiver mActionBroadcastReceiver;
     protected String mCurrentStatus = STATUS_OFF;
+    private android.os.PowerManager.WakeLock mTorWakeLock;
+
+    private void acquireTorWakeLock() {
+        if (mTorWakeLock == null || !mTorWakeLock.isHeld()) {
+            android.os.PowerManager pm =
+                (android.os.PowerManager) getSystemService(POWER_SERVICE);
+            mTorWakeLock = pm.newWakeLock(
+                android.os.PowerManager.PARTIAL_WAKE_LOCK,
+                "orbot:TorVpnLock"
+            );
+            mTorWakeLock.acquire();
+        }
+    }
+
+    private void releaseTorWakeLock() {
+        if (mTorWakeLock != null && mTorWakeLock.isHeld()) {
+            mTorWakeLock.release();
+        }
+        mTorWakeLock = null;
+    }
     TorControlConnection conn = null;
     private ServiceConnection torServiceConnection;
     private boolean shouldUnbindTorService;
@@ -150,7 +170,9 @@ public class OrbotService extends VpnService {
                         .setTicker(notifyType != NOTIFY_ID ? notifyMsg : null);
             }
         }
-        ServiceCompat.startForeground(this, NOTIFY_ID, mNotifyBuilder.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED);
+        ServiceCompat.startForeground(this, NOTIFY_ID, mNotifyBuilder.build(),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE |
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
     }
 
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -379,6 +401,15 @@ public class OrbotService extends VpnService {
                 }
 
                 mVpnManager = new OrbotVpnManager(this);
+                // Register receiver so mesh proxy state changes rebuild the VPN
+                LocalBroadcastHelper.registerReceiver(this, new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        if (mVpnManager != null) {
+                            mVpnManager.handleIntent(new Builder(), intent);
+                        }
+                    }
+                }, new IntentFilter(OrbotConstants.LOCAL_ACTION_MESH_PROXY_CHANGED));
                 loadCdnFronts(this);
             } catch (Exception e) {
                 Log.e(TAG, "Error setting up Orbot", e);
@@ -738,10 +769,15 @@ public class OrbotService extends VpnService {
     // system calls this method when VPN disconnects (either by the user or another VPN app)
     @Override
     public void onRevoke() {
-        Prefs.putUseVpn(false);
+        // onRevoke() is called by the OS when the VPN is revoked externally (Doze,
+        // another VPN app, permission revocation). It is NOT a user-initiated stop.
+        // Do NOT write Prefs.putUseVpn(false) here — that permanently destroys the
+        // user's intent and is the direct cause of "Orbot is deactivated" on unlock.
+        // The WakeLock is released here because the tunnel is gone regardless.
+        releaseTorWakeLock();
         mVpnManager.handleIntent(new Builder(), new Intent(ACTION_STOP_VPN));
-    // tell UI, if it's open, to update immediately (don't wait for onResume() in Activity...)
-    LocalBroadcastHelper.sendLocalBroadcast(this, new Intent(ACTION_STOP_VPN));
+        // tell UI to show CONNECTING (not OFF) — Orbot will attempt to reconnect
+        LocalBroadcastHelper.sendLocalBroadcast(this, new Intent(ACTION_START_VPN));
     }
 
     private void setExitNode(String newExits) {
@@ -791,6 +827,20 @@ public class OrbotService extends VpnService {
                     var transport = Prefs.getTransport();
                     transport.start(OrbotService.this);
 
+                    // Prompt for battery optimization whitelist if not already granted.
+                    // Without this, OEM killers (Samsung, Xiaomi, Huawei) terminate the
+                    // service during Doze before the WakeLock can protect it.
+                    android.os.PowerManager batteryPm =
+                        (android.os.PowerManager) getSystemService(POWER_SERVICE);
+                    if (!batteryPm.isIgnoringBatteryOptimizations(getPackageName())) {
+                        android.content.Intent batteryIntent = new android.content.Intent(
+                            android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+                        );
+                        batteryIntent.setData(android.net.Uri.parse("package:" + getPackageName()));
+                        batteryIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(batteryIntent);
+                    }
+
                     startTor();
                     replyWithStatus(mIntent);
                     if (Prefs.useVpn()) {
@@ -798,6 +848,7 @@ public class OrbotService extends VpnService {
                             Intent vpnIntent = VpnService.prepare(OrbotService.this);
                             if (vpnIntent == null) { //then we can run the VPN
                                 mVpnManager.handleIntent(new Builder(), mIntent);
+                                acquireTorWakeLock(); // hold CPU awake for VPN lifetime
                             }
                         }
 
@@ -809,6 +860,7 @@ public class OrbotService extends VpnService {
                     var userIsQuittingOrbot = mIntent.getBooleanExtra(ACTION_STOP_FOREGROUND_TASK, false);
                     // When user cancels connecting, make sure, the SmartConnect timer is also cancelled.
                     SmartConnect.cancel();
+                    releaseTorWakeLock(); // user-initiated stop — release CPU lock
                     stopTorAsync(!userIsQuittingOrbot);
                 }
                 case ACTION_UPDATE_ONION_NAMES -> updateV3OnionNames();
@@ -819,6 +871,7 @@ public class OrbotService extends VpnService {
                         var vpnIntent = VpnService.prepare(OrbotService.this);
                         if (vpnIntent == null) { //then we can run the VPN
                             mVpnManager.handleIntent(new Builder(), mIntent);
+                            acquireTorWakeLock(); // hold CPU awake for VPN lifetime
                         }
                     }
                     if (mPortSOCKS != -1 && mPortHTTP != -1)

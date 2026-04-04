@@ -153,7 +153,7 @@ This rule is enforced through:
 ---
 
 ## LARGE FILE MANUAL EDIT RULE (2026-02-02)
-
+**TAG: BOILERPLATE
 **RULE: For any file exceeding 800 lines, agents must NOT attempt direct edits using replace_string_in_file or multi_replace_string_in_file tools.**
 
 When a file is longer than 800 lines and requires modification, agents must:
@@ -195,7 +195,7 @@ When a file is longer than 800 lines and requires modification, agents must:
 ---
 
 ## 🚨 MANDATORY CODE VERIFICATION BEFORE GENERATION (2026-02-13)
-
+**TAG: BOILERPLATE
 **CRITICAL RULE: NEVER write code fixes or proposals WITHOUT reading the actual current code first.**
 
 This rule has been violated REPEATEDLY. Each violation wastes user time and breaks trust.
@@ -256,7 +256,7 @@ This rule has been violated REPEATEDLY. Each violation wastes user time and brea
   1. **Perform exhaustive, codebase-driven research** to verify the existence, location, and signature of every class, method, property, and integration point referenced in the plan.
   2. **Enumerate every file, field, and method** to be created or modified, specifying exact file paths and code snippets or signatures.
   3. **Describe all wiring and propagation steps** (e.g., DTO conversion, StateFlow updates, UI observer changes) with concrete, code-level details.
-  4. **Explicitly state any assumptions** and verify them with codebase evidence before including them in the plan.
+  4. **Explicitly ssupport all statements with evidence and verify them with codebase evidence on disk before including them in the plan.
   5. **Never omit or generalize steps**—all logic, data flow, and integration must be described at the level of actual code changes, not just high-level intent.
   6. **Append new plans** to existing documentation without erasing or replacing prior content, unless explicitly instructed.
   7. **Cite verification steps** for every referenced symbol, showing that each has been checked for existence and correctness.
@@ -268,7 +268,7 @@ Guarantee that every plan is actionable, codebase-verified, and ready for direct
 ---
 
 ## NEVER ASSUME USER ERROR - CRITICAL RULE (2026-01-23)
-
+**TAG: BOILERPLATE
 **RULE: NEVER assume the user made a testing error (not rebuilding, not deploying, cached build, wrong QR code, improper procedure, etc.)**
 
 - If you think the user may not have rebuilt/deployed correctly, perform a DEEPER ANALYSIS of the actual issue instead of asking
@@ -304,7 +304,7 @@ Guarantee that every plan is actionable, codebase-verified, and ready for direct
 ---
 
 ## PATCH ANCHORING AND IMPORT PLACEMENT RULE (2025-12-100)
-
+**TAG: BOILERPLATE
 ### 100. PATCH ANCHORING FOR ALL CODE EDITS
 
 **RULE: All code patches, regardless of language or tool, MUST anchor new code insertions and edits to the correct syntactic location in the file.**
@@ -328,6 +328,7 @@ Guarantee that every plan is actionable, codebase-verified, and ready for direct
   - Refuse to insert imports or code before the package/module declaration.
   - Refuse to insert code at the file's start unless it is valid for the language.
   - If the patch context is ambiguous, the agent must re-read the file and anchor the patch explicitly after the package/module declaration.
+  - ensure any replacmeent is unique meaning it will only cause a single change
 
 ### 400. GENERALIZATION
 
@@ -377,7 +378,7 @@ Guarantee that every plan is actionable, codebase-verified, and ready for direct
 **Date Added:** 2025-12-10
 **Trigger:** Multiple build failures and syntax errors due to imports/code being placed before the package line by patch tools and agents.
 ## IMPLEMENTATION VERIFICATION BEFORE CODE GENERATION PROTOCOL (2025-12-06)
-
+**TAG: BOILERPLATE
 **CRITICAL: Before writing ANY implementation code, agents MUST verify the actual current state of all touchpoints.**
 
 When planning or implementing code that refactors existing functionality or integrates with existing APIs:
@@ -488,7 +489,7 @@ This protocol eliminates the discrepancy between planned implementations and act
 ---
 
 ## MANDATORY PRE-EDIT VERIFICATION PROTOCOL (2026-02-19)
-
+**TAG: BOILERPLATE
 **RULE: Before ANY code edit (regardless of file size), agents MUST perform literal verification of ALL code to be modified AND verify pattern uniqueness.**
 
 This protocol extends and refines the "IMPLEMENTATION VERIFICATION BEFORE CODE GENERATION PROTOCOL" by adding explicit pattern testing requirements.
@@ -649,6 +650,41 @@ Mandatory pattern testing catches these issues BEFORE executing edits:
 **Intent:**
 This protocol transforms code editing from "guess and retry" into "verify and execute once." Every edit is preceded by verification that the pattern is correct, unique, and will change exactly what's intended. The pattern uniqueness requirement (Step 3) is the critical addition that prevents the most common edit failures: multi-location matches and whitespace mismatches.
 
+---
+
+## CHANGES  RULE  alias:BEFORE/AFTER SNIPPET REQUIREMENT RULE (2026-03-07)
+
+**RULE:** Any agent response that produces or proposes *code changes*,
+*solutions*, *patches*, or any equivalent modifications **must** include the
+following in the same message:
+
+1. **Literal verification**: the agent must read the current file(s) involved
+   using `read_file` and confirm the exact text to be replaced exists on disk.
+2. **BEFORE and AFTER snippets**: show the entire code segment before the
+   change and the entire code segment after the change, with no ellipses or
+   truncation.  Snippets must include all surrounding context lines used to
+   anchor the edit.
+3. **File path and line numbers**: each snippet must be annotated with the
+   absolute file path and the start–end line numbers of the region being
+   modified.
+4. **Pattern uniqueness check**: run `grep_search` on the target file using the
+   BEFORE text and ensure exactly one match; extend context if necessary.
+5. **Evidence-based statements**: any claim about where a change belongs or
+   what code contains must cite the line numbers or grep results from the
+   workspace; guesses are prohibited.
+
+This rule applies to every request that would normally return code or
+suggested edits.  Violations of this rule constitute a failure to comply with
+workspace standards and must be corrected before any code is actually
+introduced.
+
+**Intent:** Guarantee that all proposed code modifications are fully
+specified and verifiable, enabling developers to implement them manually or
+automatically without ambiguity.
+
+**Date Added:** 2026-03-07  
+**Trigger:** User requirement to formalize BEFORE/AFTER snippet protocol.
+
 **Date Added:** 2026-02-19  
 **Trigger:** User asked how to memorialize the verification steps that made large file edits succeed. Analysis revealed pattern uniqueness testing was the missing enforcement mechanism. User refined rule to include explicit pattern testing requirement.
 
@@ -706,6 +742,471 @@ Before updating or creating a KNOWLEDGE document, check the current date to be c
 
 # AGENTS.md - Operational Protocols for AI Agents
 
+# Mandatory Debug & Patch Strategy
+
+---
+
+## INVOCATION SYNTAX
+
+Every invocation of this strategy must specify an explicit mode. The mode controls what the agent is permitted to do. There are exactly two modes:
+
+```
+"Use the debug strategy to INVESTIGATE X"   → MODE: INFORMATIONAL
+"Use the debug strategy to PATCH X"         → MODE: PATCH
+```
+
+If no mode keyword is present, the agent must default to **MODE: INFORMATIONAL** and state this explicitly at the start of its response.
+
+The active mode must be printed at the top of every response:
+
+```
+ACTIVE MODE: INFORMATIONAL  [no file mutations permitted]
+  — or —
+ACTIVE MODE: PATCH  [file mutations permitted only on explicit BEFORE/AFTER delivery]
+```
+
+The mode cannot change mid-response. If the user changes the mode, it takes effect on the next response only.
+
+---
+
+## PRIME DIRECTIVE
+
+**All agent understanding comes exclusively from live code reads.**
+
+Agents must never read, reference, cite, or draw conclusions from:
+- Any `.md` file of any name (including this file)
+- Inline code comments (`//`, `/* */`, `/** */`)
+- File names or directory names interpreted as documentation
+- Any `README`, `CHANGELOG`, `CONTRIBUTING`, or documentation file of any format
+
+The only valid sources of truth are:
+- The literal content of `.kt`, `.java`, `.xml`, `.gradle`, `.json`, `.yaml` source files read by tool
+- Live tool output: build logs, grep results, file reads, compiler errors
+- Error messages from authoritative log files supplied by the user
+
+If a fact cannot be established from a live source-code tool read, the agent must write:
+
+```
+UNVERIFIED: [fact] — cannot proceed without live code read
+```
+
+and perform the read before continuing. It must never proceed past an unverified fact.
+
+---
+
+## EXECUTION MODE STATE MACHINE
+
+The agent's behaviour is fully determined by the active mode. The state machine is:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  STATE: INFORMATIONAL                                           │
+│                                                                 │
+│  PERMITTED:                                                     │
+│    • Read source files (read-only tool calls)                   │
+│    • Search the codebase (grep, search tools)                   │
+│    • Read build logs and error output                           │
+│    • Produce Phase 0-9 analysis and candidate BEFORE/AFTER text │
+│    • State findings, root causes, and proposed patch text       │
+│                                                                 │
+│  PROHIBITED:                                                    │
+│    • Any file-write, file-edit, or file-create tool call        │
+│    • Any file-delete tool call                                  │
+│    • Asking the user for permission to proceed                  │
+│    • Asking the user any clarifying question                    │
+│    • Offering the user choices about next steps                 │
+│    • Writing "shall I apply this?" or any equivalent phrase     │
+│                                                                 │
+│  TRANSITION TO PATCH: only on exact phrase "apply patch"        │
+│    from the user in a new message                               │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│  STATE: PATCH                                                   │
+│                                                                 │
+│  PERMITTED:                                                     │
+│    • Everything permitted in INFORMATIONAL                      │
+│    • File-write/edit/create tool calls, ONLY for files and      │
+│      line ranges explicitly identified in a delivered           │
+│      BEFORE/AFTER snippet in a prior response                   │
+│                                                                 │
+│  PROHIBITED:                                                    │
+│    • Editing any file not covered by a prior BEFORE/AFTER       │
+│    • Editing beyond the line range in the prior snippet         │
+│    • Asking the user for permission mid-patch                   │
+│    • Stopping mid-patch to ask questions                        │
+│                                                                 │
+│  TRANSITION BACK TO INFORMATIONAL: on any new "investigate"     │
+│    invocation, or at start of next conversation turn            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Violation of mode boundaries is a critical process failure.** If the agent detects it has violated a mode boundary (e.g., made a file edit while in INFORMATIONAL mode), it must:
+1. State the violation explicitly: `PROCESS VIOLATION: [what happened]`
+2. Undo the action if possible
+3. Continue in the correct mode
+
+---
+
+## MANDATORY RESPONSE HEADER
+
+Every response must open with the following header block, fully populated, before any other content:
+
+```
+═══════════════════════════════════════════════════════
+ACTIVE MODE    : [INFORMATIONAL | PATCH]
+CURRENT PHASE  : [phase name and number]
+ERRORS IN SCOPE: [N from Phase 0, or "Phase 0 not yet run"]
+TOOL CALLS MADE: [list of read/search calls made this turn, or NONE]
+FILE MUTATIONS : [NONE | list of files mutated — PATCH mode only]
+═══════════════════════════════════════════════════════
+```
+
+A response without this header does not conform to this strategy.
+
+After the header, the agent proceeds through phases in order. It must print a phase banner before each phase:
+
+```
+━━━ PHASE N — [PHASE NAME] ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+## PHASE 0 — Error Enumeration
+
+**Trigger:** First phase of every invocation. Must complete before any other phase begins.
+
+1. Read the authoritative error source (build log, logcat, crash dump) in full via tool.
+2. Produce a numbered list of every distinct error. Each entry must contain:
+   ```
+   ERROR #N
+     Message : [verbatim compiler/runtime message — no paraphrasing]
+     File    : [absolute path from error output]
+     Line    : [line number from error output]
+     Symbol  : [the type, method, or property the error implicates]
+     Status  : [ ] UNRESOLVED
+   ```
+3. Every distinct error gets its own entry. No grouping. No merging. No paraphrasing.
+4. The error count is locked at the end of this phase. New errors discovered in later phases are appended as `ERROR #N+1` and the pipeline restarts from Phase 1 for those errors only.
+
+**Phase gate — must print before proceeding:**
+```
+PHASE 0 COMPLETE — [N] errors enumerated
+```
+
+---
+
+## PHASE 1 — Symbol and Type Verification
+
+**Trigger:** After Phase 0. Run for every symbol, type, method, property, or DTO from every Phase 0 error entry.
+
+For each implicated symbol:
+
+1. Execute a literal codebase search for its declaration via tool.
+2. Read the declaration file directly via tool. Record:
+   ```
+   VERIFIED: [SymbolName]
+     File      : absolute/path/to/File.kt
+     Line      : N
+     Kind      : [class | data class | interface | fun | property | enum]
+     Signature : [full signature as written in source]
+     Properties: [full list, if class or data class]
+     Package   : [package declaration from top of file]
+   ```
+3. For every conversion function (`.toDto()`, `.toInternal()`, `.toHash()`, any mapping extension):
+   - Search for its declaration via tool
+   - Record input type, output type, file, line
+   - If not found: write `MISSING: [functionName] — not found in codebase` and add as a new ERROR entry in Phase 0
+4. Never assume existence. A search with no results means the symbol does not exist.
+
+**Phase gate — must print before proceeding:**
+```
+PHASE 1 COMPLETE — [N] symbols verified, [M] missing
+```
+
+---
+
+## PHASE 2 — Overload and Lambda Signature Verification
+
+**Trigger:** After Phase 1. Run for every higher-order function call in the affected region.
+
+Applies to: `combine`, `map`, `flatMap`, `collect`, `collectLatest`, `onEach`, `filter`, `fold`, `zip`, `stateIn`, `shareIn`, `transform`, `runCatching`, `let`, `also`, `apply`, `run`, and any function that accepts a lambda parameter.
+
+For each such call:
+
+1. Search for and read the declaration of the specific overload matched by arity via tool.
+2. Record:
+   ```
+   OVERLOAD VERIFIED: [functionName]([arg types])
+     Declaration file : absolute/path/to/File.kt
+     Line             : N
+     Lambda expects   : ([param1: Type1, param2: Type2, ...]) -> ReturnType
+     Vararg form      : [yes — receives Array<Any?> | no]
+   ```
+3. Compare the lambda in the existing or proposed code against this record. Any mismatch in parameter count, type, or destructuring form is flagged:
+   ```
+   LAMBDA MISMATCH: [functionName] — expected ([types]) got ([types])
+   ```
+   The lambda must be rewritten to match the verified signature. No snippet may be produced until this is resolved.
+
+**Phase gate — must print before proceeding:**
+```
+PHASE 2 COMPLETE — [N] overloads verified, [M] lambda mismatches corrected
+```
+
+---
+
+## PHASE 3 — Import and Reference Validation
+
+**Trigger:** After Phase 2.
+
+1. Read the import block at the top of each affected file via tool.
+2. For every type or function used in the affected region: confirm its import is present.
+3. For every import currently present: confirm it is still used after the proposed change.
+4. Record:
+   ```
+   IMPORTS TO ADD    : [list of fully qualified import statements]
+   IMPORTS TO REMOVE : [list of fully qualified import statements no longer used]
+   IMPORTS CONFIRMED : [list of imports confirmed present and used]
+   ```
+
+**Phase gate — must print before proceeding:**
+```
+PHASE 3 COMPLETE
+```
+
+---
+
+## PHASE 4 — Extension Function Verification
+
+**Trigger:** After Phase 3. Only runs if the proposed change introduces or modifies an extension function. Otherwise skip with gate message.
+
+1. Search the codebase for an existing extension function on the same receiver type. Record file path and line number.
+2. Read the found extension function and note its exact syntactic form.
+3. Verify the proposed function:
+   - Uses idiomatic Kotlin: `fun ReceiverType.functionName(): ReturnType { ... }`
+   - Has a complete, non-empty body
+   - Does not use a fully qualified receiver type
+   - Receiver type is imported in the target file
+4. If any check fails: write `EXTENSION FUNCTION BLOCKED — [reason]` and find an alternative approach that does not use an extension function.
+
+**Phase gate — must print before proceeding:**
+```
+PHASE 4 COMPLETE — [N] extension functions verified
+  — or —
+PHASE 4 SKIPPED — no extension functions in scope
+```
+
+---
+
+## PHASE 5 — Pattern Uniqueness Check
+
+**Trigger:** After Phase 4. Runs for every BEFORE snippet before it is written into the response.
+
+1. Take the most distinctive 3–5 contiguous lines from the proposed BEFORE snippet.
+2. Search the entire file for that exact sequence via tool.
+3. The search must return exactly one match.
+4. If zero matches: the snippet does not match the actual file content — re-read the file and correct the snippet before retrying.
+5. If more than one match: extend the anchor sequence until it is unique.
+
+Record for each snippet:
+```
+UNIQUENESS CHECK: [first 3 lines of anchor, abbreviated]
+  Search result : [1 match — PASS | 0 matches — FAIL | N matches — FAIL]
+  Action taken  : [PASS | re-read file and corrected | extended anchor to N lines]
+```
+
+**Phase gate — must print before proceeding:**
+```
+PHASE 5 COMPLETE — all BEFORE snippets confirmed unique
+```
+
+---
+
+## PHASE 6 — Before/After Snippet Delivery
+
+**Trigger:** After Phase 5. Primary delivery phase.
+
+**In INFORMATIONAL mode:** snippets are candidate text only. No file is mutated.
+**In PATCH mode:** snippets define the exact scope of every permitted file mutation.
+
+Every proposed change must be a complete BEFORE/AFTER pair in this exact format:
+
+```
+FILE: absolute/path/to/File.kt
+LINES: N–M  (full region including context)
+
+━━━ BEFORE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[minimum 5 lines of verbatim unmodified context before the change]
+[the lines being changed, exactly as they appear in the file]
+[minimum 5 lines of verbatim unmodified context after the change]
+
+━━━ AFTER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[same 5 lines of verbatim unmodified context]
+[the replacement lines, fully written out]
+[same 5 lines of verbatim unmodified context]
+```
+
+Mandatory rules:
+- Context lines must be verbatim from the file — no paraphrasing, no `// ...`, no ellipses
+- AFTER must reflect all import additions and removals from Phase 3
+- No stubs, `...`, or placeholder TODOs in AFTER unless the TODO existed in BEFORE and is outside the changed lines
+- Every Phase 0 error must have a corresponding snippet pair or an explicit `NO SNIPPET REQUIRED — [reason from code]`
+- Snippets must be delivered in the same response as the analysis — never in a follow-up
+
+**Phase gate — must print before proceeding:**
+```
+PHASE 6 COMPLETE — [N] snippet pairs delivered
+```
+
+---
+
+## PHASE 7 — Upstream and Downstream Impact Tracing
+
+**Trigger:** After Phase 6.
+
+1. **Downstream (callees):** For every new function call, property access, or type reference introduced in any AFTER snippet: verify existence via Phase 1 rules.
+2. **Upstream (callers):** For every function or property whose signature was changed: search the codebase for all call sites via tool. For each call site:
+   - Read the call site via tool
+   - Confirm compatibility with the new signature
+   - If incompatible: add as `ERROR #N+1` in Phase 0 and produce a snippet pair
+3. Any new error discovered restarts the pipeline from Phase 1 for that error.
+
+Record:
+```
+DOWNSTREAM VERIFIED : [list of new callees confirmed to exist, file:line each]
+UPSTREAM CALL SITES : [file:line — COMPATIBLE | NEW ERROR #N]
+```
+
+**Phase gate — must print before proceeding:**
+```
+PHASE 7 COMPLETE — [N] upstream callers checked, [M] new errors escalated
+```
+
+---
+
+## PHASE 8 — Structural and Syntax Validation
+
+**Trigger:** After Phase 7. Runs for every AFTER snippet.
+
+1. Count `{` and `}` — must balance within the snippet and within the full enclosing function.
+2. Count `(` and `)` — must balance on every expression line.
+3. Verify every coroutine builder (`launch {`, `async {`, `withContext {`) has a matching `}`.
+4. Verify every `collect {`, `combine(...) {`, `onEach {`, `map {` lambda is closed.
+5. Verify every `if`, `when`, `for`, `while` block is closed.
+6. Verify every `override fun` signature matches the interface or superclass declaration — read that declaration via tool.
+7. Verify no line ends with a dangling binary operator (`&&`, `||`, `+`, `.`, `->`) without a continuation on the next line.
+
+Any failure: rewrite the AFTER snippet and repeat this phase for that snippet.
+
+Record for each snippet:
+```
+SYNTAX VALIDATION: File.kt LINES N–M
+  Brace balance  : [PASS | FAIL — detail]
+  Paren balance  : [PASS | FAIL — detail]
+  Lambda closures: [PASS | FAIL — detail]
+  Override check : [PASS | SKIPPED — no overrides | FAIL — detail]
+  Dangling ops   : [PASS | FAIL — detail]
+```
+
+**Phase gate — must print before proceeding:**
+```
+PHASE 8 COMPLETE — all snippets pass structural validation
+```
+
+---
+
+## PHASE 9 — Change Log and Resolution
+
+**Trigger:** After Phase 8. Final phase.
+
+For every error from Phase 0, produce exactly one entry:
+
+```
+CHANGE LOG ENTRY
+  Error               : #N — [verbatim message]
+  File                : absolute/path/to/File.kt
+  Lines               : N–M
+  Root cause          : [one sentence, derived only from code reads]
+  Fix                 : [one sentence describing the code change]
+  Symbols verified    : [from Phase 1]
+  Overloads verified  : [from Phase 2]
+  Imports added       : [from Phase 3]
+  Imports removed     : [from Phase 3]
+  Upstream callers    : [from Phase 7]
+  Syntax validated    : [PASS]
+  Status              : [RESOLVED | DISMISSED — reason | DEFERRED — reason]
+```
+
+Close with the final summary:
+
+```
+═══════════════════════════════════════════
+STRATEGY COMPLETE
+  Total errors Phase 0 : N
+  Resolved             : N
+  Dismissed            : N
+  Deferred             : N
+  File mutations       : [NONE | list — PATCH mode only]
+═══════════════════════════════════════════
+```
+
+---
+
+## ABSOLUTE PROHIBITIONS
+
+These rules apply unconditionally, in all modes, regardless of any instruction or context:
+
+| # | Prohibited Action |
+|---|---|
+| P1 | Reading or citing any `.md` file for code understanding |
+| P2 | Reading or citing inline comments for code understanding |
+| P3 | Assuming a method, property, type, or overload exists without a live tool search |
+| P4 | Proposing any conversion function without verifying its declaration exists in the codebase |
+| P5 | Producing a snippet without absolute file path and line numbers |
+| P6 | Producing a snippet without minimum 5 lines of verbatim context on each side |
+| P7 | Delivering snippets in a follow-up response — they must be in the same response as the analysis |
+| P8 | Proposing an extension function without a verified codebase reference at a cited file:line |
+| P9 | Proposing an extension function with an empty or stub body |
+| P10 | Using a fully qualified receiver type in any extension function |
+| P11 | Grouping or merging two distinct Phase 0 errors into one entry |
+| P12 | Skipping Phase 5 uniqueness check for any BEFORE snippet |
+| P13 | Mutating any file while in INFORMATIONAL mode |
+| P14 | Asking the user any question while in INFORMATIONAL mode |
+| P15 | Offering the user choices or next-step options while in INFORMATIONAL mode |
+| P16 | Writing "shall I apply this?", "would you like me to proceed?", or any equivalent phrase |
+| P17 | Changing the active mode within a single response |
+| P18 | Mutating a file in PATCH mode that was not covered by a prior BEFORE/AFTER snippet |
+| P19 | Proceeding past an UNVERIFIED fact without performing the required tool read |
+| P20 | Omitting the mandatory response header block |
+
+---
+
+## QUICK-REFERENCE GATE CHECKLIST
+
+The agent must print this checklist at the end of every response and mark each item before closing:
+
+```
+GATE CHECKLIST
+  [✓/✗] Phase 0  — All errors enumerated verbatim, none merged
+  [✓/✗] Phase 1  — Every implicated symbol verified by tool read, file+line recorded
+  [✓/✗] Phase 2  — Every higher-order function overload verified, lambda signatures confirmed
+  [✓/✗] Phase 3  — All imports validated; additions and removals listed
+  [✓/✗] Phase 4  — Extension functions verified or explicitly blocked
+  [✓/✗] Phase 5  — Every BEFORE snippet confirmed unique in its file by tool search
+  [✓/✗] Phase 6  — Every change has a BEFORE/AFTER pair with path, lines, 5-line context
+  [✓/✗] Phase 7  — Upstream callers read and confirmed compatible or escalated
+  [✓/✗] Phase 8  — All AFTER snippets pass brace/paren/override/syntax validation
+  [✓/✗] Phase 9  — Change log complete; every Phase 0 error RESOLVED/DISMISSED/DEFERRED
+  [✓/✗] MODE     — No prohibited actions taken for active mode
+  [✓/✗] HEADER   — Response opened with mandatory mode/phase/tool header block
+```
+
+Any `✗` item means the response is incomplete. The agent must resolve it before the response ends.
+
+**Date Added:** 2026-03-18
+**Trigger:** User mandate to formalize a professional, iterative, error-driven debugging and patching methodology after incomplete fixes and missed errors.
+
 ## STATEMENT VERACITY RULE (2025-11-21)
 Agents must never present a claim about code structure, type existence, or file location as fact unless it is verified by direct codebase search or literal file read.
 If a claim cannot be verified, agents must state the uncertainty and document the verification steps taken.
@@ -723,7 +1224,7 @@ This document defines the effective operational rules and protocols for all AI a
 ## 🚨 CRITICAL AGENT PROTOCOLS (HIGHEST PRIORITY)
 
 ### 0. MINIMIZE TERMINAL INTERACTIONS - USE INTERNAL TOOLS FIRST (2026-02-16)
-
+**TAG: BOLIERPLATE
 **RULE: Agents MUST prefer internal file manipulation tools over terminal commands whenever functionally equivalent.**
 
 **Rationale:**

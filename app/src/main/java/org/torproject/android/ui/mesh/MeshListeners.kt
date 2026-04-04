@@ -19,10 +19,7 @@ object MeshListeners {
             // Simulate internet sharing toggle
             android.util.Log.d("MeshListeners", "Simulate setInternetSharing($isChecked)")
         }
-        MeshUIBindings.refreshButton.setOnClickListener {
-            // Simulate refresh mesh/gateway/storage state
-            android.util.Log.d("MeshListeners", "Simulate refreshStatus()")
-        }
+        
         MeshUIBindings.meshToggleButton.setOnClickListener {
             // Simulate mesh network toggle
             android.util.Log.d("MeshListeners", "Simulate toggleMeshNetwork()")

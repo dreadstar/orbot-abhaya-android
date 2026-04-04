@@ -61,6 +61,10 @@ public class OrbotVpnManager implements Handler.Callback {
     private ParcelFileDescriptor mInterface;
     private int mTorSocks = -1;
     private int mTorDns = -1;
+    // Mesh proxy mode state (set via LOCAL_ACTION_MESH_PROXY_CHANGED)
+    private boolean mMeshProxyActive = false;
+    private int mMeshProxySocks = 0;
+    private java.util.Set<String> mMeshProxyPackages = new java.util.HashSet<>();
     private final VpnService mService;
     private final SharedPreferences prefs;
     private DNSResolver mDnsResolver;
@@ -110,6 +114,20 @@ public class OrbotVpnManager implements Handler.Callback {
                             mTorDns = torDns;
 
                             setupTun2Socks(builder);
+                        }
+                    }
+                    case OrbotConstants.LOCAL_ACTION_MESH_PROXY_CHANGED -> {
+                        Log.d(TAG, "mesh proxy state changed");
+                        mMeshProxyActive = intent.getBooleanExtra(OrbotConstants.EXTRA_MESH_PROXY_ACTIVE, false);
+                        mMeshProxySocks = intent.getIntExtra(OrbotConstants.EXTRA_MESH_PROXY_SOCKS_PORT, 0);
+                        var packages = intent.getStringArrayListExtra(OrbotConstants.EXTRA_MESH_PROXY_PACKAGES);
+                        mMeshProxyPackages = packages != null ? new java.util.HashSet<>(packages) : new java.util.HashSet<>();
+                        if (mMeshProxyActive && mMeshProxySocks > 0) {
+                            Log.d(TAG, "activating mesh proxy VPN with " + mMeshProxyPackages.size() + " apps via SOCKS port " + mMeshProxySocks);
+                            setupTun2Socks(builder);
+                        } else if (!mMeshProxyActive && isStarted) {
+                            // Revert to normal state (will be restarted by Tor on next LOCAL_ACTION_PORTS)
+                            stopVPN();
                         }
                     }
                 }
@@ -200,7 +218,12 @@ public class OrbotVpnManager implements Handler.Callback {
                     .setBlocking(true);
 
             mInterface = builder.establish();
-            mDnsResolver = new DNSResolver(mTorDns);
+            if (mMeshProxyActive && mMeshProxySocks > 0) {
+                // Mesh proxy mode: DNS handled by go-tun2socks via mesh SOCKS5
+                mDnsResolver = null;
+            } else {
+                mDnsResolver = new DNSResolver(mTorDns);
+            }
 
             final Handler handler = new Handler(Looper.getMainLooper());
             handler.postDelayed(() -> {
@@ -231,7 +254,8 @@ public class OrbotVpnManager implements Handler.Callback {
             }
         };
 
-        IPtProxy.startSocks(pFlow, "127.0.0.1", mTorSocks);
+        int activeSocksPort = (mMeshProxyActive && mMeshProxySocks > 0) ? mMeshProxySocks : mTorSocks;
+        IPtProxy.startSocks(pFlow, "127.0.0.1", activeSocksPort);
 
         //read packets from TUN and send to go-tun2socks
         mThreadPacket = new Thread() {
@@ -249,7 +273,7 @@ public class OrbotVpnManager implements Handler.Callback {
                                 var packet = IpSelector.newPacket(pdata, 0, pdata.length);
 
                                 if (packet instanceof IpPacket ipPacket) {
-                                    if (isPacketDNS(ipPacket))
+                                    if (isPacketDNS(ipPacket) && mDnsResolver != null)
                                         mExec.execute(new RequestPacketHandler(ipPacket, pFlow, mDnsResolver));
                                     else //noinspection StatementWithEmptyBody
                                         if (isPacketICMP(ipPacket)) {
@@ -282,6 +306,15 @@ public class OrbotVpnManager implements Handler.Callback {
     }
 
     private void doAppBasedRouting(VpnService.Builder builder) throws NameNotFoundException {
+        // Mesh proxy mode: allow ONLY the selected mesh-proxy packages through this VPN
+        if (mMeshProxyActive && !mMeshProxyPackages.isEmpty()) {
+            for (String pkg : mMeshProxyPackages) {
+                builder.addAllowedApplication(pkg);
+                Log.d(TAG, "mesh proxy: allowing " + pkg);
+            }
+            return;
+        }
+
         var apps = TorifiedApp.Companion.getApps(mService, prefs);
         var individualAppsWereSelected = false;
         var isLockdownMode = isVpnLockdown(mService);

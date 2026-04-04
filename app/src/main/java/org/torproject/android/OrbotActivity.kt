@@ -572,6 +572,8 @@ class OrbotActivity : BaseActivity() {
      */
     fun onNotificationFeedChanged(feed: List<org.torproject.android.ui.mesh.model.NotificationFeedEntry>) {
         android.util.Log.d("OrbotActivity", "[DROPDOWN] activity received feed update, size=${feed.size}")
-        notificationsAdapter.submitList(feed)
+        if (::notificationsAdapter.isInitialized) {
+            notificationsAdapter.submitList(feed)
+        }
     }
 }

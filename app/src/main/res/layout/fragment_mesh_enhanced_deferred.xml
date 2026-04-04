@@ -7,6 +7,8 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
+
+
     <!-- 4. Detailed Information Card -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
@@ -29,14 +31,189 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="12dp" />
 
-            <TextView
-                android:id="@+id/nodeInfoText"
+            <!-- Mesh connection row: IP address + role chips (C4) -->
+            <LinearLayout
+                android:id="@+id/meshIpRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Node: Not initialized"
-                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                android:fontFamily="monospace"
-                android:layout_marginBottom="8dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="2dp">
+
+                <TextView
+                    android:id="@+id/meshIpAddressText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Not initialized"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:fontFamily="monospace" />
+
+                <View
+                    android:id="@+id/meshInternetGreenDot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="6dp"
+                    android:background="@android:color/holo_green_light"
+                    android:visibility="gone" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/meshChipGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    app:singleLine="true"
+                    app:chipSpacingHorizontal="4dp">
+
+                    <!-- Always visible for mesh connection -->
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/meshChipMesh"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Mesh"
+                        android:textSize="10sp"
+                        app:chipMinHeight="24dp"
+                        style="@style/Widget.Material3.Chip.Assist" />
+
+                    <!-- Visible whenever device is connected to the mesh as a station.
+                         Visibility set programmatically in setupNetworkInfoObserver()
+                         based on connectedPeers > 0. Default gone; shown at runtime. -->
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/meshChipSta"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="STA"
+                        android:textSize="10sp"
+                        android:visibility="gone"
+                        app:chipMinHeight="24dp"
+                        style="@style/Widget.Material3.Chip.Assist" />
+
+                    <!-- Visible when device is running a mesh hotspot (AP mode) -->
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/meshChipAp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="AP"
+                        android:textSize="10sp"
+                        android:visibility="gone"
+                        app:chipMinHeight="24dp"
+                        style="@style/Widget.Material3.Chip.Assist" />
+
+                </com.google.android.material.chip.ChipGroup>
+
+            </LinearLayout>
+
+            <!-- Internet WiFi connection row: shown only when WiFi button is connected (C4) -->
+            <LinearLayout
+                android:id="@+id/internetWifiRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="2dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/internetWifiIpText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="--"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:fontFamily="monospace" />
+
+                <!-- Green dot: shown directly left of chips when NET_CAPABILITY_VALIDATED confirms internet access -->
+                <View
+                    android:id="@+id/internetWifiGreenDot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="6dp"
+                    android:background="@android:color/holo_green_light"
+                    android:visibility="gone" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/internetWifiChipGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="0dp"
+                    app:singleLine="true"
+                    app:chipSpacingHorizontal="4dp">
+
+                    <!-- Always visible: type label chip -->
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/internetWifiChipWifi"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="WiFi"
+                        android:textSize="10sp"
+                        app:chipMinHeight="24dp"
+                        style="@style/Widget.Material3.Chip.Assist" />
+
+                    <!-- Always visible for internet WiFi connection (device is STA to internet AP) -->
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/internetWifiChipSta"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="STA"
+                        android:textSize="10sp"
+                        app:chipMinHeight="24dp"
+                        style="@style/Widget.Material3.Chip.Assist" />
+
+                </com.google.android.material.chip.ChipGroup>
+
+            </LinearLayout>
+
+            <!-- Mesh extender AP row: shown when meshExtenderHotspotState == ACTIVE (G5f-2).
+                 Displays the AP interface IP with AP and Mesh chips. -->
+            <LinearLayout
+                android:id="@+id/meshExtenderApRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="2dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/meshExtenderApIpText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="--"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:fontFamily="monospace" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/meshExtenderApChipGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    app:singleLine="true"
+                    app:chipSpacingHorizontal="4dp">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/meshExtenderApChipAp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="AP"
+                        android:textSize="10sp"
+                        app:chipMinHeight="24dp"
+                        style="@style/Widget.Material3.Chip.Assist" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/meshExtenderApChipMesh"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Mesh"
+                        android:textSize="10sp"
+                        app:chipMinHeight="24dp"
+                        style="@style/Widget.Material3.Chip.Assist" />
+
+                </com.google.android.material.chip.ChipGroup>
+
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/networkStatsText"

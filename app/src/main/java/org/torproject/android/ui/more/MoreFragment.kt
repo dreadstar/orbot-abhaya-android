@@ -21,6 +21,7 @@ import org.torproject.android.service.util.sendIntentToService
 import org.torproject.android.service.OrbotConstants
 import org.torproject.android.service.OrbotService
 import org.torproject.android.ui.AppManagerActivity
+import org.torproject.android.ui.MeshProxyAppManagerActivity
 import org.torproject.android.ui.OrbotMenuAction
 import org.torproject.android.ui.v3onionservice.OnionServiceActivity
 import org.torproject.android.ui.v3onionservice.clientauth.ClientAuthActivity
@@ -96,6 +97,9 @@ class MoreFragment : Fragment() {
             },
             OrbotMenuAction(R.string.btn_choose_apps, R.drawable.ic_choose_apps) {
                 appManagerLauncher.launch(Intent(requireActivity(), AppManagerActivity::class.java))
+            },
+            OrbotMenuAction(R.string.btn_mesh_proxy_apps, R.drawable.ic_choose_apps) {
+                startActivity(Intent(requireActivity(), MeshProxyAppManagerActivity::class.java))
             },
             OrbotMenuAction(R.string.menu_log, R.drawable.ic_log) { showLog() },
             OrbotMenuAction(R.string.v3_hosted_services, R.drawable.ic_menu_onion) {
