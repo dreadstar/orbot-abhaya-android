@@ -1,6 +1,7 @@
 package org.torproject.android.ui.mesh
 
 import org.torproject.android.R
+import org.torproject.android.ui.v3onionservice.PermissionManager
 // import com.ustadmobile.meshrabiya.model.MeshState
 
 import android.Manifest
@@ -577,6 +578,30 @@ class EnhancedMeshFragment : Fragment() {
                         deferredViewsInitialized = true
                         android.util.Log.d("EnhancedMeshFragment", "[LIFECYCLE] Deferred views bound, flag set to true")
 
+                        (meshrabiyaApi as? MeshrabiyaApiImpl)?.wifiStateFlow?.value?.let { wifiState ->
+                            val isActingAsSta = wifiState.wifiStationState.status == "AVAILABLE"
+                            val isActingAsAp = wifiState.wifiDirectState.hotspotStatus == "STARTED"
+                                || wifiState.localOnlyHotspotState.status == "STARTED"
+                            MeshUIBindings.meshChipMesh.visibility = View.VISIBLE
+                            MeshUIBindings.meshChipSta.visibility = if (isActingAsSta) View.VISIBLE else View.GONE
+                            MeshUIBindings.meshChipAp.visibility = if (isActingAsAp) View.VISIBLE else View.GONE
+                        }
+
+                        // Snapshot-sync VPN row — mirrors setupVpnStatusObserver() logic
+                        // but fires once right after views are bound, before the StateFlow
+                        // can emit again (it won't re-emit unchanged values).
+                        meshrabiyaApi.getVpnStateFlow().value.let { vpnState ->
+                            MeshUIBindings.internetWifiRow.visibility =
+                                if (vpnState.active) View.VISIBLE else View.GONE
+                            if (vpnState.active) {
+                                val portText = vpnState.socksPort?.let { ":$it" } ?: ""
+                                MeshUIBindings.internetWifiIpText.text = "Orbot VPN$portText"
+                                MeshUIBindings.internetWifiGreenDot.visibility = View.VISIBLE
+                                MeshUIBindings.internetWifiChipSta.visibility = View.GONE
+                                MeshUIBindings.internetWifiChipWifi.visibility = View.GONE
+                            }
+                        }
+
                         // Now that all views exist, wire up event listeners.
                         android.util.Log.e("EnhancedMeshFragment", "[LIFECYCLE] Setting up listeners...")
                         setupListeners()
@@ -655,6 +680,8 @@ class EnhancedMeshFragment : Fragment() {
 			android.util.Log.d("EnhancedMeshFragment", "[BROADCAST] unregisterBroadcastListener (viewState=${viewLifecycleOwner.lifecycle.currentState})")
 			meshrabiyaApi.unregisterBroadcastListener(broadcastListener)
 		}
+
+		deferredViewsInitialized = false
 		
 	}
 
@@ -776,26 +803,15 @@ class EnhancedMeshFragment : Fragment() {
                         MeshUIBindings.meshIpAddressText.text = networkInfo.ipAddress
                         MeshUIBindings.networkStatsText.text =
                             "Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
-                        // meshChipAp: visible when this device is running a mesh hotspot.
-                        // meshChipSta: visible when this device joined the mesh as a station.
-                        // These are mutually exclusive in single-radio mode but both may be
-                        // true on a device with AP+STA concurrency (e.g. Phone 1).
-                        // apActive drives the AP chip; STA is inferred as connected-but-not-AP.
-                        val meshStatus = meshrabiyaApi.meshStatusFlow.value
-                        val meshConnected = meshStatus == MeshStateDto.CONNECTED ||
-                                            meshStatus == MeshStateDto.CONNECTING
-                        val apActive = (meshrabiyaApi as? MeshrabiyaApiImpl)
-                            ?.meshApActiveFlow?.value ?: false
-                        val staActive = meshConnected && !apActive
-                        MeshUIBindings.meshChipAp.visibility =
-                            if (apActive) View.VISIBLE else View.GONE
-                        MeshUIBindings.meshChipSta.visibility =
-                            if (staActive) View.VISIBLE else View.GONE
                         // NOTE: meshInternetGreenDot is intentionally NOT set here.
                         // It is driven exclusively by setupMeshInternetGreenDotObserver()
                         // which collects getMeshInternetGatewayAvailableFlow() as a live
                         // flow. Combining a snapshot .value here caused the dot to miss
                         // updates that arrived between networkInfo emissions.
+                        // meshChipAp/meshChipSta are controlled exclusively by
+                        // setupWifiStateObserver() which reactively collects wifiStateFlow.
+                        // Using a snapshot .value here caused the chip to disappear whenever
+                        // networkInfoFlow emitted during a meshApActiveFlow transition.
                         // internetWifiRow is controlled exclusively by setupVpnStatusObserver().
                         // No nonMeshSsid logic here — that field no longer exists in NetworkInfoDto.
                     }
@@ -1151,7 +1167,9 @@ class EnhancedMeshFragment : Fragment() {
 			android.util.Log.e("EnhancedMeshFragment", "startMeshWithPermissionCheck called but permissions still not granted!")
 			return
 		}
-		
+
+		PermissionManager.requestBatteryPermissions(requireActivity(), requireView())
+
 		android.util.Log.d("EnhancedMeshFragment", "Calling startMesh() after permission grant")
 		var meshOperationInProgress = true
 		MeshUIBindings.meshToggleButton.isEnabled = false
@@ -1242,8 +1260,9 @@ class EnhancedMeshFragment : Fragment() {
 					MeshUIBindings.networkStatsText.text =
 						"Peers: ${networkInfo.connectedPeers} | Tor Gateways: ${networkInfo.torGateways} | Clearnet: ${networkInfo.clearnetGateways}"
 					val gatewayAvailable = meshrabiyaApi.getMeshInternetGatewayAvailableFlow().value
+					val vpnActive = meshrabiyaApi.getVpnStateFlow().value.active
 					MeshUIBindings.meshInternetGreenDot.visibility =
-						if (gatewayAvailable) View.VISIBLE else View.GONE
+						if (gatewayAvailable || vpnActive) View.VISIBLE else View.GONE
 				}
 				// the remainder of deferred updates stays unchanged:
 				
@@ -2242,18 +2261,19 @@ class EnhancedMeshFragment : Fragment() {
 				meshrabiyaApi.joinMesh(qrData) { result ->
 					viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
 						if (result.isSuccess) {
-							android.util.Log.d("EnhancedMeshFragment", "joinMesh() succeeded")
-							Snackbar.make(
-								requireView(),
-								"Successfully joined mesh network",
-								Snackbar.LENGTH_LONG
-							).show()
-							isJoinMeshMode = false
-						} else {
-							android.util.Log.e("EnhancedMeshFragment", "joinMesh() failed: ${result.exceptionOrNull()?.message}")
-							Snackbar.make(
-								requireView(),
-								"Failed to join mesh: ${result.exceptionOrNull()?.message}",
+						android.util.Log.d("EnhancedMeshFragment", "joinMesh() succeeded")
+						Snackbar.make(
+							requireView(),
+							"Successfully joined mesh network",
+							Snackbar.LENGTH_LONG
+						).show()
+						isJoinMeshMode = false
+						PermissionManager.requestBatteryPermissions(requireActivity(), requireView())
+					} else {
+						android.util.Log.e("EnhancedMeshFragment", "joinMesh() failed: ${result.exceptionOrNull()?.message}")
+						Snackbar.make(
+							requireView(),
+							"Failed to join mesh: ${result.exceptionOrNull()?.message}",
 								Snackbar.LENGTH_LONG
 							).show()
 						}
