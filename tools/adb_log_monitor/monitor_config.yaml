@@ -1,0 +1,23 @@
+# monitor_config.yaml
+# Top-level session config — lets you reproduce an entire burn-in run
+# from one file without touching the command line.
+#
+# CLI args always override these values if both are provided.
+
+# Path to your patterns/filters/triggers file
+patterns: /home/d8rkl3ft/workspace/orbot-abhaya-android-deadend/tools/adb_log_monitor/patterns.yaml
+
+# Where to write filtered logs and trigger dumps
+output: /home/d8rkl3ft/workspace/orbot-abhaya-android-deadend/tools/adb_log_monitor/burn_in_logs
+
+# Device serials to monitor.
+# Each device gets its own pair of rotating log files.
+# Monitors will WAIT for a device to appear if it isn't online at startup,
+# and will RECONNECT automatically if the cable is jostled.
+#
+# Use 'all' as the sole entry to auto-detect all currently connected devices
+# (note: with 'all', monitors cannot wait for devices that aren't yet present).
+devices:
+  - 30870044490006E    # Phone 1
+  - LML211BL3f1c96e3  # Phone 2 (clock incorrect — do not correlate timestamps with Phone 1)
+  # - 192.168.1.42:5555  # TCP/IP connected device (adb connect first)

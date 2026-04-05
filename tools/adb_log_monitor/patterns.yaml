@@ -1,0 +1,501 @@
+# patterns.yaml
+# ADB log monitor configuration for orbot-abhaya-android burn-in testing.
+#
+# filters       — controls what lines are kept in the rolling log.
+#                 New dict form: `include` list + optional `exclude` list.
+#                 Legacy flat list (all-include) still accepted for back-compat.
+# state_patterns — extract per-device state from log lines (runs pre-filter on
+#                  every line so state is always current).
+# triggers       — events that dump the sliding window to the trigger log.
+#                  type: pattern      (default) — line matches regex/substring
+#                  type: state_change            — tracked field value changed
+# settings       — tuning knobs.
+
+# ──────────────────────────────────────────────
+# FILTERS — new include/exclude form
+# ──────────────────────────────────────────────
+filters:
+
+  # Lines matching any include pattern are kept.
+  # Lines matching any exclude pattern are dropped (takes priority over include).
+  include:
+
+    # ── Mesh library: all System.out bridge output ─────────────────────────
+    # The Meshrabiya library emits all structured logs through System.out.
+    # This single tag captures VirtualNode, OriginatingMessageManager,
+    # VirtualNodeDatagramSocket, LocalOnlyHotspotManager, and all MMCP traffic.
+    - pattern: "I/System.out"
+    - pattern: "D/System.out"
+    - pattern: "V/System.out"
+    - pattern: "W/System.out"
+    - pattern: "E/System.out"
+
+    # ── Orbot app-layer tags ───────────────────────────────────────────────
+    - pattern: "OrbotService"
+    - pattern: "OrbotVpnManager"
+    - pattern: "OrbotApp"
+    - pattern: "TorStatusMonitor"
+    - pattern: "MeshProxyController"
+    - pattern: "MeshTorProxyController"
+
+    # ── Meshrabiya API (non-System.out path) ───────────────────────────────
+    - pattern: "MeshrabiyaApiImpl"
+    - pattern: "MeshrabiyaApi"
+    - pattern: "EmergentRoleManager"
+    - pattern: "BroadcastMessageHandler"
+    - pattern: "MeshEcosystemListener"
+    - pattern: "GatewaySelector"
+    - pattern: "GatewayRouter"
+
+    # ── Identity, friends, UI ──────────────────────────────────────────────
+    - pattern: "IdentityManager"
+    - pattern: "FindBroadcastRepository"
+    - pattern: "FriendsViewModel"
+    - pattern: "QrPayload"
+    - pattern: "EnhancedMeshFragment"
+    - pattern: "FriendsFragment"
+    - pattern: "OrbotActivity"
+
+    # ── Distributed compute / storage ──────────────────────────────────────
+    - pattern: "DistributedStorageManager"
+    - pattern: "TaskManager"
+
+    # ── Network connectivity events (WiFi, VPN, DNS) ───────────────────────
+    # The WiFi signal controller changes are useful to track hotspot state.
+    - pattern: "NetworkController.WifiSignalController"
+    # DNS failures are diagnostic for proxy routing issues.
+    - pattern: "DSQN"
+    # ConnectivityService and NetworkCapabilities signal VPN interface changes.
+    - pattern: "ConnectivityService"
+    - pattern: "NetworkCapabilities"
+
+    # ── ActivityManager: only START/STOP events for our packages ──────────
+    # Captures when Chrome, Orbot, or mesh services start/stop.
+    - pattern: "ActivityManager.*org\\.torproject\\.android"
+      is_regex: true
+    - pattern: "ActivityManager.*com\\.ustadmobile\\.meshrabiya"
+      is_regex: true
+    - pattern: "ActivityManager.*com\\.android\\.chrome"
+      is_regex: true
+
+    # ── Chrome / browser process tags ─────────────────────────────────────
+    # Chrome on Android uses a "cr_" prefix for most internal log tags.
+    # These capture proxy config, network stack, and certificate events.
+    - pattern: "cr_"
+    - pattern: "chromium"
+    - pattern: "WebViewChromium"
+    - pattern: "NetworkService"
+    - pattern: "CronetEngine"
+    - pattern: "NetworkChangeNotifier"
+    - pattern: "ProxyConfig"
+    - pattern: "ProxyResolverV8"
+    # Chrome URL loading events
+    - pattern: "cr_UrlRequest"
+    - pattern: "cr_HttpCache"
+    - pattern: "cr_ProxyService"
+    - pattern: "cr_socket"
+    # Firefox / other browser alternative
+    - pattern: "GeckoProxy"
+    - pattern: "GeckoNet"
+    # WebView proxy events (applies to any app using WebView)
+    - pattern: "WebView"
+
+    # ── Hard crashes and JVM exceptions ───────────────────────────────────
+    - pattern: "AndroidRuntime"
+    - pattern: "FATAL EXCEPTION"
+
+    # ── Stack trace lines for our packages ────────────────────────────────
+    - pattern: "at org\\.torproject\\.android"
+      is_regex: true
+    - pattern: "at com\\.ustadmobile\\.meshrabiya"
+      is_regex: true
+
+    # ── SELinux denials (needed to diagnose Tor socket access) ──────────
+    - pattern: "avc:.*denied"
+      is_regex: true
+
+  # Lines matching any exclude pattern are DROPPED even if they matched include.
+  # Ordered from broadest noise (most lines eliminated) to narrowest.
+  exclude:
+
+    # ── High-frequency LG hardware HAL noise ──────────────────────────────
+    - pattern: "propClient"
+    - pattern: "sensors_hal_Ctx"
+    - pattern: "sensors_hal_Util"
+    - pattern: "nightwatch-target"
+    - pattern: "LGNativeVibrator"
+    - pattern: "VibratorService"
+    - pattern: "VolumeVibratorManager"
+    - pattern: "ThermalEngine"
+    - pattern: "Thermal-Lib"
+    - pattern: "TMR"
+    - pattern: "WifiServerServiceExt"
+    - pattern: "PHHandler"
+    - pattern: "PowerRM"
+    - pattern: "PRM_CONFIG_Parser"
+    - pattern: "ANDR-PERF-MPCTL"
+
+    # ── Input / UI system tags ─────────────────────────────────────────────
+    - pattern: "InputDispatcher"
+    - pattern: "InputTransport"
+    - pattern: "ViewRootImpl"
+    - pattern: "WindowManager"
+    - pattern: "Choreographer"
+    - pattern: "SurfaceViewImpl"
+    - pattern: "DecorView"
+    - pattern: "NavigationThemeResource"
+    - pattern: "LGKeyButtonView"
+    - pattern: "StatusBar"
+
+    # ── SystemUI eyecandy tags ─────────────────────────────────────────────
+    - pattern: "SystemServicesProxy"
+    - pattern: "AbsQuickSettingsHandlerBase"
+    - pattern: "QSlideListController"
+    - pattern: "QSlideTray"
+    - pattern: "GameToolsWindow"
+    - pattern: "VideoQualityHandler"
+    - pattern: "HideHomeTouchButtonsHandler"
+    - pattern: "Timeline"
+    - pattern: "vol.Events"
+    - pattern: "NotificationServiceEx"
+    - pattern: "DDTIcon"
+    - pattern: "TeleService"
+
+    # ── Rendering noise ────────────────────────────────────────────────────
+    - pattern: "Adreno-EGL"
+    - pattern: "vndksupport"
+    - pattern: "BufferItemConsumer"
+
+    # ── LG settings / misc ────────────────────────────────────────────────
+    - pattern: "LGSettingsProvider"
+    - pattern: "zygote.*AllocSpace"
+      is_regex: true
+
+    # ── Generic ActivityManager lines we DON'T need ───────────────────────
+    # Drop AM lines not covered by our specific chrome/orbot include patterns.
+    # But: our include regex for chrome/orbot runs first, so these are
+    # truly miscellaneous AM lines (power hints, task records, etc.).
+    - pattern: "setTaskToReturnTo"
+    - pattern: "isOtaSpActive"
+    - pattern: "FLOATING_WINDOW"
+
+    # ── DNS callback spam ────────────────────────────────────────────────
+    # "DNSproblemNotiEnabled is disabled ignore DNS fail CB" fires ~200x/session.
+    - pattern: "DNSproblemNotiEnabled"
+
+    # ── Verbose periodic mesh keep-alive lines ────────────────────────────
+    # PKT_CHECK and PKT_TRACE lines are very high-frequency (every packet).
+    # Include them during initial debugging; comment out for steady-state runs.
+    # - pattern: "\\[PKT_CHECK\\]"
+    #   is_regex: true
+    # - pattern: "\\[PKT_RX_RAW\\]"
+    #   is_regex: true
+
+    # ── Routine ping/pong heartbeats (comment out to re-enable) ──────────
+    # Remove these comment markers to reduce keep-alive noise:
+    # - pattern: "Received ping\\(id="
+    #   is_regex: true
+    # - pattern: "Received pong\\(id="
+    #   is_regex: true
+    # - pattern: "pingNeighborsRunnable"
+
+# ──────────────────────────────────────────────
+# STATE PATTERNS — extract live device state
+# ──────────────────────────────────────────────
+# These run on every raw logcat line (before filtering) so state is always
+# current regardless of what the filter keeps.
+#
+# Each entry must have:
+#   field:   one of mesh_status | nodes_in_topology | vpn_connection_status | orbot_active
+#   pattern: regex or substring to match
+#   is_regex: true  (optional, enables regex matching)
+#   set_value: the value to assign when matched
+#   extract_group: capture-group index to use as value instead of set_value
+#
+state_patterns:
+
+  # ── mesh_status ────────────────────────────────────────────────────────────
+  - field: mesh_status
+    pattern: "MeshProxyController.*activat|LOCAL_ACTION_MESH_PROXY_CHANGED.*active=true"
+    is_regex: true
+    set_value: ACTIVE
+
+  - field: mesh_status
+    pattern: "\\[MESH_PROBE\\].*Internet confirmed via CLEARNET_GATEWAY"
+    is_regex: true
+    set_value: GATEWAY
+
+  - field: mesh_status
+    pattern: "startMesh.*success|mesh.*started successfully"
+    is_regex: true
+    set_value: ACTIVE
+
+  - field: mesh_status
+    pattern: "stopMesh|mesh.*stopped|MeshrabiyaApiImpl.*disconnect"
+    is_regex: true
+    set_value: DISCONNECTED
+
+  # Connecting phase: mesh is being established or re-joining.
+  # Fires before ACTIVE so that ACTIVE/DISCONNECTED patterns can overwrite it
+  # on the same line if a more-final state is also signalled.
+  - field: mesh_status
+    pattern: "joinMesh|connectToMesh|LocalHotspot.*starting|VirtualNode.*reconnect|mesh.*joining"
+    is_regex: true
+    set_value: CONNECTING
+
+  # ── nodes_in_topology ──────────────────────────────────────────────────────
+  # Primary: extract from getNetworkInfo() lines:
+  #   "getNetworkInfo() - connectedNeighbors=1, topologySize=1"
+  - field: nodes_in_topology
+    pattern: "topologySize=(\\d+)"
+    is_regex: true
+    extract_group: 1
+
+  # Secondary: high-frequency update from [REFRESH] keep-alive lines:
+  #   "[REFRESH] apActive=true staActive=false liveCount=1 → CONNECTED"
+  - field: nodes_in_topology
+    pattern: "\\[REFRESH\\].*liveCount=(\\d+)"
+    is_regex: true
+    extract_group: 1
+
+  # Fallback: stale-node removal implicitly signals topology shrink
+  - field: nodes_in_topology
+    pattern: "stale node|removed stale"
+    is_regex: true
+    set_value: SHRINKING
+
+  # ── vpn_connection_status ──────────────────────────────────────────────────
+  - field: vpn_connection_status
+    pattern: "OrbotVpnManager.*VPN.*connected|TUN.*opened|VpnService.*establish"
+    is_regex: true
+    set_value: CONNECTED
+
+  - field: vpn_connection_status
+    pattern: "OrbotVpnManager.*VPN.*disconnected|TUN.*closed|VpnService.*revoked"
+    is_regex: true
+    set_value: DISCONNECTED
+
+  # ── orbot_active ───────────────────────────────────────────────────────────
+  - field: orbot_active
+    pattern: "OrbotService.*onStartCommand|OrbotService.*started"
+    is_regex: true
+    set_value: "true"
+
+  - field: orbot_active
+    pattern: "OrbotService.*stopSelf|OrbotService.*onDestroy"
+    is_regex: true
+    set_value: "false"
+
+  # Additional orbot deactivation signals (user toggle, VPN revoke, ACTION_STOP_TOR)
+  - field: orbot_active
+    pattern: "ACTION_STOP_TOR|Orbot.*deactivat|OrbotApp.*onStop|OrbotApp.*stopped"
+    is_regex: true
+    set_value: "false"
+
+  # ── internet_available ─────────────────────────────────────────────────────
+  # Tracks whether a validated internet path exists on this device.
+  # Sources: ConnectivityService and NetworkCapabilities lines (both in include filters).
+  - field: internet_available
+    pattern: "NET_CAPABILITY_VALIDATED|networkValidationResult.*VALID|defaultNetwork.*internet=true"
+    is_regex: true
+    set_value: "true"
+
+  - field: internet_available
+    pattern: "validation.*fail|lost.*default.*network|onLost.*(?:WIFI|CELLULAR|VPN)|no.*default.*network|Default network via Wi-Fi disconnect"
+    is_regex: true
+    set_value: "false"
+
+# ──────────────────────────────────────────────
+# TRIGGERS — events that dump the sliding window
+# ──────────────────────────────────────────────
+# type: pattern      (default) — fires when a log line matches the pattern.
+#   state_requires:            — optional guard: only fire if the named state
+#     field: <field>             field currently holds value.
+#     value: <value>
+#   devices:                   — optional list of serials (or ["all"]).
+#
+# type: state_change           — fires when a tracked state field changes.
+#   state_change:
+#     field: <field>
+#     from:  <old_value>        (optional, omit = any previous value)
+#     to:    <new_value>        (optional, omit = any new value)
+#   devices:                   — optional list of serials (or ["all"]).
+#
+triggers:
+
+  # ── Hard crashes ──────────────────────────────────────────────────────────
+  - pattern: "FATAL EXCEPTION"
+    label: "fatal_crash"
+
+  - pattern: "Process:.*has died"
+    is_regex: true
+    label: "process_death"
+
+  # ── Exceptions and errors ─────────────────────────────────────────────────
+  - pattern: "(Exception|Error):.*"
+    is_regex: true
+    label: "exception"
+
+  # ── Mesh-specific failure conditions ──────────────────────────────────────
+  - pattern: "startMesh.*fail"
+    is_regex: true
+    label: "mesh_start_fail"
+
+  - pattern: "joinMesh.*fail"
+    is_regex: true
+    label: "mesh_join_fail"
+
+  - pattern: "broadcast.*fail"
+    is_regex: true
+    label: "broadcast_fail"
+
+  - pattern: "MESH_ROUTER.*missing|no router"
+    is_regex: true
+    label: "no_mesh_router"
+
+  # ── State-guarded pattern trigger: broadcast fail only while mesh is ACTIVE
+  - type: pattern
+    pattern: "broadcast.*fail"
+    is_regex: true
+    label: "broadcast_fail_while_mesh_active"
+    state_requires:
+      field: mesh_status
+      value: ACTIVE
+
+  # ── Identity / key errors ─────────────────────────────────────────────────
+  - pattern: "IdentityManager.*error|identity.*null"
+    is_regex: true
+    label: "identity_error"
+
+  # ── Find broadcast failures ───────────────────────────────────────────────
+  - pattern: "FindBroadcastRepository.*error"
+    is_regex: true
+    label: "find_error"
+
+  # ── Tor / gateway issues ──────────────────────────────────────────────────
+  - pattern: "TorStatusMonitor.*ERROR|OrbotService.*stopped"
+    is_regex: true
+    label: "tor_fail"
+
+  # ── Node topology change ──────────────────────────────────────────────────
+  - pattern: "stale node|removed stale"
+    is_regex: false
+    label: "node_lost"
+
+  - pattern: "MeshTorSocksProxy stopped|MeshLocalSocksProxy stopped"
+    is_regex: true
+    label: "proxy_stopped"
+
+  # ── State-change triggers ─────────────────────────────────────────────────
+
+  # Fire whenever mesh_status transitions to DISCONNECTED from any state
+  - type: state_change
+    state_change:
+      field: mesh_status
+      to: DISCONNECTED
+    label: "mesh_went_offline"
+    devices: all        # default; included here for clarity
+
+  # Fire when this specific device becomes the clearnet gateway
+  - type: state_change
+    state_change:
+      field: mesh_status
+      to: GATEWAY
+    label: "device_became_gateway"
+    devices: all
+
+  # Fire only on phone 1 (gateway) when VPN disconnects
+  - type: state_change
+    state_change:
+      field: vpn_connection_status
+      from: CONNECTED
+      to: DISCONNECTED
+    label: "gateway_vpn_lost"
+    devices:
+      - 30870044490006E
+
+  # Fire on any device when Orbot stops
+  - type: state_change
+    state_change:
+      field: orbot_active
+      to: "false"
+    label: "orbot_stopped"
+
+  # ── User-requested state-change triggers ─────────────────────────────────
+
+  # 1. Mesh transitions into CONNECTING from any established state
+  - type: state_change
+    state_change:
+      field: mesh_status
+      to: CONNECTING
+    label: "mesh_reconnecting"
+    devices: all
+
+  # 2. Topology node count changes in either direction (addition OR removal)
+  - type: state_change
+    state_change:
+      field: nodes_in_topology
+      # no from:/to: — fires on ANY change to this field
+    label: "topology_changed"
+    devices: all
+
+  # 3. VPN becomes active (covers both initial connect and re-connect)
+  - type: state_change
+    state_change:
+      field: vpn_connection_status
+      to: CONNECTED
+    label: "vpn_connected"
+    devices: all
+
+  # 4. VPN drops
+  - type: state_change
+    state_change:
+      field: vpn_connection_status
+      to: DISCONNECTED
+    label: "vpn_disconnected"
+    devices: all
+
+  # 5. Internet path confirmed available (validated by ConnectivityService)
+  - type: state_change
+    state_change:
+      field: internet_available
+      to: "true"
+    label: "internet_gained"
+    devices: all
+
+  # 6. Internet path lost
+  - type: state_change
+    state_change:
+      field: internet_available
+      to: "false"
+    label: "internet_lost"
+    devices: all
+
+# ──────────────────────────────────────────────
+# SETTINGS
+# ──────────────────────────────────────────────
+settings:
+  # Number of filtered lines kept in the sliding window per device
+  window_size: 300
+
+  # Rotate the filtered log file when it hits this size (MB)
+  max_file_size_mb: 8
+
+  # How many rotated copies to keep (e.g. 4 → .1 through .4, total 5 files)
+  max_rotations: 4
+
+  # How many lines from the window to include in a trigger dump
+  trigger_context_lines: 75
+
+  # How often (seconds) to flush output files to disk.
+  # Set to 1 when chasing intermittent crashes — reduces data loss risk.
+  flush_interval_sec: 3
+
+  # How long to wait between reconnect polls when a device goes offline (seconds)
+  reconnect_interval_sec: 5
+
+  # Number of beeps on disconnect
+  reconnect_beep_count: 3
+
+  # Seconds between each beep
+  reconnect_beep_interval: 0.35
